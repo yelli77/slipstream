@@ -175,6 +175,86 @@ namespace StarTruckMP.Encoding
             return placeholder;
         }
 
+
+        /// <summary>
+        /// Spawns a visible trailer for a remote player by instantiating the local
+        /// player hitched CargoContainer mesh. Falls back to a placeholder cube
+        /// if no local trailer is currently hitched.
+        /// </summary>
+        public static GameObject createTrailerMesh(ushort playerId)
+        {
+            try
+            {
+                var myTruck = StarTruckClient.StarTruckClient.myTruck;
+                if (myTruck == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: myTruck is null, falling back to placeholder.");
+                    return createTrailerPlaceholder(playerId);
+                }
+
+                // Find local player hitched CargoContainer
+                CargoContainer hitchedCargo = null;
+                var hitchPoints = myTruck.GetComponentsInChildren<MaglockHitchPoint>();
+                foreach (var hp in hitchPoints)
+                {
+                    if (hp != null && hp.cargo != null)
+                    {
+                        hitchedCargo = hp.cargo;
+                        break;
+                    }
+                }
+
+                if (hitchedCargo == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no hitched CargoContainer found, falling back to placeholder.");
+                    return createTrailerPlaceholder(playerId);
+                }
+
+                GameObject cargoRoot = hitchedCargo.gameObject;
+                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 1: found CargoContainer {cargoRoot.name}");
+
+                // Instantiate a copy of the cargo container
+                GameObject newTrailer = GameObject.Instantiate(cargoRoot, Vector3.zero, Quaternion.Euler(Vector3.zero));
+                newTrailer.name = "RemoteTrailer" + playerId;
+
+                var sectorGO = GameObject.Find("[Sector]");
+                if (sectorGO != null)
+                {
+                    SceneManager.MoveGameObjectToScene(newTrailer, sectorGO.scene);
+                }
+                newTrailer.transform.SetParent(null);
+
+                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 2: instantiated");
+
+                // Strip game-logic components keep visuals only
+                var cargoComp = newTrailer.GetComponent<CargoContainer>();
+                if (cargoComp != null) GameObject.Destroy(cargoComp);
+
+                var rb = newTrailer.GetComponent<Rigidbody>();
+                if (rb != null) GameObject.Destroy(rb);
+
+                // Disable all colliders to prevent unwanted collisions
+                foreach (var col in newTrailer.GetComponentsInChildren<Collider>())
+                {
+                    col.enabled = false;
+                }
+
+                // Remove hitch-related components on children
+                foreach (var hp in newTrailer.GetComponentsInChildren<MaglockHitchPoint>())
+                {
+                    if (hp != null) GameObject.Destroy(hp);
+                }
+
+                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 3: components stripped, trailer ready");
+                return newTrailer;
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}] failed: {ex.Message}, falling back to placeholder.");
+                return createTrailerPlaceholder(playerId);
+            }
+        }
+
         public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat)
         {
             float[] playerTransform = { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, velocity.x, velocity.y, velocity.z, angVel.x, angVel.y, angVel.z};

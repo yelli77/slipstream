@@ -291,7 +291,7 @@ namespace StarTruckMP.StarTruckClient
 
                         if (hitched && currentPlayer.Trailer == null)
                         {
-                            currentPlayer.Trailer = Messages.createTrailerPlaceholder(playerId);
+                            currentPlayer.Trailer = Messages.createTrailerMesh(playerId);
                         }
                         else if (!hitched && currentPlayer.Trailer != null)
                         {
