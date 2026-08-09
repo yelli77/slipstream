@@ -221,11 +221,17 @@ namespace StarTruckMP.Encoding
                 StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 2: instantiated");
 
                 // Strip game-logic components keep visuals only
+                // Remove ConfigurableJoint BEFORE Rigidbody (dependency)
+                foreach (var cj in newTrailer.GetComponentsInChildren<ConfigurableJoint>())
+                {
+                    try { GameObject.Destroy(cj); } catch { }
+                }
+
                 var cargoComp = newTrailer.GetComponent<CargoContainer>();
-                if (cargoComp != null) GameObject.Destroy(cargoComp);
+                if (cargoComp != null) try { GameObject.Destroy(cargoComp); } catch { }
 
                 var rb = newTrailer.GetComponent<Rigidbody>();
-                if (rb != null) GameObject.Destroy(rb);
+                if (rb != null) try { GameObject.Destroy(rb); } catch { }
 
                 // Disable all colliders to prevent unwanted collisions
                 foreach (var col in newTrailer.GetComponentsInChildren<Collider>())
@@ -236,7 +242,16 @@ namespace StarTruckMP.Encoding
                 // Remove hitch-related components on children
                 foreach (var hp in newTrailer.GetComponentsInChildren<MaglockHitchPoint>())
                 {
-                    if (hp != null) GameObject.Destroy(hp);
+                    if (hp != null) try { GameObject.Destroy(hp); } catch { }
+                }
+
+                // Disable any remaining Behaviour components that might cause issues
+                foreach (var bh in newTrailer.GetComponentsInChildren<Behaviour>())
+                {
+                    if (bh != null)
+                    {
+                        try { bh.enabled = false; } catch { }
+                    }
                 }
 
                 StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 3: components stripped, trailer ready");
