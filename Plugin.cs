@@ -3,7 +3,6 @@ using BepInEx;
 using Object = UnityEngine.Object;
 using HarmonyLib;
 using System;
-using System.Threading;
 using BepInEx.Logging;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP.UnityEngine;
@@ -16,7 +15,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-24";
+    public const string customBuildNumber = "custom-build-25";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -33,39 +32,6 @@ public class StarTruckMP : BasePlugin
         joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
         hostKey = Config.Bind("Keybinds", "HostKey", UnityEngine.KeyCode.RightBracket, "Set the Key to press for hosting a server");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
-        StartNetworkThread();
-    }
-
-    private static Thread _networkThread;
-    private static volatile bool _networkRunning;
-
-    private static void StartNetworkThread()
-    {
-        _networkRunning = true;
-        _networkThread = new Thread(() =>
-        {
-            Log.LogInfo("Network thread started");
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            double acc = 0;
-            const double dt = 1.0 / 60.0;
-            while (_networkRunning)
-            {
-                double elapsed = sw.Elapsed.TotalSeconds;
-                sw.Restart();
-                acc += elapsed;
-                while (acc >= dt)
-                {
-                    try { StarTruckServer.StarTruckServer.server.Update(); } catch { }
-                    try { StarTruckClient.StarTruckClient.client.Update(); } catch { }
-                    acc -= dt;
-                }
-                Thread.Sleep(1);
-            }
-            Log.LogInfo("Network thread stopped");
-        });
-        _networkThread.IsBackground = true;
-        _networkThread.Name = "StarTruckMP-Network";
-        _networkThread.Start();
     }
 
     [HarmonyPatch]
@@ -75,9 +41,10 @@ public class StarTruckMP : BasePlugin
         [HarmonyPostfix]
         public static void Update()
         {
-            try { StarTruckServer.StarTruckServer.Update(); } catch (Exception ex) { Log.LogError($"Server.Update error: {ex.Message}"); }
-            try { StarTruckClient.StarTruckClient.Update(); } catch (Exception ex) { Log.LogError($"Client.Update error: {ex.Message}"); }
-            try { StarTruckClient.StarTruckClient.ReanchorRemotePlayersToFloatingOrigin(); } catch (Exception ex) { Log.LogError($"Reanchor error: {ex.Message}"); }
+            StarTruckServer.StarTruckServer.Update();
+            StarTruckClient.StarTruckClient.Update();
+            StarTruckServer.StarTruckServer.FixedUpdate();
+            StarTruckClient.StarTruckClient.FixedUpdate();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]
