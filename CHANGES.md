@@ -1,17 +1,49 @@
-# StarTruckMP – Custom Build Changes (custom-build-11)
+# StarTruckMP — Custom Build Changes (custom-build-12)
 
 Diese Datei dokumentiert alle Änderungen gegenüber dem Original-Repo
-(https://github.com/JayJay34/StarTruckerMP), Stand custom-build-11.
-Die Quelldateien in diesem Repo sind der **unveränderte Original-Stand**
-(als sichere Referenz); die Patches unten wurden darauf angewendet, um
-die fertige `StarTruckMP.dll` (im Ordner `builds/`) zu bauen. Die DLL ist
-geprüft identisch mit der aktuell laufenden Version (md5 56a8eb16fa1a758e81750e497a460d2e).
+(https://github.com/JayJay34/StarTruckerMP), Stand custom-build-12.
+Die Quelldateien in diesem Repo enthalten die tatsächlich gepatchten Stände
+(inkl. aller Änderungen aus custom-build-11 und dem neuen Anhänger-Sync aus
+custom-build-12). Die DLL (im Ordner `builds/`) ist geprüft identisch mit der
+aktuell laufenden Version (md5 881d81eb45a8ca1ed2fd5039d395972a).
 
-## Plugin.cs
-- `customBuildNumber` Konstante hinzugefügt, wird im Load-Log ausgegeben:
-  `Plugin StarTruckMP is loaded! [custom-build-11]`
+## Neu in custom-build-12: Anhänger/Trailer-Synchronisation
 
-## Server/Server.cs
+- Neuer Nachrichtentyp `trailerMovementUpdate` (Encoding/Utilities.cs) sowie
+  neue Felder in `playerInfo`: `Trailer` (GameObject), `trailerTrans`,
+  `trailerHitched`.
+- Client/Client.cs: `SendTrailerMovement()` prüft per
+  `MaglockHitchPoint`/`CargoContainer` (Spiel-Assembly), ob am eigenen Truck
+  gerade ein Anhänger angekuppelt ist, und sendet Kuppel-Status +
+  Position/Rotation an den Server. Wird aus der bestehenden `SendMovement()`-
+  Schleife heraus aufgerufen.
+- Server/Server.cs: neuer `case` in `Server_MessageReceived` für
+  `trailerMovementUpdate` — übernimmt den Zustand in `playerList` und
+  broadcastet ihn an alle anderen Clients (`SendToAll`).
+- Client.cs (Empfang): beim Empfang von `trailerMovementUpdate` wird für den
+  jeweiligen Remote-Spieler bei Bedarf ein Platzhalter-Objekt gespawnt
+  (`Messages.createTrailerPlaceholder`) bzw. beim Abkuppeln wieder zerstört.
+  Position/Rotation werden laufend über `Messages.updateMovement` aktualisiert
+  und in `ReanchorRemotePlayersToFloatingOrigin()` zusammen mit Truck/Player
+  gegen den Floating Origin reanchored.
+- Messages.cs: `createTrailerPlaceholder()` erzeugt bewusst **keinen** Klon
+  des echten Anhänger-Modells, sondern einen einfachen blauen Würfel
+  (Collider deaktiviert, nur Sichtreferenz). Grund: anders als beim
+  Truck/Player-Exterior gibt es keine Garantie, dass ein empfangender Client
+  ein passendes lokales Anhänger-Prefab zum Klonen bereithält (verschiedene
+  Anhängertypen im Spiel). Der Platzhalter ist bewusst als einfache,
+  risikoarme Lösung gewählt und **noch nicht live im Spiel getestet**.
+- Aufräumen: Anhänger-Platzhalter werden korrekt zerstört bei
+  Client-Disconnect, `clientDisconnect`-Nachricht und beim Sektorwechsel
+  (`RemoveFromSector`).
+
+## custom-build-11 (vorherige Änderungen, weiterhin enthalten)
+
+### Plugin.cs
+- `customBuildNumber` Konstante (jetzt "custom-build-12"), wird im Load-Log
+  ausgegeben: `Plugin StarTruckMP is loaded! [custom-build-12]`
+
+### Server/Server.cs
 - **Kritischer Fix:** `server.ClientConnected/-Disconnected/-MessageReceived`
   Subscriptions wurden VOR dem `StarTruckClient.ConnectToServer("127.0.0.1:7777")`
   Aufruf verschoben (der Call warf immer eine Exception und brach die Methode
@@ -22,7 +54,7 @@ geprüft identisch mit der aktuell laufenden Version (md5 56a8eb16fa1a758e81750e
   (`LogPlayerPositionsPeriodically`).
 - Log-Zeile "Client Connected" zeigt jetzt die Client-ID.
 
-## Client/Client.cs
+### Client/Client.cs
 - `ConnectToServer` mit try/catch und granularem Logging pro Schritt
   (myPlayer, playerCam, myTruck, floatingOrigin, spaceSuitObj), inkl.
   Fallback `GetComponentInChildren<MeshRenderer>()` falls MeshRenderer nicht
@@ -43,21 +75,23 @@ geprüft identisch mit der aktuell laufenden Version (md5 56a8eb16fa1a758e81750e
   `Pos` doppelt übergeben wurde.
 - Periodisches Logging (60s) aller getrackten Remote-Spieler.
 
-## Encoding/Utilities.cs
+### Encoding/Utilities.cs
 - `playerConnected` zum `messageType` enum hinzugefügt.
 
-## Encoding/Messages.cs
+### Encoding/Messages.cs
 - `createPlayer` komplett defensiv gemacht: try/catch, Checkpoint-Logging
   (1-9), null-Checks für "Exterior"-GameObject, spaceSuitObj, MeshRenderer
-  etc. – bricht nicht mehr silent ab, sondern loggt genau wo es scheitert.
+  etc. — bricht nicht mehr silent ab, sondern loggt genau wo es scheitert.
   Cosmetic-Tweaks (Hatch/Marker/Cameras/etc.) über neue Helper
-  `TryDisable`/`TryDestroyComponent<T>`/`FindPath`, die fehlende Kindobjekte
-  überspringen statt zu crashen.
+  `TryDisable`/`TryDestroyComponent<T>`/`FindPath`, die fehlende
+  Kindobjekte überspringen statt zu crashen.
 - Neu gespawnte Truck/Player-Objekte bekommen jetzt sofort die korrekte
   `position`/`rotation` gesetzt (vorher blieben sie bei Weltursprung (0,0,0)).
 
-## Bekannte offene Punkte (nicht in dieser DLL)
-- Anhänger/Trailer werden noch nicht zwischen Spielern synchronisiert
-  (siehe Analyse: `CargoContainer`/`MaglockHitchPoint` im Spiel-Assembly).
-- Ob "Server muss sich bewegen" durch build-11 vollständig behoben ist,
-  war beim letzten Test noch nicht final bestätigt.
+## Bekannte offene Punkte
+- Der Anhänger-Sync (custom-build-12) ist neu implementiert, aber noch nicht
+  mit mehreren Spielern live im Spiel getestet — der Platzhalter-Würfel
+  könnte optisch nicht überzeugen, auch wenn die Netzwerklogik funktionieren
+  sollte.
+- Ob "Server muss sich zuerst bewegen" durch build-11 vollständig behoben
+  ist, war beim letzten Test noch nicht final bestätigt.
