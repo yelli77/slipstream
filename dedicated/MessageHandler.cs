@@ -12,6 +12,8 @@ public class MessageHandler
 
     public void Handle(MessageReceivedEventArgs e, Riptide.Server server)
     {
+        try
+        {
         switch ((MessageType)e.MessageId)
         {
             case MessageType.MovementUpdate: HandleMovement(e, server); break;
@@ -19,6 +21,11 @@ public class MessageHandler
             case MessageType.UpdateSector: HandleSector(e, server); break;
             case MessageType.UpdateLivery: HandleLivery(e, server); break;
             case MessageType.ChatMessage: Console.WriteLine($"[CHAT] {e.FromConnection.Id}: {e.Message.GetString()}"); break;
+        }
+        }
+        catch (System.Exception ex)
+        {
+            Console.WriteLine($"[WARN] MessageHandler error: {ex.Message}");
         }
     }
 
@@ -63,6 +70,7 @@ public class MessageHandler
     private void HandleLivery(MessageReceivedEventArgs e, Riptide.Server server)
     {
         if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
+        e.Message.GetUShort();
         string item=e.Message.GetString();
         p.Livery=item;p.LastUpdate=DateTime.UtcNow;
         _players[e.FromConnection.Id]=p;
