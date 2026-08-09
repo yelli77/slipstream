@@ -30,6 +30,7 @@ namespace StarTruckMP.StarTruckClient
         public static GameObject spaceSuitObj = null;
         public static Material[] spaceSuitMats = null;
         private static float nextPositionLogTime = 0f;
+        private static float nextSendTime = 0f;
         private const float PositionLogIntervalSeconds = 60f;
 
         public static void FixedUpdate()
@@ -186,7 +187,6 @@ namespace StarTruckMP.StarTruckClient
                         RemoveFromSector(id, playerList[id]);
                     }
                 }
-                SendMovement();
             }
 
             if (e.MessageId == (ushort)messageType.playerConnected)
@@ -361,12 +361,14 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        public static async void SendMovement()
+        public static void SendMovement()
         {
-            while (client.IsConnected)
+            if (!client.IsConnected) return;
+            if (Time.realtimeSinceStartup < nextSendTime) return;
+            nextSendTime = Time.realtimeSinceStartup + StarTruckMP.MoveUpdate.Value / 1000f;
+
+            try
             {
-              try
-              {
                 if (myTruck != null && playerLocation)
                 {
                     if (!sentFirstUpdate || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
@@ -397,15 +399,11 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 SendTrailerMovement();
-              }
-              catch (System.Exception ex)
-              {
-                StarTruckMP.Log.LogError($"SendMovement error: {ex.Message}");
-              }
-
-                await System.Threading.Tasks.Task.Delay(StarTruckMP.MoveUpdate.Value);
             }
-
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogError($"SendMovement error: {ex.Message}");
+            }
         }
 
         private const float HitchDistanceThreshold = 50f;
