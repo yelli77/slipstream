@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  startruckmp-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    container_name: startruckmp-dedicated-1
+    ports:
+      - "7777:7777/udp"
+    environment:
+      - SERVER_PORT=7777
+      - MAX_CLIENTS=8
+      - SERVER_NAME=StarTruckMP Server
+    restart: unless-stopped

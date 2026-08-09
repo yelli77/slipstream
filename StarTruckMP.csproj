@@ -16,6 +16,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="common/**" />
+    <Compile Remove="dedicated/**" />
+    <Compile Remove="updater/**" />
+    <Compile Remove="docker/**" />
+    <Compile Remove="docs/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="RiptideNetworking.Riptide" Version="2.2.0" />
   </ItemGroup>
 
