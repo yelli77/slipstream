@@ -19,6 +19,7 @@ namespace StarTruckMP.Utilities
         public GameObject Player;
         public GameObject Truck;
         public GameObject Trailer;
+        public GameObject NameLabel;
         public movementTrans playerTrans;
         public movementTrans truckTrans;
         public movementTrans trailerTrans;
