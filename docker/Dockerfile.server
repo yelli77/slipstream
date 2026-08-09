@@ -3,7 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
 COPY common/ ./common/
 COPY dedicated/ ./dedicated/
-RUN dotnet publish dedicated/StarTruckMP.Dedicated.csproj -c Release -o /app --no-restore
+RUN dotnet restore dedicated/StarTruckMP.Dedicated.csproj
+RUN dotnet publish dedicated/StarTruckMP.Dedicated.csproj -c Release -o /app
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/runtime:6.0
