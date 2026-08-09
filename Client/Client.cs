@@ -400,17 +400,19 @@ namespace StarTruckMP.StarTruckClient
             CargoContainer hitchedCargo = null;
             try
             {
-                var hitchPoints = myTruck.GetComponentsInChildren<MaglockHitchPoint>();
+                // Scene-wide search: MaglockHitchPoint is NOT a child of the truck
+                var allHitchPoints = GameObject.FindObjectsOfType<MaglockHitchPoint>();
                 trailerLogCounter++;
                 if (trailerLogCounter % 50 == 1)
                 {
-                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitchPoints.Count={hitchPoints.Length}, myTruck={myTruck.name}, children={myTruck.transform.childCount}");
-                    foreach (var hp in hitchPoints)
+                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: sceneWide count={allHitchPoints.Length}");
+                    foreach (var hp in allHitchPoints)
                     {
-                        StarTruckMP.Log.LogInfo($"  MaglockHitchPoint: hp={hp != null}, cargo={(hp != null ? hp.cargo?.ToString() ?? "null" : "N/A")}");
+                        string cargoName = hp.cargo != null ? hp.cargo.gameObject.name : "null";
+                        StarTruckMP.Log.LogInfo($"  MaglockHitchPoint: obj={hp.gameObject.name}, cargo={cargoName}");
                     }
                 }
-                foreach (var hp in hitchPoints)
+                foreach (var hp in allHitchPoints)
                 {
                     if (hp != null && hp.cargo != null)
                     {
