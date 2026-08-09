@@ -164,6 +164,9 @@ namespace StarTruckMP.StarTruckClient
 
         public static void Client_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
+            try
+            {
+        {
             if (e.MessageId == (ushort)messageType.clientJoin)
             {
                 foreach (ushort id in e.Message.GetUShorts())
@@ -348,6 +351,13 @@ namespace StarTruckMP.StarTruckClient
                     if (clientInfo.Truck != null)
                         clientInfo.Truck.transform.GetChild(0).GetComponent<LiveryAndDamageApplierTruckExterior>().LoadAndApplyLiveryById(livery);
                 }
+            }
+        }
+
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"Client_MessageReceived error: {ex.Message}");
             }
         }
 
