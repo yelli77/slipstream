@@ -365,6 +365,8 @@ namespace StarTruckMP.StarTruckClient
         {
             while (client.IsConnected)
             {
+              try
+              {
                 if (myTruck != null && playerLocation)
                 {
                     if (!sentFirstUpdate || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
@@ -395,6 +397,11 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 SendTrailerMovement();
+              }
+              catch (System.Exception ex)
+              {
+                StarTruckMP.Log.LogError($"SendMovement error: {ex.Message}");
+              }
 
                 await System.Threading.Tasks.Task.Delay(StarTruckMP.MoveUpdate.Value);
             }

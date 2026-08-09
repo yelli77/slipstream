@@ -16,7 +16,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-23";
+    public const string customBuildNumber = "custom-build-24";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -75,23 +75,23 @@ public class StarTruckMP : BasePlugin
         [HarmonyPostfix]
         public static void Update()
         {
-            StarTruckServer.StarTruckServer.Update();
-            StarTruckClient.StarTruckClient.Update();
-            StarTruckClient.StarTruckClient.ReanchorRemotePlayersToFloatingOrigin();
+            try { StarTruckServer.StarTruckServer.Update(); } catch (Exception ex) { Log.LogError($"Server.Update error: {ex.Message}"); }
+            try { StarTruckClient.StarTruckClient.Update(); } catch (Exception ex) { Log.LogError($"Client.Update error: {ex.Message}"); }
+            try { StarTruckClient.StarTruckClient.ReanchorRemotePlayersToFloatingOrigin(); } catch (Exception ex) { Log.LogError($"Reanchor error: {ex.Message}"); }
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]
         [HarmonyPostfix]
         public static void EquipLivery(string itemId)
         {
-            StarTruckClient.StarTruckClient.equipLivery(itemId);
+            try { StarTruckClient.StarTruckClient.equipLivery(itemId); } catch (Exception ex) { Log.LogError($"EquipLivery error: {ex.Message}"); }
         }
 
         [HarmonyPatch(typeof(SectorPersistence), nameof(SectorPersistence.OnArrivedAtSector))]
         [HarmonyPostfix]
         public static void OnArrivedAtSector(Object sender, EventArgs eventArgs)
         {
-            StarTruckClient.StarTruckClient.OnArrivedAtSector();
+            try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
         }
     }
 }
