@@ -148,7 +148,7 @@ namespace StarTruckMP.Encoding
                     textMesh.characterSize = 0.08f;
                     textMesh.anchor = TextAnchor.MiddleCenter;
                     textMesh.alignment = TextAlignment.Center;
-                    textMesh.color = Color.white;
+                    textMesh.color = Color.yellow;
                     textMesh.fontStyle = FontStyle.Bold;
 
                     // Set font to Arial (always available)
