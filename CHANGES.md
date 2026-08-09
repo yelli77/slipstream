@@ -1,4 +1,4 @@
-# StarTruckMP — Custom Build Changes (custom-build-14)
+# StarTruckMP — Custom Build Changes (custom-build-15)
 
 Diese Datei dokumentiert alle Änderungen gegenüber dem Original-Repo
 (https://github.com/JayJay34/StarTruckerMP), Stand custom-build-12.
@@ -8,7 +8,7 @@ custom-build-12). Die DLL (im Ordner `builds/`) ist geprüft identisch mit der
 aktuell laufenden Version (md5 881d81eb45a8ca1ed2fd5039d395972a).
 
 
-## Neu in custom-build-14: Echtes Anhänger-Mesh statt Placeholder-Würfel
+## Neu in custom-build-15: Echtes Anhänger-Mesh statt Placeholder-Würfel
 
 - `Messages.createTrailerMesh()`: Neue Methode, die das lokale
   `CargoContainer`-GameObjekt (via `MaglockHitchPoint.cargo`) instantiiert
@@ -23,6 +23,15 @@ aktuell laufenden Version (md5 881d81eb45a8ca1ed2fd5039d395972a).
   sendet der Server jetzt für jeden existierenden Spieler mit gehitchtem
   Anhänger ein `trailerMovementUpdate` an den neuen Client — damit auch
   Anhänger, die schon bei Spielstart dran sind, korrekt gespawnt werden.
+- **Bugfix Floating Origin:** `SendTrailerMovement()` sendet jetzt die
+  korrekte Welt-Position (`rb.position + floatingOrigin`) statt der
+  reinen Scene-Local-Position. Vorher war der Anhänger um
+  `-2×floatingOrigin` verschoben (zehntausende Einheiten entfernt,
+  unsichtbar).
+- **Performance:** `ReanchorRemotePlayersToFloatingOrigin()` hat jetzt
+  einen Dirty-Check — überspringt das Reanchoring wenn sich das
+  Floating-Origin seit dem letzten Tick nicht geändert hat. Reduziert
+  unnötige Transform-Schreibvorgänge um ~99%.
 
 ## Neu in custom-build-12: Anhänger/Trailer-Synchronisation
 

@@ -417,7 +417,8 @@ namespace StarTruckMP.StarTruckClient
 
             if (hitched)
             {
-                Vector3 pos = hitchedCargo.rb != null ? hitchedCargo.rb.position : hitchedCargo.transform.position;
+                Vector3 pos = (hitchedCargo.rb != null ? hitchedCargo.rb.position : hitchedCargo.transform.position)
+                              + floatingOrigin.m_currentOrigin;
                 Vector3 rot = hitchedCargo.transform.eulerAngles;
 
                 client.Send(Messages.createTrailerMovementMessage(client.Id, true, pos, rot));
@@ -485,9 +486,13 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        private static Vector3 lastAnchoredOrigin = Vector3.zero;
+
         public static void ReanchorRemotePlayersToFloatingOrigin()
         {
             if (floatingOrigin == null) return;
+            if (floatingOrigin.m_currentOrigin == lastAnchoredOrigin) return;
+            lastAnchoredOrigin = floatingOrigin.m_currentOrigin;
 
             foreach (var kv in playerList)
             {
