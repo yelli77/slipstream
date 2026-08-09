@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "i9KBx7wIPtnlWE1OU3OC+wAVDXavc6ei8tIIdWkaQijoKxkV9vNEf96q7C0h7BKgrKvB3EvPd3Xhm1w5piy6gg==",
+  "success": true,
+  "projectFilePath": "/src/StarTruckMP.csproj",
+  "expectedPackageFiles": [
+    "/root/.nuget/packages/riptidenetworking.riptide/2.2.0/riptidenetworking.riptide.2.2.0.nupkg.sha512"
+  ],
+  "logs": []
+}

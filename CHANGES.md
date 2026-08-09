@@ -1,4 +1,4 @@
-# StarTruckMP — Custom Build Changes (custom-build-13)
+# StarTruckMP — Custom Build Changes (custom-build-14)
 
 Diese Datei dokumentiert alle Änderungen gegenüber dem Original-Repo
 (https://github.com/JayJay34/StarTruckerMP), Stand custom-build-12.
@@ -8,7 +8,7 @@ custom-build-12). Die DLL (im Ordner `builds/`) ist geprüft identisch mit der
 aktuell laufenden Version (md5 881d81eb45a8ca1ed2fd5039d395972a).
 
 
-## Neu in custom-build-13: Echtes Anhänger-Mesh statt Placeholder-Würfel
+## Neu in custom-build-14: Echtes Anhänger-Mesh statt Placeholder-Würfel
 
 - `Messages.createTrailerMesh()`: Neue Methode, die das lokale
   `CargoContainer`-GameObjekt (via `MaglockHitchPoint.cargo`) instantiiert
@@ -19,6 +19,10 @@ aktuell laufenden Version (md5 881d81eb45a8ca1ed2fd5039d395972a).
   wird weiterhin der blaue Placeholder-Würfel verwendet.
 - `Client/Client.cs`: `trailerMovementUpdate`-Handler ruft jetzt
   `createTrailerMesh()` statt `createTrailerPlaceholder()` auf.
+- `Server/Server.cs`: Beim `clientJoin` (neuer Client verbindet sich)
+  sendet der Server jetzt für jeden existierenden Spieler mit gehitchtem
+  Anhänger ein `trailerMovementUpdate` an den neuen Client — damit auch
+  Anhänger, die schon bei Spielstart dran sind, korrekt gespawnt werden.
 
 ## Neu in custom-build-12: Anhänger/Trailer-Synchronisation
 

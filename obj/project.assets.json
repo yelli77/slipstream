@@ -1,0 +1,102 @@
+{
+  "version": 3,
+  "targets": {
+    "net6.0": {
+      "RiptideNetworking.Riptide/2.2.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/RiptideNetworking.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/RiptideNetworking.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RiptideNetworking.Riptide/2.2.0": {
+      "sha512": "pNEweYDBp76VpPSWmMhWm5/voGuu+CGUetdZMecUEiIoChl9EbvS5PAFoJAcaBCNtrP8XaDMsxd1VCuDfLQAsg==",
+      "type": "package",
+      "path": "riptidenetworking.riptide/2.2.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/netstandard2.0/RiptideNetworking.dll",
+        "nuget-readme.md",
+        "package-icon.png",
+        "riptidenetworking.riptide.2.2.0.nupkg.sha512",
+        "riptidenetworking.riptide.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net6.0": [
+      "RiptideNetworking.Riptide >= 2.2.0"
+    ]
+  },
+  "packageFolders": {
+    "/root/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/src/StarTruckMP.csproj",
+      "projectName": "StarTruckMP",
+      "projectPath": "/src/StarTruckMP.csproj",
+      "packagesPath": "/root/.nuget/packages/",
+      "outputPath": "/src/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/root/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net6.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {},
+        "https://api.nuget.org/v3/index.json": {},
+        "https://nuget.bepinex.dev/v3/index.json": {},
+        "https://nuget.samboy.dev/v3/index.json": {}
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "net6.0": {
+        "targetAlias": "net6.0",
+        "dependencies": {
+          "RiptideNetworking.Riptide": {
+            "target": "Package",
+            "version": "[2.2.0, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/6.0.428/RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

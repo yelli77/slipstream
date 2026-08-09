@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "StarTruckMP/1.0.0": {
+        "dependencies": {
+          "RiptideNetworking.Riptide": "2.2.0"
+        },
+        "runtime": {
+          "StarTruckMP.dll": {}
+        }
+      },
+      "RiptideNetworking.Riptide/2.2.0": {
+        "runtime": {
+          "lib/netstandard2.0/RiptideNetworking.dll": {
+            "assemblyVersion": "2.2.0.0",
+            "fileVersion": "2.2.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "StarTruckMP/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "RiptideNetworking.Riptide/2.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-pNEweYDBp76VpPSWmMhWm5/voGuu+CGUetdZMecUEiIoChl9EbvS5PAFoJAcaBCNtrP8XaDMsxd1VCuDfLQAsg==",
+      "path": "riptidenetworking.riptide/2.2.0",
+      "hashPath": "riptidenetworking.riptide.2.2.0.nupkg.sha512"
+    }
+  }
+}

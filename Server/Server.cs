@@ -197,6 +197,15 @@ namespace StarTruckMP.StarTruckServer
             }
             server.Send(message, e.Client);
 
+            // Send initial trailer state for each existing player who has a hitched trailer
+            foreach (var kv in playerList)
+            {
+                if (kv.Value.trailerHitched)
+                {
+                    server.Send(Messages.createTrailerMovementMessage(kv.Key, true, kv.Value.trailerTrans.Pos, kv.Value.trailerTrans.Rot), e.Client);
+                }
+            }
+
             playerInfo newPlayer = new playerInfo();
             newPlayer.sector = "none";
             playerList.Add(e.Client.Id, newPlayer);
