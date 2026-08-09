@@ -204,8 +204,6 @@ namespace StarTruckMP.Encoding
                 }
 
                 GameObject cargoRoot = sampleCargo.gameObject;
-                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 1: cloning CargoContainer {cargoRoot.name}");
-                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 1: found CargoContainer {cargoRoot.name}");
 
                 // Instantiate a copy of the cargo container
                 GameObject newTrailer = GameObject.Instantiate(cargoRoot, Vector3.zero, Quaternion.Euler(Vector3.zero));
@@ -218,7 +216,6 @@ namespace StarTruckMP.Encoding
                 }
                 newTrailer.transform.SetParent(null);
 
-                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 2: instantiated");
 
                 // Strip game-logic components keep visuals only
                 // Remove ConfigurableJoint BEFORE Rigidbody (dependency)
@@ -254,7 +251,6 @@ namespace StarTruckMP.Encoding
                     }
                 }
 
-                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 3: components stripped, trailer ready");
                 return newTrailer;
             }
             catch (System.Exception ex)

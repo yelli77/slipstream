@@ -391,7 +391,6 @@ namespace StarTruckMP.StarTruckClient
 
         }
 
-        private static int trailerLogCounter = 0;
         private const float HitchDistanceThreshold = 50f;
 
         public static void SendTrailerMovement()
@@ -413,13 +412,6 @@ namespace StarTruckMP.StarTruckClient
                         bestDist = dist;
                         hitchedCargo = cargo;
                     }
-                }
-                trailerLogCounter++;
-                if (trailerLogCounter % 50 == 1)
-                {
-                    string found = hitchedCargo != null ? hitchedCargo.gameObject.name : "none";
-                    Vector3 truckPos = myTruck.transform.position;
-                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: {allCargo.Length} CargoContainers, truck=({truckPos.x:F1},{truckPos.y:F1},{truckPos.z:F1}), closest={found} dist={bestDist:F1}m");
                 }
             }
             catch (Exception ex)
