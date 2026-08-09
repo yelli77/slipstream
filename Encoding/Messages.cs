@@ -185,32 +185,26 @@ namespace StarTruckMP.Encoding
         {
             try
             {
-                var myTruck = StarTruckClient.StarTruckClient.myTruck;
-                if (myTruck == null)
+                // Find any CargoContainer in the scene to clone as visual mesh
+                var allCargo = GameObject.FindObjectsOfType<CargoContainer>();
+                CargoContainer sampleCargo = null;
+                foreach (var cargo in allCargo)
                 {
-                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: myTruck is null, falling back to placeholder.");
-                    return createTrailerPlaceholder(playerId);
-                }
-
-                // Find local player hitched CargoContainer
-                CargoContainer hitchedCargo = null;
-                var hitchPoints = myTruck.GetComponentsInChildren<MaglockHitchPoint>();
-                foreach (var hp in hitchPoints)
-                {
-                    if (hp != null && hp.cargo != null)
+                    if (cargo != null && cargo.gameObject != null)
                     {
-                        hitchedCargo = hp.cargo;
+                        sampleCargo = cargo;
                         break;
                     }
                 }
 
-                if (hitchedCargo == null)
+                if (sampleCargo == null)
                 {
-                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no hitched CargoContainer found, falling back to placeholder.");
+                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no CargoContainer found in scene, falling back to placeholder.");
                     return createTrailerPlaceholder(playerId);
                 }
 
-                GameObject cargoRoot = hitchedCargo.gameObject;
+                GameObject cargoRoot = sampleCargo.gameObject;
+                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 1: cloning CargoContainer {cargoRoot.name}");
                 StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}] checkpoint 1: found CargoContainer {cargoRoot.name}");
 
                 // Instantiate a copy of the cargo container

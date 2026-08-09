@@ -392,6 +392,7 @@ namespace StarTruckMP.StarTruckClient
         }
 
         private static int trailerLogCounter = 0;
+        private const float HitchDistanceThreshold = 10f;
 
         public static void SendTrailerMovement()
         {
@@ -400,30 +401,29 @@ namespace StarTruckMP.StarTruckClient
             CargoContainer hitchedCargo = null;
             try
             {
-                // Scene-wide search: MaglockHitchPoint is NOT a child of the truck
-                var allHitchPoints = GameObject.FindObjectsOfType<MaglockHitchPoint>();
+                // Find the closest CargoContainer to our truck — distance-based hitch detection
+                var allCargo = GameObject.FindObjectsOfType<CargoContainer>();
+                float bestDist = HitchDistanceThreshold;
+                foreach (var cargo in allCargo)
+                {
+                    if (cargo == null) continue;
+                    float dist = Vector3.Distance(myTruck.transform.position, cargo.transform.position);
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        hitchedCargo = cargo;
+                    }
+                }
                 trailerLogCounter++;
                 if (trailerLogCounter % 50 == 1)
                 {
-                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: sceneWide count={allHitchPoints.Length}");
-                    foreach (var hp in allHitchPoints)
-                    {
-                        string cargoName = hp.cargo != null ? hp.cargo.gameObject.name : "null";
-                        StarTruckMP.Log.LogInfo($"  MaglockHitchPoint: obj={hp.gameObject.name}, cargo={cargoName}");
-                    }
-                }
-                foreach (var hp in allHitchPoints)
-                {
-                    if (hp != null && hp.cargo != null)
-                    {
-                        hitchedCargo = hp.cargo;
-                        break;
-                    }
+                    string found = hitchedCargo != null ? hitchedCargo.gameObject.name : "none";
+                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: {allCargo.Length} CargoContainers in scene, closest={found} dist={bestDist:F1}m");
                 }
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"SendTrailerMovement: hitch lookup failed: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"SendTrailerMovement: cargo lookup failed: {ex.Message}");
             }
 
             bool hitched = hitchedCargo != null;
