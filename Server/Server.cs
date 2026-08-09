@@ -1,4 +1,4 @@
-﻿using Riptide;
+using Riptide;
 using StarTruckMP.Encoding;
 using StarTruckMP.Utilities;
 using System.Collections.Generic;
@@ -11,10 +11,18 @@ namespace StarTruckMP.StarTruckServer
     {
         public static Server server = new Server();
         public static Dictionary<ushort, playerInfo> playerList = new Dictionary<ushort, playerInfo>();
+        private static float nextPositionLogTime = 0f;
+        private const float PositionLogIntervalSeconds = 60f;
 
         public static void FixedUpdate()
         {
             server.Update();
+
+            if (server.IsRunning && Time.realtimeSinceStartup >= nextPositionLogTime)
+            {
+                nextPositionLogTime = Time.realtimeSinceStartup + PositionLogIntervalSeconds;
+                LogPlayerPositionsPeriodically();
+            }
         }
 
         public static void Update()
@@ -22,11 +30,11 @@ namespace StarTruckMP.StarTruckServer
             if (UnityEngine.Input.GetKeyDown(StarTruckMP.hostKey.Value) && !server.IsRunning && !StarTruckClient.StarTruckClient.client.IsConnected)
             {
                 StarTruckMP.Log.LogInfo($"Server Starting");
-                server.Start(7777, 4);
-                StarTruckClient.StarTruckClient.ConnectToServer("127.0.0.1:7777");
                 server.ClientConnected += Server_ClientConnected;
                 server.ClientDisconnected += Server_ClientDisconnected;
                 server.MessageReceived += Server_MessageReceived;
+                server.Start(7777, 4);
+                StarTruckClient.StarTruckClient.ConnectToServer("127.0.0.1:7777");
             }
         }
 
@@ -99,6 +107,34 @@ namespace StarTruckMP.StarTruckServer
                     }
                     break;
 
+                case (ushort)messageType.trailerMovementUpdate:
+                    foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
+
+                    if (foundPlayer)
+                    {
+                        e.Message.GetUShort();
+                        bool hitched = e.Message.GetBool();
+                        float[] trailerTrans = e.Message.GetFloats();
+
+                        Vector3 trailerPos;
+                        trailerPos.x = trailerTrans[0];
+                        trailerPos.y = trailerTrans[1];
+                        trailerPos.z = trailerTrans[2];
+
+                        Vector3 trailerRot;
+                        trailerRot.x = trailerTrans[3];
+                        trailerRot.y = trailerTrans[4];
+                        trailerRot.z = trailerTrans[5];
+
+                        currentPlayer.trailerHitched = hitched;
+                        currentPlayer.trailerTrans.Pos = trailerPos;
+                        currentPlayer.trailerTrans.Rot = trailerRot;
+                        playerList[e.FromConnection.Id] = currentPlayer;
+
+                        server.SendToAll(Messages.createTrailerMovementMessage(e.FromConnection.Id, hitched, trailerPos, trailerRot));
+                    }
+                    break;
+
                 case (ushort)messageType.updateSector:
                     foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
 
@@ -146,7 +182,7 @@ namespace StarTruckMP.StarTruckServer
 
         public static void Server_ClientConnected(object sender, ServerConnectedEventArgs e)
         {
-            StarTruckMP.Log.LogInfo($"Client Connected");
+            StarTruckMP.Log.LogInfo($"Client Connected: {e.Client.Id}");
             Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.clientJoin);
             message.AddUShorts(playerList.Keys.ToArray<ushort>());
             foreach (var p in playerList.Values)
@@ -162,8 +198,29 @@ namespace StarTruckMP.StarTruckServer
             server.Send(message, e.Client);
 
             playerInfo newPlayer = new playerInfo();
+            newPlayer.sector = "none";
             playerList.Add(e.Client.Id, newPlayer);
+
+            Message joinBroadcast = Message.Create(MessageSendMode.Reliable, (ushort)messageType.playerConnected);
+            joinBroadcast.AddUShort(e.Client.Id);
+            server.SendToAll(joinBroadcast, e.Client.Id);
         }
 
+        public static void LogPlayerPositionsPeriodically()
+        {
+            var origin = StarTruckClient.StarTruckClient.floatingOrigin;
+            Vector3 hostOrigin = origin != null ? origin.m_currentOrigin : Vector3.zero;
+            StarTruckMP.Log.LogInfo($"Position update: hostFloatingOrigin=({hostOrigin.x:F2}, {hostOrigin.y:F2}, {hostOrigin.z:F2}), {playerList.Count} client(s):");
+            if (playerList.Count == 0)
+            {
+                StarTruckMP.Log.LogInfo("Position update: no clients connected.");
+                return;
+            }
+            foreach (var kv in playerList)
+            {
+                var p = kv.Value;
+                StarTruckMP.Log.LogInfo($"  Client {kv.Key}: sector='{p.sector}', truckPos=({p.truckTrans.Pos.x:F2}, {p.truckTrans.Pos.y:F2}, {p.truckTrans.Pos.z:F2}), playerPos=({p.playerTrans.Pos.x:F2}, {p.playerTrans.Pos.y:F2}, {p.playerTrans.Pos.z:F2})");
+            }
+        }
     }
 }
