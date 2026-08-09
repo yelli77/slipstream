@@ -9,7 +9,7 @@ namespace StarTruckMPUpdater
 {
     class Program
     {
-        const string VersionJsonUrl = "https://raw.githubusercontent.com/yelli77/StarTruckMP-builds/main/version.json";
+        const string VersionJsonUrl = "https://api.github.com/repos/yelli77/StarTruckMP-builds/contents/version.json";
         const string BootstrapZipUrl = "https://raw.githubusercontent.com/yelli77/StarTruckMP-builds/main/bootstrap/bepinex-bootstrap.zip";
         const string ConfigFileName = "updater-config.txt";
         const string LocalVersionFileName = "installed-build.txt";
@@ -256,8 +256,11 @@ namespace StarTruckMPUpdater
         {
             using var http = new HttpClient();
             http.DefaultRequestHeaders.Add("User-Agent", "StarTruckMPUpdater");
-            var json = http.GetStringAsync(VersionJsonUrl).GetAwaiter().GetResult();
-            return JsonSerializer.Deserialize<VersionInfo>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var apiJson = http.GetStringAsync(VersionJsonUrl).GetAwaiter().GetResult();
+            using var doc = System.Text.Json.JsonDocument.Parse(apiJson);
+            var content = doc.RootElement.GetProperty("content").GetString();
+            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(content));
+            return JsonSerializer.Deserialize<VersionInfo>(decoded, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
         static byte[] DownloadBytes(string url)
