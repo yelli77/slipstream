@@ -1,4 +1,4 @@
 {
-  build: custom-build-14,
-  url: https://raw.githubusercontent.com/yelli77/StarTruckMP-builds/main/builds/StarTruckMP-custom-build-14.dll.gz
+  "build": "custom-build-14",
+  "url": "https://raw.githubusercontent.com/yelli77/StarTruckMP-builds/main/builds/StarTruckMP-custom-build-14.dll.gz"
 }
