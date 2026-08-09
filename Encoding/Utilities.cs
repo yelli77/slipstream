@@ -9,15 +9,20 @@ namespace StarTruckMP.Utilities
         movementUpdate,
         chatMessage,
         updateSector,
-        updateLivery
+        updateLivery,
+        playerConnected,
+        trailerMovementUpdate
     }
 
     public struct playerInfo
     {
         public GameObject Player;
         public GameObject Truck;
+        public GameObject Trailer;
         public movementTrans playerTrans;
         public movementTrans truckTrans;
+        public movementTrans trailerTrans;
+        public bool trailerHitched;
         public string Name;
         public string sector;
         public bool seated;
