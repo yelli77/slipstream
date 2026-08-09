@@ -110,6 +110,8 @@ namespace StarTruckMP.StarTruckServer
                 case (ushort)messageType.trailerMovementUpdate:
                     foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
 
+                    StarTruckMP.Log.LogInfo($"Server received trailerMovementUpdate from client {e.FromConnection.Id}, foundInList={foundPlayer}");
+
                     if (foundPlayer)
                     {
                         e.Message.GetUShort();

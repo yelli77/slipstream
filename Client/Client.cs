@@ -391,6 +391,8 @@ namespace StarTruckMP.StarTruckClient
 
         }
 
+        private static int trailerLogCounter = 0;
+
         public static void SendTrailerMovement()
         {
             if (myTruck == null || floatingOrigin == null) return;
@@ -399,6 +401,15 @@ namespace StarTruckMP.StarTruckClient
             try
             {
                 var hitchPoints = myTruck.GetComponentsInChildren<MaglockHitchPoint>();
+                trailerLogCounter++;
+                if (trailerLogCounter % 50 == 1)
+                {
+                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitchPoints.Count={hitchPoints.Length}, myTruck={myTruck.name}, children={myTruck.transform.childCount}");
+                    foreach (var hp in hitchPoints)
+                    {
+                        StarTruckMP.Log.LogInfo($"  MaglockHitchPoint: hp={hp != null}, cargo={(hp != null ? hp.cargo?.ToString() ?? "null" : "N/A")}");
+                    }
+                }
                 foreach (var hp in hitchPoints)
                 {
                     if (hp != null && hp.cargo != null)
