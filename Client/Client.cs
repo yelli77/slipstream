@@ -253,6 +253,21 @@ namespace StarTruckMP.StarTruckClient
                                 currentPlayer.playerTrans.Rot = playerRot;
                                 currentPlayer.playerTrans.Vel = playerVel;
                                 currentPlayer.playerTrans.AngVel = playerAngVel;
+                                // Player is seated — hide suit
+                                if (currentPlayer.Player != null)
+                                {
+                                    var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
+                                    if (suitR != null && suitR.enabled) suitR.enabled = false;
+                                }
+                            }
+                            else
+                            {
+                                // Player is outside truck (EVA) — show suit
+                                if (currentPlayer.Player != null)
+                                {
+                                    var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
+                                    if (suitR != null && !suitR.enabled) suitR.enabled = true;
+                                }
                             }
                         }
                         else
@@ -507,6 +522,13 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector);
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
+                clientInfo.NameLabel = player.NameLabel;
+                // Hide spacesuit by default — only show when player is outside truck (EVA)
+                if (clientInfo.Player != null)
+                {
+                    var suitRenderer = clientInfo.Player.GetComponentInChildren<MeshRenderer>();
+                    if (suitRenderer != null) suitRenderer.enabled = false;
+                }
                 playerList[clientId] = clientInfo;
                 StarTruckMP.Log.LogInfo($"Spawn result for player {clientId}: truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}");
             }
@@ -539,7 +561,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     p.NameLabel.transform.position = p.Truck != null
                         ? p.Truck.transform.position + new Vector3(0, 3f, 0)
-                        : p.truckTrans.Pos - floatingOrigin.m_currentOrigin + new Vector3(0, 3f, 0);
+                        : p.truckTrans.Pos - floatingOrigin.m_currentOrigin + new Vector3(0, 4f, 0);
                 }
             }
         }
