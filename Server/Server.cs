@@ -136,7 +136,22 @@ namespace StarTruckMP.StarTruckServer
                     }
                     break;
 
-                case (ushort)messageType.updateSector:
+                case (ushort)messageType.setPlayerName:
+                    foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
+
+                    if (foundPlayer)
+                    {
+                        e.Message.GetUShort();
+                        string newName = e.Message.GetString();
+                        currentPlayer.Name = newName;
+                        playerList[e.FromConnection.Id] = currentPlayer;
+
+                        Message nameMsg = Messages.createPlayerNameMessage(e.FromConnection.Id, newName);
+                        server.SendToAll(nameMsg);
+                    }
+                    break;
+
+            case (ushort)messageType.updateSector:
                     foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
 
                     if (foundPlayer)
@@ -195,6 +210,7 @@ namespace StarTruckMP.StarTruckServer
                 message.AddFloat(p.truckTrans.Rot.y);
                 message.AddFloat(p.truckTrans.Rot.z);
                 message.AddString(p.sector);
+                message.AddString(p.Name ?? "");
             }
             server.Send(message, e.Client);
 
@@ -213,6 +229,7 @@ namespace StarTruckMP.StarTruckServer
 
             Message joinBroadcast = Message.Create(MessageSendMode.Reliable, (ushort)messageType.playerConnected);
             joinBroadcast.AddUShort(e.Client.Id);
+            joinBroadcast.AddString("");
             server.SendToAll(joinBroadcast, e.Client.Id);
         }
 

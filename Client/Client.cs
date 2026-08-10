@@ -151,6 +151,16 @@ namespace StarTruckMP.StarTruckClient
         public static void Client_Connected(object sender, EventArgs e)
         {
             StarTruckMP.Log.LogInfo($"Connected to Server");
+            try
+            {
+                string myName = StarTruckMP.PlayerName.Value;
+                client.Send(Messages.createPlayerNameMessage(client.Id, myName));
+                StarTruckMP.Log.LogInfo($"Sent player name: '{myName}'");
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"Failed to send player name: {ex.Message}");
+            }
             OnArrivedAtSector();
         }
 
@@ -176,10 +186,12 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 pPos = new Vector3(e.Message.GetFloat(), e.Message.GetFloat(), e.Message.GetFloat());
                     Vector3 pRot = new Vector3(e.Message.GetFloat(), e.Message.GetFloat(), e.Message.GetFloat());
                     string sector = e.Message.GetString();
+                    string remoteName = e.Message.GetString();
                     if (!playerList.ContainsKey(id))
                     {
                         playerInfo newPlayer = new playerInfo();
                         newPlayer.sector = sector;
+                        newPlayer.Name = remoteName;
                         newPlayer.truckTrans.Pos = pPos;
                         newPlayer.truckTrans.Rot = pRot;
                         newPlayer.playerTrans.Pos = pPos;
@@ -193,10 +205,12 @@ namespace StarTruckMP.StarTruckClient
             if (e.MessageId == (ushort)messageType.playerConnected)
             {
                 ushort id = e.Message.GetUShort();
+                string remoteName = e.Message.GetString();
                 if (!playerList.ContainsKey(id))
                 {
                     playerInfo newPlayer = new playerInfo();
                     newPlayer.sector = "none";
+                    newPlayer.Name = remoteName;
                     playerList.Add(id, newPlayer);
                 }
             }
@@ -318,6 +332,22 @@ namespace StarTruckMP.StarTruckClient
                         }
 
                         playerList[playerId] = currentPlayer;
+                    }
+                }
+            }
+
+            if (e.MessageId == (ushort)messageType.setPlayerName)
+            {
+                ushort namePlayerId = e.Message.GetUShort();
+                string newName = e.Message.GetString();
+                if (namePlayerId != client.Id)
+                {
+                    playerInfo currentPlayer;
+                    if (playerList.TryGetValue(namePlayerId, out currentPlayer))
+                    {
+                        currentPlayer.Name = newName;
+                        playerList[namePlayerId] = currentPlayer;
+                        StarTruckMP.Log.LogInfo($"Player {namePlayerId} name set to '{newName}'");
                     }
                 }
             }
@@ -509,7 +539,7 @@ namespace StarTruckMP.StarTruckClient
             else if (clientInfo.sector == currentSector && clientInfo.Truck == null)
             {
                 StarTruckMP.Log.LogInfo($"Spawning player {clientId} in sector '{currentSector}' at pos {playerList[clientId].truckTrans.Pos}");
-                playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector);
+                playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector, playerList[clientId].Name);
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
                 clientInfo.NameLabel = player.NameLabel;

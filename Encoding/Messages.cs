@@ -7,7 +7,7 @@ namespace StarTruckMP.Encoding
 {
     internal class Messages
     {
-        public static playerInfo createPlayer(ushort playerId, Vector3 position, Vector3 rotation, string sector)
+        public static playerInfo createPlayer(ushort playerId, Vector3 position, Vector3 rotation, string sector, string playerName)
         {
             try
             {
@@ -143,7 +143,8 @@ namespace StarTruckMP.Encoding
                 currentPlayer.playerTrans.Pos = position;
                 currentPlayer.playerTrans.Rot = rotation;
 
-                currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
+                string displayName = (!string.IsNullOrEmpty(playerName)) ? playerName : "Player " + playerId;
+                currentPlayer.NameLabel = CreateNameLabel(displayName, playerId);
 
                 return currentPlayer;
             }
@@ -261,6 +262,14 @@ namespace StarTruckMP.Encoding
                 StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}] failed: {ex.Message}, falling back to placeholder.");
                 return createTrailerPlaceholder(playerId);
             }
+        }
+
+        public static Message createPlayerNameMessage(ushort playerId, string name)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.setPlayerName);
+            message.AddUShort(playerId);
+            message.AddString(name ?? "");
+            return message;
         }
 
         public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat)
