@@ -137,7 +137,6 @@ namespace StarTruckMP.StarTruckClient
                 GameObject.Destroy(player.Player);
                 GameObject.Destroy(player.Truck);
                 if (player.Trailer != null) GameObject.Destroy(player.Trailer);
-                if (player.NameLabel != null) GameObject.Destroy(player.NameLabel);
             }
             ushort[] keys = playerList.Keys.ToArray<ushort>();
             foreach (var pId in keys) { playerList.Remove(pId); }
@@ -322,7 +321,6 @@ namespace StarTruckMP.StarTruckClient
                 GameObject.Destroy(clientInfo.Truck);
                 GameObject.Destroy(clientInfo.Player);
                 if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
-                if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
                 playerList.Remove(clientId);
             }
 
@@ -492,7 +490,6 @@ namespace StarTruckMP.StarTruckClient
                     GameObject.Destroy(clientInfo.Truck);
                     GameObject.Destroy(clientInfo.Player);
                     if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
-                    if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
                     clientInfo.Truck = null;
                     clientInfo.Player = null;
                     clientInfo.Trailer = null;

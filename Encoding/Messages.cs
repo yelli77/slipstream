@@ -133,43 +133,10 @@ namespace StarTruckMP.Encoding
                 newPlayer.transform.eulerAngles = rotation;
                 StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 9: initial transform set to ({position.x:F2}, {position.y:F2}, {position.z:F2}) (world pos was ({newTruck.transform.position.x:F2}, {newTruck.transform.position.y:F2}, {newTruck.transform.position.z:F2}))");
 
-                // Create name label above truck (3D TextMesh)
-                GameObject nameLabel = null;
-                try
-                {
-                    GameObject labelGO = new GameObject("NameLabel" + playerId);
-                    labelGO.transform.SetParent(newTruck.transform, false);
-                    labelGO.transform.localPosition = new Vector3(0f, 4f, 0f);
-                    labelGO.transform.localRotation = Quaternion.identity;
-
-                    TextMesh textMesh = labelGO.AddComponent<TextMesh>();
-                    textMesh.text = $"Spieler {playerId}";
-                    textMesh.fontSize = 48;
-                    textMesh.characterSize = 0.08f;
-                    textMesh.anchor = TextAnchor.MiddleCenter;
-                    textMesh.alignment = TextAlignment.Center;
-                    textMesh.color = Color.yellow;
-                    textMesh.fontStyle = FontStyle.Bold;
-
-                    // Set font to Arial (always available)
-                    textMesh.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                    if (textMesh.font == null)
-                    {
-                        textMesh.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                    }
-
-
-                    nameLabel = labelGO;
-                }
-                catch (System.Exception ex)
-                {
-                    StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: label creation failed: {ex.Message}");
-                }
 
                 playerInfo currentPlayer = new playerInfo();
                 currentPlayer.Player = newPlayer;
                 currentPlayer.Truck = newTruck;
-                currentPlayer.NameLabel = nameLabel;
                 currentPlayer.sector = sector;
                 currentPlayer.truckTrans.Pos = position;
                 currentPlayer.truckTrans.Rot = rotation;
