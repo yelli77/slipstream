@@ -346,6 +346,15 @@ namespace StarTruckMP.StarTruckClient
                     if (playerList.TryGetValue(namePlayerId, out currentPlayer))
                     {
                         currentPlayer.Name = newName;
+                        if (currentPlayer.NameLabel != null)
+                        {
+                            GameObject.Destroy(currentPlayer.NameLabel);
+                            currentPlayer.NameLabel = null;
+                        }
+                        if (currentPlayer.Truck != null && !string.IsNullOrEmpty(newName))
+                        {
+                            currentPlayer.NameLabel = Encoding.Messages.CreateNameLabel(newName, namePlayerId);
+                        }
                         playerList[namePlayerId] = currentPlayer;
                         StarTruckMP.Log.LogInfo($"Player {namePlayerId} name set to '{newName}'");
                     }
