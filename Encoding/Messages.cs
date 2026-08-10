@@ -397,7 +397,7 @@ namespace StarTruckMP.Encoding
                 TextGenerator textGen = new TextGenerator();
                 var settings = new TextGenerationSettings();
                 settings.font = font;
-                settings.fontSize = 28;
+                settings.fontSize = 80;
                 settings.fontStyle = FontStyle.Bold;
                 settings.textAnchor = TextAnchor.MiddleCenter;
                 settings.color = Color.yellow;
@@ -409,7 +409,7 @@ namespace StarTruckMP.Encoding
                 settings.resizeTextMaxSize = 40;
                 settings.horizontalOverflow = HorizontalWrapMode.Overflow;
                 settings.verticalOverflow = VerticalWrapMode.Overflow;
-                settings.generationExtents = new Vector2(600, 100);
+                settings.generationExtents = new Vector2(1200, 200);
                 settings.pivot = new Vector2(0.5f, 0.5f);
                 settings.updateBounds = true;
                 settings.generateOutOfBounds = true;
@@ -446,8 +446,9 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+2;
-                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i+3;
+                    // Reversed winding for correct front-face rendering
+                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i;
+                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
@@ -455,7 +456,7 @@ namespace StarTruckMP.Encoding
 
                 // Scale to ~3.8m wide
                 Bounds bounds = mesh.bounds;
-                float targetW = 3.8f;
+                float targetW = 12f;
                 float scale = (bounds.size.x > 0) ? (targetW / bounds.size.x) : 0.01f;
 
                 MeshFilter mf = labelObj.AddComponent<MeshFilter>();
