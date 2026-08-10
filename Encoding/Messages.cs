@@ -391,36 +391,6 @@ namespace StarTruckMP.Encoding
                 SceneManager.MoveGameObjectToScene(labelObj, sectorGO.scene);
                 labelObj.transform.SetParent(null);
 
-                // Dark background quad
-                GameObject bgObj = new GameObject("NameLabelBg_" + playerId);
-                SceneManager.MoveGameObjectToScene(bgObj, labelObj.scene);
-                bgObj.transform.SetParent(labelObj.transform);
-                bgObj.transform.localPosition = new Vector3(0, 0, 0.01f);
-
-                MeshFilter bgMf = bgObj.AddComponent<MeshFilter>();
-                Mesh bgMesh = new Mesh();
-                float bgW = 13f, bgH = 3f;
-                bgMesh.vertices = new Vector3[]
-                {
-                    new Vector3(-bgW/2, -bgH/2, 0),
-                    new Vector3(-bgW/2,  bgH/2, 0),
-                    new Vector3( bgW/2,  bgH/2, 0),
-                    new Vector3( bgW/2, -bgH/2, 0),
-                };
-                bgMesh.uv = new Vector2[] { new Vector2(0,0), new Vector2(0,1), new Vector2(1,1), new Vector2(1,0) };
-                bgMesh.triangles = new int[] { 0,1,2, 2,3,0 };
-                bgMesh.RecalculateNormals();
-                bgMf.mesh = bgMesh;
-
-                MeshRenderer bgMr = bgObj.AddComponent<MeshRenderer>();
-                Material bgMat = new Material(Shader.Find("Standard"));
-                bgMat.color = new Color(0f, 0f, 0f, 1f);
-                bgMr.material = bgMat;
-                bgMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                bgMr.receiveShadows = false;
-                bgMr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-                bgMr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-
                 // Text mesh
                 TextGenerator textGen = new TextGenerator();
                 var settings = new TextGenerationSettings();
