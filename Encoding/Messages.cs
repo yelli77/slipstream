@@ -144,6 +144,14 @@ namespace StarTruckMP.Encoding
                 currentPlayer.playerTrans.Rot = rotation;
 
                 currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
+                if (currentPlayer.NameLabel != null && newTruck != null)
+                {
+                    // Parent label to truck so it follows automatically
+                    currentPlayer.NameLabel.transform.SetParent(newTruck.transform);
+                    currentPlayer.NameLabel.transform.localPosition = new Vector3(0, 18f, 0);
+                    // Make label face camera via billboard rotation
+                    currentPlayer.NameLabel.transform.localRotation = Quaternion.identity;
+                }
 
                 return currentPlayer;
             }
@@ -384,10 +392,13 @@ namespace StarTruckMP.Encoding
                 if (tmpTexts != null && tmpTexts.Length > 0)
                 {
                     var source = tmpTexts[0];
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found TMP source '{source.name}'");
+
+                    // Clone and parent to the truck — will follow it as a child
+                    // The truck transform is passed separately, store it for later parenting
                     GameObject clone = GameObject.Instantiate(source.gameObject);
                     clone.name = "NameLabel_" + playerId;
                     SceneManager.MoveGameObjectToScene(clone, sectorGO.scene);
-                    clone.transform.SetParent(null);
 
                     var tmp = clone.GetComponent<TMPro.TextMeshProUGUI>();
                     if (tmp != null)
@@ -397,9 +408,11 @@ namespace StarTruckMP.Encoding
                         tmp.alignment = TMPro.TextAlignmentOptions.Center;
                         tmp.color = Color.yellow;
                         tmp.enableAutoSizing = false;
+                        // Disable raycast target to avoid blocking clicks
+                        tmp.raycastTarget = false;
                     }
 
-                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloned TMP text from '{source.name}'");
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloned TMP, returning");
                     return clone;
                 }
 
