@@ -380,7 +380,7 @@ namespace StarTruckMP.Encoding
                 if (sectorGO == null) return null;
 
                 Font font = null;
-                try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
+                try { font = Font.CreateDynamicFontFromOSFont("Arial", 80); } catch { }
                 if (font == null)
                 {
                     StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no font available");
