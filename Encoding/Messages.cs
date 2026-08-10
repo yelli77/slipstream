@@ -143,6 +143,13 @@ namespace StarTruckMP.Encoding
                 currentPlayer.playerTrans.Pos = position;
                 currentPlayer.playerTrans.Rot = rotation;
 
+                // Create name label above truck
+                currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
+                if (currentPlayer.NameLabel != null)
+                {
+                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 3f, 0);
+                }
+
                 return currentPlayer;
             }
             catch (System.Exception ex)
@@ -363,6 +370,140 @@ namespace StarTruckMP.Encoding
             if (comp != null)
             {
                 GameObject.Destroy(comp);
+            }
+        }
+
+        /// <summary>
+        /// Creates a world-space name label above a remote player truck using TextGenerator + Mesh.
+        /// Returns the label GameObject, or null on failure.
+        /// </summary>
+        public static GameObject CreateNameLabel(string name, ushort playerId)
+        {
+            try
+            {
+                // Try to find a font in the scene first (most reliable in IL2CPP)
+                Font font = null;
+                var existingTexts = GameObject.FindObjectsOfType<TextMesh>();
+                foreach (var tm in existingTexts)
+                {
+                    if (tm != null && tm.font != null)
+                    {
+                        font = tm.font;
+                        break;
+                    }
+                }
+                // Fallback: try OS font
+                if (font == null)
+                {
+                    try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
+                }
+                if (font == null)
+                {
+                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no font available");
+                    return null;
+                }
+
+                // Create label GameObject
+                GameObject labelObj = new GameObject("NameLabel_" + playerId);
+                var sectorGO = GameObject.Find("[Sector]");
+                if (sectorGO != null)
+                    SceneManager.MoveGameObjectToScene(labelObj, sectorGO.scene);
+                labelObj.transform.SetParent(null);
+
+                // Configure TextGenerator
+                TextGenerator textGen = new TextGenerator();
+                var settings = new TextGenerationSettings();
+                settings.font = font;
+                settings.fontSize = 14;
+                settings.fontStyle = FontStyle.Bold;
+                settings.textAnchor = TextAnchor.MiddleCenter;
+                settings.color = Color.white;
+                settings.scaleFactor = 1f;
+                settings.lineSpacing = 1f;
+                settings.richText = false;
+                settings.resizeTextForBestFit = false;
+                settings.resizeTextMinSize = 10;
+                settings.resizeTextMaxSize = 40;
+                settings.horizontalOverflow = HorizontalWrapMode.Overflow;
+                settings.verticalOverflow = VerticalWrapMode.Overflow;
+                settings.generationExtents = new Vector2(400, 50);
+                settings.pivot = new Vector2(0.5f, 0.5f);
+                settings.updateBounds = true;
+                settings.generateOutOfBounds = true;
+                settings.alignByGeometry = false;
+
+                textGen.Populate(name, settings);
+                var vertList = new Il2CppSystem.Collections.Generic.List<UIVertex>();
+                textGen.GetVertices(vertList);
+                UIVertex[] uiVerts = vertList.ToArray();
+
+                if (uiVerts == null || uiVerts.Length == 0)
+                {
+                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: TextGenerator produced no vertices for name");
+                    GameObject.Destroy(labelObj);
+                    return null;
+                }
+
+                // Convert UIVertex[] to Mesh
+                Mesh mesh = new Mesh();
+                Vector3[] verts = new Vector3[uiVerts.Length];
+                Vector2[] uvs = new Vector2[uiVerts.Length];
+                Color32[] colors = new Color32[uiVerts.Length];
+
+                for (int i = 0; i < uiVerts.Length; i++)
+                {
+                    verts[i] = uiVerts[i].position;
+                    uvs[i] = uiVerts[i].uv0;
+                    colors[i] = uiVerts[i].color;
+                }
+
+                mesh.vertices = verts;
+                mesh.uv = uvs;
+                mesh.colors32 = colors;
+
+                // TextGenerator triangle pattern: every 4 vertices = 1 quad = 2 triangles
+                int quadCount = uiVerts.Length / 4;
+                int[] tris = new int[quadCount * 6];
+                int triIdx = 0;
+                for (int i = 0; i < uiVerts.Length; i += 4)
+                {
+                    tris[triIdx++] = i;
+                    tris[triIdx++] = i + 1;
+                    tris[triIdx++] = i + 2;
+                    tris[triIdx++] = i + 2;
+                    tris[triIdx++] = i + 1;
+                    tris[triIdx++] = i + 3;
+                }
+                mesh.triangles = tris;
+                mesh.RecalculateNormals();
+                mesh.RecalculateBounds();
+
+                // Scale: TextGenerator outputs pixel coords -> convert to world units
+                Bounds bounds = mesh.bounds;
+                float targetWidth = 2.5f;
+                float pixelWidth = bounds.size.x;
+                float scaleFactor = (pixelWidth > 0) ? (targetWidth / pixelWidth) : 0.01f;
+
+                labelObj.transform.localScale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
+
+                // Add MeshFilter + MeshRenderer
+                MeshFilter mf = labelObj.AddComponent<MeshFilter>();
+                mf.mesh = mesh;
+
+                MeshRenderer mr = labelObj.AddComponent<MeshRenderer>();
+                mr.material = font.material;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: created with {uiVerts.Length} verts, scale={scaleFactor:F4}");
+                return labelObj;
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}] failed: {ex.Message}");
+                return null;
             }
         }
     }

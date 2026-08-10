@@ -27,6 +27,7 @@ namespace StarTruckMP.Utilities
         public string sector;
         public bool seated;
         public string livery;
+        public GameObject NameLabel;
     }
 
     public struct movementTrans

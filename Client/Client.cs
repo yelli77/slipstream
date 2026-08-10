@@ -37,6 +37,7 @@ namespace StarTruckMP.StarTruckClient
         {
             client.Update();
             ReanchorRemotePlayersToFloatingOrigin();
+            BillboardNameLabels();
 
             if (client.IsConnected && Time.realtimeSinceStartup >= nextPositionLogTime)
             {
@@ -134,6 +135,7 @@ namespace StarTruckMP.StarTruckClient
 
             foreach (var player in playerList.Values)
             {
+                if (player.NameLabel != null) GameObject.Destroy(player.NameLabel);
                 GameObject.Destroy(player.Player);
                 GameObject.Destroy(player.Truck);
                 if (player.Trailer != null) GameObject.Destroy(player.Trailer);
@@ -318,6 +320,7 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo clientInfo;
                 playerList.TryGetValue(clientId, out clientInfo);
 
+                if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
                 GameObject.Destroy(clientInfo.Truck);
                 GameObject.Destroy(clientInfo.Player);
                 if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
@@ -487,12 +490,14 @@ namespace StarTruckMP.StarTruckClient
                 if (clientInfo.Truck != null)
                 {
                     StarTruckMP.Log.LogInfo($"Despawning player {clientId} (different sector)");
+                    if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
                     GameObject.Destroy(clientInfo.Truck);
                     GameObject.Destroy(clientInfo.Player);
                     if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
                     clientInfo.Truck = null;
                     clientInfo.Player = null;
                     clientInfo.Trailer = null;
+                    clientInfo.NameLabel = null;
                     playerList[clientId] = clientInfo;
                 }
             }
@@ -529,6 +534,41 @@ namespace StarTruckMP.StarTruckClient
                 if (p.Trailer != null)
                 {
                     p.Trailer.transform.position = p.trailerTrans.Pos - floatingOrigin.m_currentOrigin;
+                }
+                if (p.NameLabel != null)
+                {
+                    p.NameLabel.transform.position = p.Truck != null
+                        ? p.Truck.transform.position + new Vector3(0, 3f, 0)
+                        : p.truckTrans.Pos - floatingOrigin.m_currentOrigin + new Vector3(0, 3f, 0);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Makes all name labels face the camera (billboard effect).
+        /// Called every frame from the update loop.
+        /// </summary>
+        public static void BillboardNameLabels()
+        {
+            Camera cam = Camera.main;
+            if (cam == null) return;
+
+            foreach (var kv in playerList)
+            {
+                var p = kv.Value;
+                if (p.NameLabel != null && p.NameLabel.activeInHierarchy)
+                {
+                    // Position above truck
+                    if (p.Truck != null)
+                    {
+                        p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 3f, 0);
+                    }
+                    // Billboard: face camera
+                    Vector3 dir = p.NameLabel.transform.position - cam.transform.position;
+                    if (dir.sqrMagnitude > 0.001f)
+                    {
+                        p.NameLabel.transform.rotation = Quaternion.LookRotation(dir);
+                    }
                 }
             }
         }
