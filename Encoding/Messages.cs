@@ -446,9 +446,9 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    // Reversed winding for correct front-face rendering
-                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i;
-                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
+                    // Both triangles same winding (clockwise)
+                    tris[ti++] = i+1; tris[ti++] = i+2; tris[ti++] = i;
+                    tris[ti++] = i+1; tris[ti++] = i+3; tris[ti++] = i+2;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
