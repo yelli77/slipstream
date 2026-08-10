@@ -518,6 +518,7 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector);
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
+                clientInfo.NameLabel = player.NameLabel;
                 // Hide spacesuit by default — only show when player is outside truck (EVA)
                 if (clientInfo.Player != null)
                 {
