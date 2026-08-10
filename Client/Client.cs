@@ -245,28 +245,16 @@ namespace StarTruckMP.StarTruckClient
                             currentPlayer.truckTrans.Vel = playerVel;
                             currentPlayer.truckTrans.AngVel = playerAngVel;
 
-                            if (inSeat)
+                            Messages.updateMovement(currentPlayer.Player, playerPos, playerRot, playerVel, playerAngVel);
+                            currentPlayer.playerTrans.Pos = playerPos;
+                            currentPlayer.playerTrans.Rot = playerRot;
+                            currentPlayer.playerTrans.Vel = playerVel;
+                            currentPlayer.playerTrans.AngVel = playerAngVel;
+                            // Player is in truck — hide suit
+                            if (currentPlayer.Player != null)
                             {
-                                Messages.updateMovement(currentPlayer.Player, playerPos, playerRot, playerVel, playerAngVel);
-                                currentPlayer.playerTrans.Pos = playerPos;
-                                currentPlayer.playerTrans.Rot = playerRot;
-                                currentPlayer.playerTrans.Vel = playerVel;
-                                currentPlayer.playerTrans.AngVel = playerAngVel;
-                                // Player is seated — hide suit
-                                if (currentPlayer.Player != null)
-                                {
-                                    var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
-                                    if (suitR != null && suitR.enabled) suitR.enabled = false;
-                                }
-                            }
-                            else
-                            {
-                                // Player is outside truck (EVA) — show suit
-                                if (currentPlayer.Player != null)
-                                {
-                                    var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
-                                    if (suitR != null && !suitR.enabled) suitR.enabled = true;
-                                }
+                                var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
+                                if (suitR != null && suitR.enabled) suitR.enabled = false;
                             }
                         }
                         else
@@ -276,6 +264,12 @@ namespace StarTruckMP.StarTruckClient
                             currentPlayer.playerTrans.Rot = playerRot;
                             currentPlayer.playerTrans.Vel = playerVel;
                             currentPlayer.playerTrans.AngVel = playerAngVel;
+                            // Player is outside truck (EVA) — show suit
+                            if (currentPlayer.Player != null)
+                            {
+                                var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
+                                if (suitR != null && !suitR.enabled) suitR.enabled = true;
+                            }
                         }
                         playerList[playerId] = currentPlayer;
                     }
