@@ -143,6 +143,7 @@ namespace StarTruckMP.Encoding
                 currentPlayer.playerTrans.Pos = position;
                 currentPlayer.playerTrans.Rot = rotation;
 
+                currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
 
                 return currentPlayer;
             }
