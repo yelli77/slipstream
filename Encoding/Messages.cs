@@ -143,12 +143,6 @@ namespace StarTruckMP.Encoding
                 currentPlayer.playerTrans.Pos = position;
                 currentPlayer.playerTrans.Rot = rotation;
 
-                // Create name label above truck
-                currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
-                if (currentPlayer.NameLabel != null)
-                {
-                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 18f, 0);
-                }
 
                 return currentPlayer;
             }
@@ -374,162 +368,67 @@ namespace StarTruckMP.Encoding
         }
 
         /// <summary>
-        /// Creates a world-space name label above a remote player truck using TextGenerator + Mesh.
-        /// Includes a dark semi-transparent background for contrast.
-        /// Returns the label GameObject, or null on failure.
+        /// Creates a name label by cloning an existing TextMeshPro text from the game scene.
+        /// Falls back to a colored quad if no text component is found.
         /// </summary>
         public static GameObject CreateNameLabel(string name, ushort playerId)
         {
             try
             {
-                // Create font from OS (FindObjectsOfType<TextMesh> crashes in IL2CPP too)
-                Font font = null;
-                try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
-                if (font == null)
-                {
-                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no font available");
-                    return null;
-                }
-
-                // Create root label object
-                GameObject labelObj = new GameObject("NameLabel_" + playerId);
                 var sectorGO = GameObject.Find("[Sector]");
-                if (sectorGO != null)
-                    SceneManager.MoveGameObjectToScene(labelObj, sectorGO.scene);
-                labelObj.transform.SetParent(null);
+                if (sectorGO == null) return null;
 
-                // === Background quad (dark semi-transparent) ===
-                GameObject bgObj = new GameObject("NameLabelBg_" + playerId);
-                SceneManager.MoveGameObjectToScene(bgObj, labelObj.scene);
-                bgObj.transform.SetParent(labelObj.transform);
-                bgObj.transform.localPosition = Vector3.zero;
-                bgObj.transform.localScale = new Vector3(1, 1, 1);
-
-                MeshFilter bgMf = bgObj.AddComponent<MeshFilter>();
-                Mesh bgMesh = new Mesh();
-                float bgW = 12.0f;
-                float bgH = 2.4f;
-                bgMesh.vertices = new Vector3[]
+                // Strategy 1: Find existing TextMeshPro text in scene and clone it
+                var tmpTexts = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
+                if (tmpTexts != null && tmpTexts.Length > 0)
                 {
-                    new Vector3(-bgW/2, -bgH/2, 0.01f),
-                    new Vector3(-bgW/2,  bgH/2, 0.01f),
-                    new Vector3( bgW/2,  bgH/2, 0.01f),
-                    new Vector3( bgW/2, -bgH/2, 0.01f),
-                };
-                bgMesh.uv = new Vector2[]
-                {
-                    new Vector2(0, 0), new Vector2(0, 1),
-                    new Vector2(1, 1), new Vector2(1, 0)
-                };
-                bgMesh.triangles = new int[] { 0, 1, 2, 2, 3, 0 };
-                bgMesh.RecalculateNormals();
-                bgMesh.RecalculateBounds();
-                bgMf.mesh = bgMesh;
+                    var source = tmpTexts[0];
+                    GameObject clone = GameObject.Instantiate(source.gameObject);
+                    clone.name = "NameLabel_" + playerId;
+                    SceneManager.MoveGameObjectToScene(clone, sectorGO.scene);
+                    clone.transform.SetParent(null);
 
-                MeshRenderer bgMr = bgObj.AddComponent<MeshRenderer>();
-                Material bgMat = new Material(Shader.Find("Standard"));
-                bgMat.color = new Color(0f, 0f, 0f, 1f);
-                bgMat.SetFloat("_Mode", 3); // render mode = transparent
-                bgMr.material = bgMat;
-                bgMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                bgMr.receiveShadows = false;
-                bgMr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-                bgMr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+                    var tmp = clone.GetComponent<TMPro.TextMeshProUGUI>();
+                    if (tmp != null)
+                    {
+                        tmp.text = name;
+                        tmp.fontSize = 36;
+                        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+                        tmp.color = Color.yellow;
+                        tmp.enableAutoSizing = false;
+                    }
 
-                // === Text mesh ===
-                TextGenerator textGen = new TextGenerator();
-                var settings = new TextGenerationSettings();
-                settings.font = font;
-                settings.fontSize = 120;
-                settings.fontStyle = FontStyle.Bold;
-                settings.textAnchor = TextAnchor.MiddleCenter;
-                settings.color = new Color(1f, 1f, 1f, 1f);
-                settings.scaleFactor = 1f;
-                settings.lineSpacing = 1f;
-                settings.richText = false;
-                settings.resizeTextForBestFit = false;
-                settings.resizeTextMinSize = 10;
-                settings.resizeTextMaxSize = 40;
-                settings.horizontalOverflow = HorizontalWrapMode.Overflow;
-                settings.verticalOverflow = VerticalWrapMode.Overflow;
-                settings.generationExtents = new Vector2(600, 100);
-                settings.pivot = new Vector2(0.5f, 0.5f);
-                settings.updateBounds = true;
-                settings.generateOutOfBounds = true;
-                settings.alignByGeometry = false;
-
-                textGen.Populate(name, settings);
-                var vertList = new Il2CppSystem.Collections.Generic.List<UIVertex>();
-                textGen.GetVertices(vertList);
-                UIVertex[] uiVerts = vertList.ToArray();
-
-                if (uiVerts == null || uiVerts.Length == 0)
-                {
-                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: TextGenerator produced no vertices for name");
-                    GameObject.Destroy(labelObj);
-                    return null;
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloned TMP text from '{source.name}'");
+                    return clone;
                 }
 
-                Mesh mesh = new Mesh();
-                Vector3[] verts = new Vector3[uiVerts.Length];
-                Vector2[] uvs = new Vector2[uiVerts.Length];
-                Color32[] colors = new Color32[uiVerts.Length];
-
-                for (int i = 0; i < uiVerts.Length; i++)
+                // Strategy 2: Find existing TextMesh (legacy) in scene and clone it
+                var textMeshes = GameObject.FindObjectsOfType<TextMesh>();
+                if (textMeshes != null && textMeshes.Length > 0)
                 {
-                    verts[i] = uiVerts[i].position;
-                    uvs[i] = uiVerts[i].uv0;
-                    colors[i] = uiVerts[i].color;
+                    var source = textMeshes[0];
+                    GameObject clone = GameObject.Instantiate(source.gameObject);
+                    clone.name = "NameLabel_" + playerId;
+                    SceneManager.MoveGameObjectToScene(clone, sectorGO.scene);
+                    clone.transform.SetParent(null);
+
+                    var tm = clone.GetComponent<TextMesh>();
+                    if (tm != null)
+                    {
+                        tm.text = name;
+                        tm.fontSize = 80;
+                        tm.characterSize = 0.1f;
+                        tm.anchor = TextAnchor.MiddleCenter;
+                        tm.alignment = TextAlignment.Center;
+                        tm.color = Color.yellow;
+                    }
+
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloned TextMesh from '{source.name}'");
+                    return clone;
                 }
 
-                mesh.vertices = verts;
-                mesh.uv = uvs;
-                mesh.colors32 = colors;
-
-                int quadCount = uiVerts.Length / 4;
-                int[] tris = new int[quadCount * 6];
-                int triIdx = 0;
-                for (int i = 0; i < uiVerts.Length; i += 4)
-                {
-                    tris[triIdx++] = i;
-                    tris[triIdx++] = i + 1;
-                    tris[triIdx++] = i + 2;
-                    tris[triIdx++] = i + 2;
-                    tris[triIdx++] = i + 1;
-                    tris[triIdx++] = i + 3;
-                }
-                mesh.triangles = tris;
-                mesh.RecalculateNormals();
-                mesh.RecalculateBounds();
-
-                // Scale: text coords are in pixels, we want about 3m wide label
-                Bounds bounds = mesh.bounds;
-                float targetWidth = 11.4f;
-                float pixelWidth = bounds.size.x;
-                float textScale = (pixelWidth > 0) ? (targetWidth / pixelWidth) : 0.01f;
-
-                // Text mesh child
-                GameObject textObj = new GameObject("NameLabelTxt_" + playerId);
-                SceneManager.MoveGameObjectToScene(textObj, labelObj.scene);
-                textObj.transform.SetParent(labelObj.transform);
-                textObj.transform.localPosition = new Vector3(0, 0, 0.02f);
-                textObj.transform.localScale = new Vector3(textScale, textScale, textScale);
-
-                MeshFilter mf = textObj.AddComponent<MeshFilter>();
-                mf.mesh = mesh;
-
-                MeshRenderer mr = textObj.AddComponent<MeshRenderer>();
-                // Use UI/Default shader with font texture for correct atlas rendering
-                Material textMat = new Material(Shader.Find("UI/Default"));
-                textMat.mainTexture = font.material.mainTexture;
-                mr.material = textMat;
-                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                mr.receiveShadows = false;
-                mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-                mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-
-                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: created '{name}' ({uiVerts.Length} verts, textScale={textScale:F4})");
-                return labelObj;
+                StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no text components found in scene");
+                return null;
             }
             catch (System.Exception ex)
             {

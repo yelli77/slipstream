@@ -15,7 +15,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-34";
+    public const string customBuildNumber = "custom-build-35";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -32,6 +32,7 @@ public class StarTruckMP : BasePlugin
         joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
         hostKey = Config.Bind("Keybinds", "HostKey", UnityEngine.KeyCode.RightBracket, "Set the Key to press for hosting a server");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
+
     }
 
     [HarmonyPatch]
