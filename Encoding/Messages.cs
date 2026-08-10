@@ -435,7 +435,7 @@ namespace StarTruckMP.Encoding
                 for (int i = 0; i < uiVerts.Length; i++)
                 {
                     verts[i] = uiVerts[i].position;
-                    uvs[i] = new Vector2(uiVerts[i].uv0.x, 1f - uiVerts[i].uv0.y);
+                    uvs[i] = uiVerts[i].uv0;
                     colors[i] = uiVerts[i].color;
                 }
                 mesh.vertices = verts;
