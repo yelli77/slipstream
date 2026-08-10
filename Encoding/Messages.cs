@@ -381,22 +381,9 @@ namespace StarTruckMP.Encoding
         {
             try
             {
-                // Try to find a font in the scene first (most reliable in IL2CPP)
+                // Create font from OS (FindObjectsOfType<TextMesh> crashes in IL2CPP too)
                 Font font = null;
-                var existingTexts = GameObject.FindObjectsOfType<TextMesh>();
-                foreach (var tm in existingTexts)
-                {
-                    if (tm != null && tm.font != null)
-                    {
-                        font = tm.font;
-                        break;
-                    }
-                }
-                // Fallback: try OS font
-                if (font == null)
-                {
-                    try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
-                }
+                try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
                 if (font == null)
                 {
                     StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no font available");
