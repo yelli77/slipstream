@@ -369,8 +369,8 @@ namespace StarTruckMP.Encoding
         }
 
         /// <summary>
-        /// Creates a name label by cloning an existing TextMeshPro text from the game scene.
-        /// Falls back to a colored quad if no text component is found.
+        /// Creates a world-space name label using TextGenerator + Mesh.
+        /// Includes dark background quad for contrast.
         /// </summary>
         public static GameObject CreateNameLabel(string name, ushort playerId)
         {
@@ -379,7 +379,6 @@ namespace StarTruckMP.Encoding
                 var sectorGO = GameObject.Find("[Sector]");
                 if (sectorGO == null) return null;
 
-                // Find a font: try OS font
                 Font font = null;
                 try { font = Font.CreateDynamicFontFromOSFont("Arial", 16); } catch { }
                 if (font == null)
@@ -388,12 +387,41 @@ namespace StarTruckMP.Encoding
                     return null;
                 }
 
-                // Create root label object
                 GameObject labelObj = new GameObject("NameLabel_" + playerId);
                 SceneManager.MoveGameObjectToScene(labelObj, sectorGO.scene);
                 labelObj.transform.SetParent(null);
 
-                // Generate text mesh using TextGenerator
+                // Dark background quad
+                GameObject bgObj = new GameObject("NameLabelBg_" + playerId);
+                SceneManager.MoveGameObjectToScene(bgObj, labelObj.scene);
+                bgObj.transform.SetParent(labelObj.transform);
+                bgObj.transform.localPosition = new Vector3(0, 0, 0.01f);
+
+                MeshFilter bgMf = bgObj.AddComponent<MeshFilter>();
+                Mesh bgMesh = new Mesh();
+                float bgW = 13f, bgH = 3f;
+                bgMesh.vertices = new Vector3[]
+                {
+                    new Vector3(-bgW/2, -bgH/2, 0),
+                    new Vector3(-bgW/2,  bgH/2, 0),
+                    new Vector3( bgW/2,  bgH/2, 0),
+                    new Vector3( bgW/2, -bgH/2, 0),
+                };
+                bgMesh.uv = new Vector2[] { new Vector2(0,0), new Vector2(0,1), new Vector2(1,1), new Vector2(1,0) };
+                bgMesh.triangles = new int[] { 0,1,2, 2,3,0 };
+                bgMesh.RecalculateNormals();
+                bgMf.mesh = bgMesh;
+
+                MeshRenderer bgMr = bgObj.AddComponent<MeshRenderer>();
+                Material bgMat = new Material(Shader.Find("Standard"));
+                bgMat.color = new Color(0f, 0f, 0f, 0.85f);
+                bgMr.material = bgMat;
+                bgMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                bgMr.receiveShadows = false;
+                bgMr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+                bgMr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+                // Text mesh
                 TextGenerator textGen = new TextGenerator();
                 var settings = new TextGenerationSettings();
                 settings.font = font;
@@ -422,12 +450,11 @@ namespace StarTruckMP.Encoding
 
                 if (uiVerts == null || uiVerts.Length == 0)
                 {
-                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no vertices for '{name}'");
+                    StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no vertices");
                     GameObject.Destroy(labelObj);
                     return null;
                 }
 
-                // Build mesh from UIVertex data
                 Mesh mesh = new Mesh();
                 Vector3[] verts = new Vector3[uiVerts.Length];
                 Vector2[] uvs = new Vector2[uiVerts.Length];
@@ -435,12 +462,15 @@ namespace StarTruckMP.Encoding
                 for (int i = 0; i < uiVerts.Length; i++)
                 {
                     verts[i] = uiVerts[i].position;
-                    uvs[i] = uiVerts[i].uv0;
+                    // Clamp UV y to avoid bottom atlas edge artifact
+                    float uvY = Mathf.Clamp(uiVerts[i].uv0.y, 0.01f, 0.99f);
+                    uvs[i] = new Vector2(uiVerts[i].uv0.x, uvY);
                     colors[i] = uiVerts[i].color;
                 }
                 mesh.vertices = verts;
                 mesh.uv = uvs;
                 mesh.colors32 = colors;
+
                 int quadCount = uiVerts.Length / 4;
                 int[] tris = new int[quadCount * 6];
                 int ti = 0;
@@ -453,25 +483,27 @@ namespace StarTruckMP.Encoding
                 mesh.RecalculateNormals();
                 mesh.RecalculateBounds();
 
-                // Scale to ~3.8m wide
                 Bounds bounds = mesh.bounds;
                 float targetW = 12f;
-                float scale = (bounds.size.x > 0) ? (targetW / bounds.size.x) : 0.01f;
+                float textScale = (bounds.size.x > 0) ? (targetW / bounds.size.x) : 0.01f;
 
-                MeshFilter mf = labelObj.AddComponent<MeshFilter>();
+                GameObject textObj = new GameObject("NameLabelTxt_" + playerId);
+                SceneManager.MoveGameObjectToScene(textObj, labelObj.scene);
+                textObj.transform.SetParent(labelObj.transform);
+                textObj.transform.localPosition = new Vector3(0, 0, 0.02f);
+                textObj.transform.localScale = new Vector3(textScale, textScale, textScale);
+
+                MeshFilter mf = textObj.AddComponent<MeshFilter>();
                 mf.mesh = mesh;
 
-                MeshRenderer mr = labelObj.AddComponent<MeshRenderer>();
-                // Use font's own material (copy it) — this has the correct shader + texture
+                MeshRenderer mr = textObj.AddComponent<MeshRenderer>();
                 mr.material = new Material(font.material);
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mr.receiveShadows = false;
                 mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
                 mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
 
-                labelObj.transform.localScale = new Vector3(scale, scale, scale);
-
-                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: mesh created ({uiVerts.Length} verts, scale={scale:F4})");
+                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: created '{name}' ({uiVerts.Length} verts, scale={textScale:F4})");
                 return labelObj;
             }
             catch (System.Exception ex)
