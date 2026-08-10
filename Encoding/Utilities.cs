@@ -10,9 +10,9 @@ namespace StarTruckMP.Utilities
         chatMessage,
         updateSector,
         updateLivery,
-        setPlayerName,
         playerConnected,
-        trailerMovementUpdate
+        trailerMovementUpdate,
+        setPlayerName
     }
 
     public struct playerInfo
