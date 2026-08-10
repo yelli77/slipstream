@@ -66,6 +66,7 @@ public class DedicatedServer
             joinMsg.AddFloat(pl.TruckPosition.X); joinMsg.AddFloat(pl.TruckPosition.Y); joinMsg.AddFloat(pl.TruckPosition.Z);
             joinMsg.AddFloat(pl.TruckRotation.X); joinMsg.AddFloat(pl.TruckRotation.Y); joinMsg.AddFloat(pl.TruckRotation.Z);
             joinMsg.AddString(pl.Sector);
+            joinMsg.AddString(pl.Name ?? "");
         }
         _server.Send(joinMsg, e.Client);
         foreach (var kv in _players)
@@ -76,6 +77,7 @@ public class DedicatedServer
         _players.Add(e.Client.Id, p);
         var bc = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.PlayerConnected);
         bc.AddUShort(e.Client.Id);
+        bc.AddString(p.Name ?? "");
         _server.SendToAll(bc, e.Client.Id);
     }
 

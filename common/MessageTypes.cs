@@ -9,5 +9,6 @@ public enum MessageType : ushort
     UpdateSector = 4,
     UpdateLivery = 5,
     PlayerConnected = 6,
-    TrailerMovementUpdate = 7
+    TrailerMovementUpdate = 7,
+    SetPlayerName = 8
 }
