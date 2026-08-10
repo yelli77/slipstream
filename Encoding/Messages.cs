@@ -519,7 +519,10 @@ namespace StarTruckMP.Encoding
                 mf.mesh = mesh;
 
                 MeshRenderer mr = textObj.AddComponent<MeshRenderer>();
-                mr.material = font.material;
+                // Use UI/Default shader with font texture for correct atlas rendering
+                Material textMat = new Material(Shader.Find("UI/Default"));
+                textMat.mainTexture = font.material.mainTexture;
+                mr.material = textMat;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mr.receiveShadows = false;
                 mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
