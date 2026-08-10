@@ -455,8 +455,8 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i;
-                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
+                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+2;
+                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i+3;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
