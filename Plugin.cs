@@ -65,11 +65,5 @@ public class StarTruckMP : BasePlugin
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
         }
 
-        [HarmonyPatch(typeof(GalacticMapState), "OnMapStateChanged")]
-        [HarmonyPostfix]
-        public static void MapStateChanged()
-        {
-            // try { StarTruckClient.StarTruckClient.UpdateMapIndicators(); } catch (Exception ex) { Log.LogError($"MapStateChanged error: {ex.Message}"); }
-        }
     }
 }

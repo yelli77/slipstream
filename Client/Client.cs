@@ -631,133 +631,127 @@ namespace StarTruckMP.StarTruckClient
         private static List<GameObject> mapIndicators = new List<GameObject>();
         private static int mapCheckFrame = 0;
 
-//         public static void UpdateMapIndicators()
-//         {
-//             mapCheckFrame++;
-//             if (mapCheckFrame % 30 != 0) return;
-// 
-//             try
-//             {
-//                 bool mapOpen = false;
-//                 GalacticMapState mapState = null;
-// 
-//                 try
-//                 {
-//                     var allMaps = UnityEngine.Object.FindObjectsOfType<GalacticMapState>();
-//                     if (allMaps != null && allMaps.Length > 0)
-//                     {
-//                         mapState = allMaps[0];
-//                         mapOpen = mapState != null && mapState.gameObject.activeInHierarchy;
-//                     }
-//                 }
-//                 catch { }
-// 
-//                 if (mapOpen)
-//                 {
-//                     if (mapIndicators.Count == 0)
-//                     {
-//                         // SpawnMapIndicators(mapState);
-//                     }
-//                 }
-//                 else
-//                 {
-//                     if (mapIndicators.Count > 0)
-//                     {
-//                         ClearMapIndicators();
-//                     }
-//                 }
-//             }
-//             catch (System.Exception ex)
-//             {
-//                 StarTruckMP.Log.LogWarning($"UpdateMapIndicators error: {ex.Message}");
-//             }
-//         }
+        public static void UpdateMapIndicators()
+        {
+            mapCheckFrame++;
+            if (mapCheckFrame % 30 != 0) return;
 
-        // DISABLED: GalacticMapState is static type, incompatible with IL2CPP
-//         // private static void SpawnMapIndicators(GalacticMapState mapState)
-//         {
-//             try
-//             {
-//                 var buttons = mapState.SectorButtons;
-//                 if (buttons == null || buttons.Length == 0)
-//                 {
-//                     StarTruckMP.Log.LogWarning("SpawnMapIndicators: no sector buttons found");
-//                     return;
-//                 }
-// 
-//                 StarTruckMP.Log.LogInfo($"SpawnMapIndicators: {buttons.Length} sector buttons, {playerList.Count} players");
-// 
-//                 for (int i = 0; i < buttons.Length; i++)
-//                 {
-//                     var btn = buttons[i];
-//                     if (btn == null) continue;
-// 
-//                     string btnSectorName = "";
-//                     try
-//                     {
-//                         var tmps = btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>();
-//                         if (tmps != null)
-//                         {
-//                             foreach (var tmp in tmps)
-//                             {
-//                                 if (!string.IsNullOrEmpty(tmp.text) && tmp.text.Trim().Length > 1)
-//                                 {
-//                                     btnSectorName = tmp.text.Trim();
-//                                     break;
-//                                 }
-//                             }
-//                         }
-//                     }
-//                     catch { }
-// 
-//                     if (string.IsNullOrEmpty(btnSectorName))
-//                     {
-//                         try
-//                         {
-//                             var texts = btn.GetComponentsInChildren<UnityEngine.UI.Text>();
-//                             if (texts != null)
-//                             {
-//                                 foreach (var t in texts)
-//                                 {
-//                                     if (!string.IsNullOrEmpty(t.text) && t.text.Trim().Length > 1)
-//                                     {
-//                                         btnSectorName = t.text.Trim();
-//                                         break;
-//                                     }
-//                                 }
-//                             }
-//                         }
-//                         catch { }
-//                     }
-// 
-//                     StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': sectorText='{btnSectorName}'");
-// 
-//                     foreach (var kv in playerList)
-//                     {
-//                         string playerDisplay = SectorToDisplayName(kv.Value.sector);
-//                         if (SectorNamesMatch(playerDisplay, btnSectorName))
-//                         {
-//                             string pName = !string.IsNullOrEmpty(kv.Value.Name) ? kv.Value.Name : $"P{kv.Key}";
-//                             StarTruckMP.Log.LogInfo($"    => Player {kv.Key} ({pName}) at '{btnSectorName}'!");
-//                             CreateMapIndicator(btn, pName, kv.Key);
-//                         }
-//                     }
-//                 }
-// 
-//                 if (mapIndicators.Count == 0)
-//                 {
-//                     StarTruckMP.Log.LogInfo("SpawnMapIndicators: no player-sector matches. Player sectors:");
-//                     foreach (var kv in playerList)
-//                     {
-//                         StarTruckMP.Log.LogInfo($"    Player {kv.Key}: sector='{kv.Value.sector}' -> display='{SectorToDisplayName(kv.Value.sector)}'");
-//                     }
-//                 }
-//             }
-//             catch (System.Exception ex)
-//             {
-//                 StarTruckMP.Log.LogWarning($"SpawnMapIndicators error: {ex.Message}");
-//             }
-//         }
+            try
+            {
+                bool mapOpen = false;
+
+                try
+                {
+                    var allBtns = UnityEngine.Object.FindObjectsOfType<MapSectorButton>();
+                    mapOpen = allBtns != null && allBtns.Length > 0;
+                }
+                catch { }
+
+                if (mapOpen)
+                {
+                    if (mapIndicators.Count == 0)
+                    {
+                        SpawnMapIndicators();
+                    }
+                }
+                else
+                {
+                    if (mapIndicators.Count > 0)
+                    {
+                        ClearMapIndicators();
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"UpdateMapIndicators error: {ex.Message}");
+            }
+        }
+
+        private static void SpawnMapIndicators()
+        {
+            try
+            {
+                var allButtons = UnityEngine.Object.FindObjectsOfType<MapSectorButton>();
+                if (allButtons == null || allButtons.Length == 0)
+                {
+                    StarTruckMP.Log.LogWarning("SpawnMapIndicators: no MapSectorButton objects found");
+                    return;
+                }
+
+                StarTruckMP.Log.LogInfo($"SpawnMapIndicators: {allButtons.Length} sector buttons, {playerList.Count} players");
+
+                for (int i = 0; i < allButtons.Length; i++)
+                {
+                    var btn = allButtons[i];
+                    if (btn == null) continue;
+
+                    string btnSectorName = "";
+                    try
+                    {
+                        var tmps = btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>();
+                        if (tmps != null)
+                        {
+                            foreach (var tmp in tmps)
+                            {
+                                if (!string.IsNullOrEmpty(tmp.text) && tmp.text.Trim().Length > 1)
+                                {
+                                    btnSectorName = tmp.text.Trim();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    if (string.IsNullOrEmpty(btnSectorName))
+                    {
+                        try
+                        {
+                            var texts = btn.GetComponentsInChildren<UnityEngine.UI.Text>();
+                            if (texts != null)
+                            {
+                                foreach (var t in texts)
+                                {
+                                    if (!string.IsNullOrEmpty(t.text) && t.text.Trim().Length > 1)
+                                    {
+                                        btnSectorName = t.text.Trim();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': sectorText='{btnSectorName}'");
+
+                    foreach (var kv in playerList)
+                    {
+                        string playerDisplay = SectorToDisplayName(kv.Value.sector);
+                        if (SectorNamesMatch(playerDisplay, btnSectorName))
+                        {
+                            string pName = !string.IsNullOrEmpty(kv.Value.Name) ? kv.Value.Name : $"P{kv.Key}";
+                            StarTruckMP.Log.LogInfo($"    => Player {kv.Key} ({pName}) at '{btnSectorName}'!");
+                            CreateMapIndicator(btn, pName, kv.Key);
+                        }
+                    }
+                }
+
+                if (mapIndicators.Count == 0)
+                {
+                    StarTruckMP.Log.LogInfo("SpawnMapIndicators: no player-sector matches. Player sectors:");
+                    foreach (var kv in playerList)
+                    {
+                        StarTruckMP.Log.LogInfo($"    Player {kv.Key}: sector='{kv.Value.sector}' -> display='{SectorToDisplayName(kv.Value.sector)}'");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"SpawnMapIndicators error: {ex.Message}");
+            }
+        }
 
         private static string SectorToDisplayName(string sceneName)
         {
