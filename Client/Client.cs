@@ -560,8 +560,8 @@ namespace StarTruckMP.StarTruckClient
                 if (p.NameLabel != null)
                 {
                     p.NameLabel.transform.position = p.Truck != null
-                        ? p.Truck.transform.position + new Vector3(0, 6f, 0)
-                        : p.truckTrans.Pos - floatingOrigin.m_currentOrigin + new Vector3(0, 6f, 0);
+                        ? p.Truck.transform.position + new Vector3(0, 18f, 0)
+                        : p.truckTrans.Pos - floatingOrigin.m_currentOrigin + new Vector3(0, 18f, 0);
                 }
             }
         }
@@ -583,7 +583,7 @@ namespace StarTruckMP.StarTruckClient
                     // Position above truck
                     if (p.Truck != null)
                     {
-                        p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 6f, 0);
+                        p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 18f, 0);
                     }
                     // Billboard: face camera
                     Vector3 dir = p.NameLabel.transform.position - cam.transform.position;

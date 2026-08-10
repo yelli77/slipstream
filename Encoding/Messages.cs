@@ -147,7 +147,7 @@ namespace StarTruckMP.Encoding
                 currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
                 if (currentPlayer.NameLabel != null)
                 {
-                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 6f, 0);
+                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 18f, 0);
                 }
 
                 return currentPlayer;
