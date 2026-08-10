@@ -435,7 +435,7 @@ namespace StarTruckMP.Encoding
                 for (int i = 0; i < uiVerts.Length; i++)
                 {
                     verts[i] = uiVerts[i].position;
-                    uvs[i] = uiVerts[i].uv0;
+                    uvs[i] = new Vector2(uiVerts[i].uv0.x, 1f - uiVerts[i].uv0.y);
                     colors[i] = uiVerts[i].color;
                 }
                 mesh.vertices = verts;
@@ -446,9 +446,8 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    // Both triangles same winding (clockwise)
-                    tris[ti++] = i+1; tris[ti++] = i+2; tris[ti++] = i;
-                    tris[ti++] = i+1; tris[ti++] = i+3; tris[ti++] = i+2;
+                    tris[ti++] = i+2; tris[ti++] = i+1; tris[ti++] = i;
+                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
