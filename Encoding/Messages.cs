@@ -477,7 +477,9 @@ namespace StarTruckMP.Encoding
                 mf.mesh = mesh;
 
                 MeshRenderer mr = textObj.AddComponent<MeshRenderer>();
-                mr.material = new Material(font.material);
+                var textMat = new Material(font.material);
+                textMat.SetInt("_Cull", 0); // Disable backface culling
+                mr.material = textMat;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mr.receiveShadows = false;
                 mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
