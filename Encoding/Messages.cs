@@ -413,8 +413,8 @@ namespace StarTruckMP.Encoding
                 bgMf.mesh = bgMesh;
 
                 MeshRenderer bgMr = bgObj.AddComponent<MeshRenderer>();
-                Material bgMat = new Material(Shader.Find("Unlit/Color"));
-                bgMat.color = new Color(0f, 0f, 0f, 0.85f);
+                Material bgMat = new Material(Shader.Find("Standard"));
+                bgMat.color = new Color(0f, 0f, 0f, 1f);
                 bgMr.material = bgMat;
                 bgMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 bgMr.receiveShadows = false;
