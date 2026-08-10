@@ -455,8 +455,9 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
+                    // Both triangles CCW (front-face): top + bottom
                     tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
-                    tris[ti++] = i; tris[ti++] = i+3; tris[ti++] = i+2;
+                    tris[ti++] = i+3; tris[ti++] = i+2; tris[ti++] = i;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
