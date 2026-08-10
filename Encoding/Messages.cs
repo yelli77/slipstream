@@ -147,7 +147,7 @@ namespace StarTruckMP.Encoding
                 currentPlayer.NameLabel = CreateNameLabel("Player " + playerId, playerId);
                 if (currentPlayer.NameLabel != null)
                 {
-                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 4f, 0);
+                    currentPlayer.NameLabel.transform.position = newTruck.transform.position + new Vector3(0, 6f, 0);
                 }
 
                 return currentPlayer;
@@ -407,8 +407,8 @@ namespace StarTruckMP.Encoding
 
                 MeshFilter bgMf = bgObj.AddComponent<MeshFilter>();
                 Mesh bgMesh = new Mesh();
-                float bgW = 4.0f;
-                float bgH = 0.8f;
+                float bgW = 12.0f;
+                float bgH = 2.4f;
                 bgMesh.vertices = new Vector3[]
                 {
                     new Vector3(-bgW/2, -bgH/2, 0.01f),
@@ -428,7 +428,7 @@ namespace StarTruckMP.Encoding
 
                 MeshRenderer bgMr = bgObj.AddComponent<MeshRenderer>();
                 Material bgMat = new Material(Shader.Find("Standard"));
-                bgMat.color = new Color(0f, 0f, 0f, 0.85f);
+                bgMat.color = new Color(0f, 0f, 0f, 1f);
                 bgMat.SetFloat("_Mode", 3); // render mode = transparent
                 bgMr.material = bgMat;
                 bgMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -440,7 +440,7 @@ namespace StarTruckMP.Encoding
                 TextGenerator textGen = new TextGenerator();
                 var settings = new TextGenerationSettings();
                 settings.font = font;
-                settings.fontSize = 40;
+                settings.fontSize = 120;
                 settings.fontStyle = FontStyle.Bold;
                 settings.textAnchor = TextAnchor.MiddleCenter;
                 settings.color = new Color(1f, 1f, 1f, 1f);
@@ -504,7 +504,7 @@ namespace StarTruckMP.Encoding
 
                 // Scale: text coords are in pixels, we want about 3m wide label
                 Bounds bounds = mesh.bounds;
-                float targetWidth = 3.8f;
+                float targetWidth = 11.4f;
                 float pixelWidth = bounds.size.x;
                 float textScale = (pixelWidth > 0) ? (targetWidth / pixelWidth) : 0.01f;
 
