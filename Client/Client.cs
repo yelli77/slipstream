@@ -750,7 +750,7 @@ namespace StarTruckMP.StarTruckClient
 
                     StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': sectorText='{btnSectorName}'");
 
-                    // Count players in this sector
+                    // Count players in this sector (remote + local)
                     int playerCount = 0;
                     foreach (var kv in playerList)
                     {
@@ -758,8 +758,15 @@ namespace StarTruckMP.StarTruckClient
                         if (SectorNamesMatch(playerDisplay, btnSectorName))
                         {
                             playerCount++;
-                            string pName = !string.IsNullOrEmpty(kv.Value.Name) ? kv.Value.Name : $"P{kv.Key}";
-                            StarTruckMP.Log.LogInfo($"    => Player {kv.Key} ({pName}) at '{btnSectorName}'!");
+                        }
+                    }
+                    // Also count local player if in this sector
+                    if (!string.IsNullOrEmpty(currentSector))
+                    {
+                        string localDisplay = SectorToDisplayName(currentSector);
+                        if (SectorNamesMatch(localDisplay, btnSectorName))
+                        {
+                            playerCount++;
                         }
                     }
                     if (playerCount > 0)
@@ -818,39 +825,26 @@ namespace StarTruckMP.StarTruckClient
                 rootRT.anchoredPosition = new Vector2(0f, 50f);
                 rootRT.sizeDelta = new Vector2(50f, 50f);
 
-                // Find a circular Image from the button's IconRing to get its sprite
+                // Find ANY circular sprite from ANY Image in the button hierarchy
                 UnityEngine.Sprite circleSprite = null;
                 try
                 {
-                    for (int ci = 0; ci < btn.transform.childCount; ci++)
+                    var allImgs = btn.GetComponentsInChildren<UnityEngine.UI.Image>();
+                    if (allImgs != null)
                     {
-                        var child = btn.transform.GetChild(ci);
-                        if (child.name.Contains("IconRing"))
+                        foreach (var img in allImgs)
                         {
-                            var ringImg = child.GetComponent<UnityEngine.UI.Image>();
-                            if (ringImg != null && ringImg.sprite != null)
+                            if (img.sprite != null)
                             {
-                                circleSprite = ringImg.sprite;
+                                circleSprite = img.sprite;
                                 break;
                             }
-                            // Check grandchildren
-                            for (int gi = 0; gi < child.childCount; gi++)
-                            {
-                                var gc = child.GetChild(gi);
-                                var gcImg = gc.GetComponent<UnityEngine.UI.Image>();
-                                if (gcImg != null && gcImg.sprite != null)
-                                {
-                                    circleSprite = gcImg.sprite;
-                                    break;
-                                }
-                            }
-                            if (circleSprite != null) break;
                         }
                     }
                 }
                 catch { }
 
-                // Round dot using the game's own circular sprite
+                // Orange round dot
                 GameObject dot = new GameObject("Dot");
                 dot.transform.SetParent(root.transform, false);
                 var dotRT = dot.AddComponent<RectTransform>();
@@ -859,24 +853,22 @@ namespace StarTruckMP.StarTruckClient
                 dotRT.sizeDelta = Vector2.zero;
                 dotRT.localScale = Vector3.one;
 
-                var img = dot.AddComponent<UnityEngine.UI.Image>();
-                img.color = new Color(1f, 0.3f, 0f); // bright orange
+                var imgComp = dot.AddComponent<UnityEngine.UI.Image>();
+                imgComp.color = new Color(1f, 0.3f, 0f);
                 if (circleSprite != null)
                 {
-                    img.sprite = circleSprite;
-                    img.type = UnityEngine.UI.Image.Type.Simple;
-                    img.preserveAspect = false;
+                    imgComp.sprite = circleSprite;
+                    imgComp.type = UnityEngine.UI.Image.Type.Filled;
+                    imgComp.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
+                    imgComp.fillAmount = 1f;
                 }
                 else
                 {
-                    // Fallback: no sprite found, use filled
-                    img.type = UnityEngine.UI.Image.Type.Filled;
-                    img.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
-                    img.fillAmount = 1f;
+                    imgComp.type = UnityEngine.UI.Image.Type.Filled;
+                    imgComp.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
+                    imgComp.fillAmount = 1f;
                 }
-                img.raycastTarget = false;
-
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot with sprite={(circleSprite != null ? "YES" : "NO")}");
+                imgComp.raycastTarget = false;
 
                 // Player count text centered on the dot
                 try
