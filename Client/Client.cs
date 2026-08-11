@@ -34,14 +34,13 @@ namespace StarTruckMP.StarTruckClient
         private const float PositionLogIntervalSeconds = 60f;
         private static bool isHonking = false;
         private static bool wasHonking = false;
-        private static int sendMovementCallCount = 0;
         private static float honkMaxDistance = 400f;
-        private static float honkEndTime = 0f;
-
+        
         // Sonity horn SoundEvent cache
         private static Sonity.SoundEvent cachedHornEvent = null;
         private static bool hornEventSearched = false;
         private static System.Reflection.MethodInfo cachedPlayMethod = null;
+        private static System.Reflection.MethodInfo cachedVolumeMethod = null;
         private static System.Reflection.MethodInfo cachedStopMethod = null;
         private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
             = new System.Collections.Generic.Dictionary<ushort, bool>();
@@ -433,26 +432,11 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        private static int getKeyDownCallCount = 0;
-        private static bool lastGetKeyDown = false;
-
         public static void CheckHonk()
         {
             if (!client.IsConnected) return;
-            bool keyDown = UnityEngine.Input.GetKeyDown(StarTruckMP.HonkKey.Value);
-            bool keyHeld = UnityEngine.Input.GetKey(StarTruckMP.HonkKey.Value);
-            getKeyDownCallCount++;
-            if (getKeyDownCallCount % 100 == 0 || (keyDown && !lastGetKeyDown) || (keyDown && lastGetKeyDown))
-                StarTruckMP.Log.LogInfo($"[HONK-DIAG] CheckHonk#{getKeyDownCallCount}: GetKeyDown={keyDown}, GetKey={keyHeld}, isHonking(before)={isHonking}");
-            lastGetKeyDown = keyDown;
-
-            if (keyDown)
-            {
-                isHonking = true;
-                honkEndTime = Time.realtimeSinceStartup + 0.5f;
-            }
-            if (isHonking && Time.realtimeSinceStartup >= honkEndTime)
-                isHonking = false;
+            // Use GetKey (held) so honk lasts as long as the key is pressed
+            isHonking = UnityEngine.Input.GetKey(StarTruckMP.HonkKey.Value);
         }
 
         public static void SendMovement()
@@ -469,9 +453,6 @@ namespace StarTruckMP.StarTruckClient
                     bool honkJustEnded = !isHonking && wasHonking;
                     bool sendHonk = honkJustStarted || honkJustEnded;
                     if (honkJustStarted || honkJustEnded) wasHonking = isHonking;
-                    sendMovementCallCount++;
-                    if (sendHonk || (sendMovementCallCount % 10 == 0))
-                        StarTruckMP.Log.LogInfo($"[HONK-DIAG] Send #{sendMovementCallCount}: isHonking={isHonking}, wasHonking={wasHonking}, sendHonk={sendHonk}");
                     if (!sentFirstUpdate || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
                         client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk));
@@ -763,10 +744,33 @@ namespace StarTruckMP.StarTruckClient
                 float dist = Vector3.Distance(myTruck.transform.position, rp.Truck.transform.position);
                 if (dist > honkMaxDistance) return;
 
+                // --- Distance-based volume: 0dB at 0m, -20dB at 400m ---
+                if (cachedVolumeMethod == null)
+                {
+                    var vmethods = cachedHornEvent.GetType().GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var vm in vmethods)
+                    {
+                        if (vm.Name == "SetVolumeDecibel")
+                        {
+                            var vp = vm.GetParameters();
+                            if (vp.Length == 1 && vp[0].ParameterType == typeof(float))
+                            { cachedVolumeMethod = vm; break; }
+                        }
+                    }
+                    if (cachedVolumeMethod != null)
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Found SetVolumeDecibel via reflection");
+                }
+                if (cachedVolumeMethod != null)
+                {
+                    float volumeDb = -20f * Math.Min(dist / honkMaxDistance, 1f);
+                    cachedVolumeMethod.Invoke(cachedHornEvent, new object[] { volumeDb });
+                }
+
                 // --- Play horn at remote truck ---
                 cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
                 Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) dist={dist:F0}");
+                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} dist={dist:F0} volDb={(-20f * Math.Min(dist / honkMaxDistance, 1f)):F1}");
             }
             catch (System.Exception ex)
             {
