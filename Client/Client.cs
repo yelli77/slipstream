@@ -34,7 +34,7 @@ namespace StarTruckMP.StarTruckClient
         private const float PositionLogIntervalSeconds = 60f;
         private static bool isHonking = false;
         private static bool wasHonking = false;
-        private static float honkMaxDistance = 200f;
+        private static float honkMaxDistance = 400f;
         private static float honkEndTime = 0f;
 
         // Sonity horn SoundEvent cache
