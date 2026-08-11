@@ -661,32 +661,39 @@ namespace StarTruckMP.StarTruckClient
                 Vector3 honkPos = rp.Truck.transform.position;
                 StarTruckMP.Log.LogInfo($"HONK from player {playerId} at ({honkPos.x:F1}, {honkPos.y:F1}, {honkPos.z:F1})");
 
-                // Find horn AudioClip from local truck via reflection (cached once)
+                // Find horn AudioClip from AudioManager (cached once)
                 if (!hornClipSearched)
                 {
                     hornClipSearched = true;
-                    if (myTruck != null)
+                    try
                     {
-                        var comps = myTruck.GetComponentsInChildren<Component>();
-                        foreach (var comp in comps)
+                        var allComps = UnityEngine.Object.FindObjectsOfType<Component>();
+                        foreach (var comp in allComps)
                         {
                             if (comp == null) continue;
-                            var field = comp.GetType().GetField("m_honkSound",
-                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                            if (field != null)
+                            if (comp.GetType().Name == "AudioManager")
                             {
-                                var clip = field.GetValue(comp);
-                                if (clip != null)
+                                var field = comp.GetType().GetField("m_honkSound",
+                                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                                if (field != null)
                                 {
-                                    cachedHornClip = clip;
-                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: found horn clip on {comp.GetType().Name}");
-                                    break;
+                                    var clip = field.GetValue(comp);
+                                    if (clip != null)
+                                    {
+                                        cachedHornClip = clip;
+                                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: found horn clip on AudioManager");
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
+                    catch (System.Exception ex)
+                    {
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: audio search error: {ex.Message}");
+                    }
                     if (cachedHornClip == null)
-                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: no horn clip found on local truck");
+                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: no horn clip found on AudioManager");
                 }
 
                 if (cachedHornClip == null) return;
