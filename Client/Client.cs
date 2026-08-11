@@ -33,6 +33,8 @@ namespace StarTruckMP.StarTruckClient
         private static float nextSendTime = 0f;
         private const float PositionLogIntervalSeconds = 60f;
         private static bool isHonking = false;
+        private static bool wasHonking = false;
+        private static float honkMaxDistance = 200f;
         private static float honkEndTime = 0f;
 
         // Sonity horn SoundEvent cache
@@ -443,9 +445,13 @@ namespace StarTruckMP.StarTruckClient
             {
                 if (myTruck != null && playerLocation)
                 {
-                    if (!sentFirstUpdate || isHonking || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
+                    bool honkJustStarted = isHonking && !wasHonking;
+                    bool honkJustEnded = !isHonking && wasHonking;
+                    bool sendHonk = honkJustStarted || honkJustEnded;
+                    if (honkJustStarted || honkJustEnded) wasHonking = isHonking;
+                    if (!sentFirstUpdate || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
-                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, isHonking));
+                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk));
                         truckTrans.Pos = floatingOrigin.m_currentOrigin + myTruck.transform.position;
                         truckTrans.Rot = myTruck.transform.eulerAngles;
                         truckTrans.Vel = myTruckRigid.velocity;
@@ -728,10 +734,14 @@ namespace StarTruckMP.StarTruckClient
 
                 if (cachedPlayMethod == null) return;
 
+                // --- Distance filter: skip if too far ---
+                float dist = Vector3.Distance(myTruck.transform.position, rp.Truck.transform.position);
+                if (dist > honkMaxDistance) return;
+
                 // --- Play horn at remote truck ---
                 cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
                 Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1})");
+                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) dist={dist:F0}");
             }
             catch (System.Exception ex)
             {
