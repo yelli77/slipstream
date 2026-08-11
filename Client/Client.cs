@@ -35,6 +35,8 @@ namespace StarTruckMP.StarTruckClient
         private static bool isHonking = false;
         private static bool wasHonking = false;
         private static float honkMaxDistance = 400f;
+        private static System.Collections.Generic.Dictionary<ushort, float> lastRemoteHonkTime
+            = new System.Collections.Generic.Dictionary<ushort, float>();
         private static float honkEndTime = 0f;
 
         // Sonity horn SoundEvent cache
@@ -660,6 +662,12 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
+                // Rate-limit: max 1 play per 1.5s per player
+                float now = Time.realtimeSinceStartup;
+                float lastTime;
+                if (lastRemoteHonkTime.TryGetValue(playerId, out lastTime) && (now - lastTime) < 1.5f) return;
+                lastRemoteHonkTime[playerId] = now;
+
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
 
