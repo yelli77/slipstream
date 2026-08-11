@@ -34,7 +34,6 @@ namespace StarTruckMP.StarTruckClient
         private const float PositionLogIntervalSeconds = 60f;
         private static bool isHonking = false;
         private static float honkEndTime = 0f;
-        private static float lastHonkLogTime = 0f;
 
         public static void FixedUpdate()
         {
@@ -645,18 +644,70 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        private static float lastHonkLogTime = 0f;
+        private static object cachedHornClip = null;
+        private static bool hornClipSearched = false;
+
         private static void HandleRemoteHonk(ushort playerId)
         {
-            if (Time.realtimeSinceStartup - lastHonkLogTime < 1f) return;
+            if (Time.realtimeSinceStartup - lastHonkLogTime < 2f) return;
             lastHonkLogTime = Time.realtimeSinceStartup;
+
             try
             {
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
-                Vector3 p = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"HONK from player {playerId} at ({p.x:F1}, {p.y:F1}, {p.z:F1})");
+
+                Vector3 honkPos = rp.Truck.transform.position;
+                StarTruckMP.Log.LogInfo($"HONK from player {playerId} at ({honkPos.x:F1}, {honkPos.y:F1}, {honkPos.z:F1})");
+
+                // Find horn AudioClip from local truck via reflection (cached once)
+                if (!hornClipSearched)
+                {
+                    hornClipSearched = true;
+                    if (myTruck != null)
+                    {
+                        var comps = myTruck.GetComponentsInChildren<Component>();
+                        foreach (var comp in comps)
+                        {
+                            if (comp == null) continue;
+                            var field = comp.GetType().GetField("m_honkSound",
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                            if (field != null)
+                            {
+                                var clip = field.GetValue(comp);
+                                if (clip != null)
+                                {
+                                    cachedHornClip = clip;
+                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: found horn clip on {comp.GetType().Name}");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (cachedHornClip == null)
+                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: no horn clip found on local truck");
+                }
+
+                if (cachedHornClip == null) return;
+
+                // Play via AudioSource.PlayClipAtPoint reflection
+                var audioSourceType = cachedHornClip.GetType().Assembly.GetType("UnityEngine.AudioSource");
+                if (audioSourceType != null)
+                {
+                    var playMethod = audioSourceType.GetMethod("PlayClipAtPoint",
+                        new[] { cachedHornClip.GetType(), typeof(Vector3) });
+                    if (playMethod != null)
+                    {
+                        playMethod.Invoke(null, new object[] { cachedHornClip, honkPos });
+                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: playing horn sound");
+                    }
+                }
             }
-            catch (System.Exception ex) { StarTruckMP.Log.LogWarning($"HandleRemoteHonk: {ex.Message}"); }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"HandleRemoteHonk error: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         // === MAP PLAYER INDICATORS ===
