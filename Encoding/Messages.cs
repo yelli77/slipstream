@@ -417,7 +417,7 @@ namespace StarTruckMP.Encoding
                     if (tmp != null)
                     {
                         tmp.text = name;
-                        tmp.fontSize = 12f;
+                        tmp.fontSize = 36f;
                         tmp.alignment = TMPro.TextAlignmentOptions.Center;
                         tmp.color = Color.yellow;
                         tmp.enableAutoSizing = false;
@@ -428,7 +428,7 @@ namespace StarTruckMP.Encoding
                     var renderer = clone.GetComponent<MeshRenderer>();
                     if (renderer != null) renderer.enabled = true;
                     // Scale up the clone
-                    clone.transform.localScale = new Vector3(5f, 5f, 5f);
+                    clone.transform.localScale = new Vector3(20f, 20f, 20f);
                     StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: clone ready, scale={clone.transform.localScale}");
                     return clone;
                 }
