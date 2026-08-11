@@ -741,35 +741,48 @@ namespace StarTruckMP.StarTruckClient
                 {
                     try
                     {
-                        var seType = cachedHornEvent.GetType();
-                        var asm = seType.Assembly;
-                        var volType = asm.GetType("Sonity.SoundParameterVolumeDecibel");
-                        if (volType == null)
+                        // Search ALL loaded assemblies, not just cachedHornEvent's own —
+                        // SoundParameterVolumeDecibel lives in Sonity.Runtime, while
+                        // SoundEvent lives in Sonity.Public.Runtime (different assembly).
+                        Type volType = null;
+                        Type updateModeType = null;
+                        foreach (var candidateAsm in AppDomain.CurrentDomain.GetAssemblies())
                         {
-                            foreach (var t in asm.GetTypes())
-                                if (t.Name == "SoundParameterVolumeDecibel") { volType = t; break; }
+                            if (volType != null && updateModeType != null) break;
+                            Type[] asmTypes;
+                            try { asmTypes = candidateAsm.GetTypes(); }
+                            catch { continue; }
+                            foreach (var t in asmTypes)
+                            {
+                                if (volType == null && t.Name == "SoundParameterVolumeDecibel") volType = t;
+                                if (updateModeType == null && t.Name == "UpdateMode" && t.Namespace != null && t.Namespace.StartsWith("Sonity")) updateModeType = t;
+                                if (volType != null && updateModeType != null) break;
+                            }
                         }
-                        if (volType != null)
+                        if (volType != null && updateModeType != null)
                         {
-                            Type updateModeType = null;
-                            foreach (var t in asm.GetTypes())
-                                if (t.Name == "UpdateMode") { updateModeType = t; break; }
                             var ctor = volType.GetConstructor(new Type[] { typeof(float), updateModeType });
-                            if (ctor != null && updateModeType != null)
+                            if (ctor != null)
                             {
                                 object updateModeOnce = Enum.GetValues(updateModeType).GetValue(0);
                                 foreach (var val in Enum.GetValues(updateModeType))
                                     if (val.ToString() == "Once") { updateModeOnce = val; break; }
-                                cachedVolumeParam = ctor.Invoke(new object[] { 12f, updateModeOnce });
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: SoundParameterVolumeDecibel(+12dB, {updateModeOnce})");
+                                cachedVolumeParam = ctor.Invoke(new object[] { 24f, updateModeOnce });
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: SoundParameterVolumeDecibel(+24dB, {updateModeOnce}) in {volType.Assembly.GetName().Name}");
+                            }
+                            else
+                            {
+                                StarTruckMP.Log.LogWarning($"HandleRemoteHonk: SoundParameterVolumeDecibel found in {volType.Assembly.GetName().Name} but no matching ctor(float, UpdateMode)");
                             }
                         }
-                        if (volType == null)
-                            StarTruckMP.Log.LogWarning("HandleRemoteHonk: SoundParameterVolumeDecibel type not found");
+                        else
+                        {
+                            StarTruckMP.Log.LogWarning($"HandleRemoteHonk: SoundParameterVolumeDecibel type not found (volType={(volType!=null)}, updateModeType={(updateModeType!=null)})");
+                        }
                     }
                     catch (System.Exception ex)
                     {
-                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: volume param error: {ex.Message}");
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: volume param error: {ex.GetType().Name}: {ex.Message}");
                     }
                 }
 
@@ -808,7 +821,7 @@ namespace StarTruckMP.StarTruckClient
                     try
                     {
                         cachedPlayWithParamsMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, arr });
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(params) OK for player {playerId} dist={dist:F0} vol=+12dB");
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(params) OK for player {playerId} dist={dist:F0} vol=+24dB");
                     }
                     catch (System.Exception ex)
                     {
