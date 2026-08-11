@@ -808,124 +808,49 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                // Create a root container as child of the button
-                GameObject root = new GameObject($"PlayerInd_{playerId}_{playerName}");
-                root.transform.SetParent(btn.transform, false);
-                root.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-                root.transform.localScale = Vector3.one;
+                // Find IconRingParent child — this is a Canvas UI element that renders on the map
+                Transform iconRingParent = null;
+                try
+                {
+                    for (int ci = 0; ci < btn.transform.childCount; ci++)
+                    {
+                        var child = btn.transform.GetChild(ci);
+                        if (child.name.Contains("IconRingParent"))
+                        {
+                            iconRingParent = child;
+                            break;
+                        }
+                    }
+                }
+                catch { }
 
-                // Create a visible dot using a scaled cube
-                GameObject dot = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                dot.name = "Dot";
-                dot.transform.SetParent(root.transform, false);
-                dot.transform.localPosition = Vector3.zero;
-                dot.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f);
+                if (iconRingParent == null)
+                {
+                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: no IconRingParent found on '{btn.name}', skipping");
+                    return;
+                }
 
-                var col = dot.GetComponent<Collider>();
-                if (col != null) col.enabled = false;
+                // Clone IconRingParent as visible indicator
+                GameObject indicator = UnityEngine.Object.Instantiate(iconRingParent.gameObject, btn.transform);
+                indicator.name = $"PlayerIndicator_{playerId}_{playerName}";
+                indicator.transform.localPosition = iconRingParent.localPosition;
+                indicator.transform.localScale = iconRingParent.localScale * 1.2f; // slightly bigger
 
-                var mr = dot.GetComponent<MeshRenderer>();
-                if (mr != null)
+                // Tint all renderers yellow to make it stand out
+                foreach (var renderer in indicator.GetComponentsInChildren<MeshRenderer>())
                 {
                     var mat = new Material(Shader.Find("Standard"));
                     mat.color = new Color(1f, 1f, 0f); // bright yellow
                     mat.SetInt("_Cull", 0);
-                    mr.material = mat;
-                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    mr.receiveShadows = false;
+                    renderer.material = mat;
                 }
-
-                // Create name label using TextGenerator + Mesh (same technique as truck name labels)
-                try
+                foreach (var img in indicator.GetComponentsInChildren<UnityEngine.UI.Image>())
                 {
-                    Font font = null;
-                    try { font = Font.CreateDynamicFontFromOSFont("Arial", 24); } catch { }
-                    if (font != null)
-                    {
-                        TextGenerator textGen = new TextGenerator();
-                        var settings = new TextGenerationSettings();
-                        settings.font = font;
-                        settings.fontSize = 24;
-                        settings.fontStyle = FontStyle.Bold;
-                        settings.textAnchor = TextAnchor.MiddleCenter;
-                        settings.color = Color.yellow;
-                        settings.scaleFactor = 1f;
-                        settings.lineSpacing = 1f;
-                        settings.richText = false;
-                        settings.resizeTextForBestFit = false;
-                        settings.horizontalOverflow = HorizontalWrapMode.Overflow;
-                        settings.verticalOverflow = VerticalWrapMode.Overflow;
-                        settings.generationExtents = new Vector2(400, 50);
-                        settings.pivot = new Vector2(0.5f, 0.5f);
-                        settings.updateBounds = true;
-                        settings.generateOutOfBounds = true;
-                        settings.alignByGeometry = false;
-
-                        string label = playerName.ToUpperInvariant();
-                        textGen.Populate(label, settings);
-                        var vertList = new Il2CppSystem.Collections.Generic.List<UIVertex>();
-                        textGen.GetVertices(vertList);
-                        UIVertex[] uiVerts = vertList.ToArray();
-
-                        if (uiVerts != null && uiVerts.Length > 0)
-                        {
-                            Mesh mesh = new Mesh();
-                            Vector3[] verts = new Vector3[uiVerts.Length];
-                            Vector2[] uvs = new Vector2[uiVerts.Length];
-                            Color32[] colors = new Color32[uiVerts.Length];
-                            for (int vi = 0; vi < uiVerts.Length; vi++)
-                            {
-                                verts[vi] = uiVerts[vi].position;
-                                float uvY = Mathf.Clamp(uiVerts[vi].uv0.y, 0.01f, 0.99f);
-                                uvs[vi] = new Vector2(uiVerts[vi].uv0.x, uvY);
-                                colors[vi] = uiVerts[vi].color;
-                            }
-                            mesh.vertices = verts;
-                            mesh.uv = uvs;
-                            mesh.colors32 = colors;
-
-                            int quadCount = uiVerts.Length / 4;
-                            int[] tris = new int[quadCount * 6];
-                            int ti = 0;
-                            for (int qi = 0; qi < uiVerts.Length; qi += 4)
-                            {
-                                tris[ti++] = qi; tris[ti++] = qi+1; tris[ti++] = qi+3;
-                                tris[ti++] = qi+3; tris[ti++] = qi+2; tris[ti++] = qi+0;
-                            }
-                            mesh.triangles = tris;
-                            mesh.RecalculateNormals();
-                            mesh.RecalculateBounds();
-
-                            Bounds bounds = mesh.bounds;
-                            float targetW = 3f;
-                            float textScale = (bounds.size.x > 0) ? (targetW / bounds.size.x) : 0.01f;
-
-                            GameObject textObj = new GameObject("Label");
-                            textObj.transform.SetParent(root.transform, false);
-                            textObj.transform.localPosition = new Vector3(0f, -0.15f, 0f);
-                            textObj.transform.localScale = new Vector3(textScale, textScale, textScale);
-
-                            MeshFilter mf = textObj.AddComponent<MeshFilter>();
-                            mf.mesh = mesh;
-
-                            MeshRenderer textMr = textObj.AddComponent<MeshRenderer>();
-                            var textMat = new Material(font.material);
-                            textMat.SetInt("_Cull", 0);
-                            textMr.material = textMat;
-                            textMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                            textMr.receiveShadows = false;
-
-                            StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{label}' created ({uiVerts.Length} verts, scale={textScale:F4})");
-                        }
-                    }
-                }
-                catch (System.Exception ex3)
-                {
-                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: text label failed: {ex3.Message}");
+                    img.color = new Color(1f, 1f, 0f, 0.9f); // bright yellow
                 }
 
-                mapIndicators.Add(root);
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: indicator for '{playerName}' at '{btn.name}' created");
+                mapIndicators.Add(indicator);
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: cloned IconRing for '{playerName}' at '{btn.name}'");
             }
             catch (System.Exception ex)
             {
