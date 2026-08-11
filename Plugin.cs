@@ -15,13 +15,14 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-81";
+    public const string customBuildNumber = "custom-build-89";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
     public static ConfigEntry<UnityEngine.KeyCode> joinKey;
     public static ConfigEntry<UnityEngine.KeyCode> hostKey;
     public static ConfigEntry<string> PlayerName;
+    public static ConfigEntry<UnityEngine.KeyCode> HonkKey;
 
 
     public override void Load()
@@ -33,6 +34,7 @@ public class StarTruckMP : BasePlugin
         joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
         hostKey = Config.Bind("Keybinds", "HostKey", UnityEngine.KeyCode.RightBracket, "Set the Key to press for hosting a server");
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
+        HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
 
     }
@@ -49,6 +51,7 @@ public class StarTruckMP : BasePlugin
             StarTruckServer.StarTruckServer.FixedUpdate();
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.SendMovement();
+            StarTruckClient.StarTruckClient.CheckHonk();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]

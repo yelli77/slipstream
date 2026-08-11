@@ -32,6 +32,9 @@ namespace StarTruckMP.StarTruckClient
         private static float nextPositionLogTime = 0f;
         private static float nextSendTime = 0f;
         private const float PositionLogIntervalSeconds = 60f;
+        private static bool isHonking = false;
+        private static float honkEndTime = 0f;
+        private static float lastHonkLogTime = 0f;
 
         public static void FixedUpdate()
         {
@@ -246,6 +249,7 @@ namespace StarTruckMP.StarTruckClient
 
                     bool isTruck = e.Message.GetBool();
                     bool inSeat = e.Message.GetBool();
+                    bool remoteIsHonking = e.Message.GetBool();
 
                     playerInfo currentPlayer;
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
@@ -287,6 +291,8 @@ namespace StarTruckMP.StarTruckClient
                             }
                         }
                         playerList[playerId] = currentPlayer;
+                        if (remoteIsHonking && currentPlayer.Truck != null)
+                            HandleRemoteHonk(playerId);
                     }
                 }
             }
@@ -411,6 +417,19 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        public static void CheckHonk()
+        {
+            if (!client.IsConnected) return;
+            if (UnityEngine.Input.GetKeyDown(StarTruckMP.HonkKey.Value))
+            {
+                isHonking = true;
+                honkEndTime = Time.realtimeSinceStartup + 0.5f;
+                StarTruckMP.Log.LogInfo("CheckHonk: honk flag set");
+            }
+            if (isHonking && Time.realtimeSinceStartup >= honkEndTime)
+                isHonking = false;
+        }
+
         public static void SendMovement()
         {
             if (!client.IsConnected) return;
@@ -423,7 +442,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (!sentFirstUpdate || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
-                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false));
+                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, isHonking));
                         truckTrans.Pos = floatingOrigin.m_currentOrigin + myTruck.transform.position;
                         truckTrans.Rot = myTruck.transform.eulerAngles;
                         truckTrans.Vel = myTruckRigid.velocity;
@@ -625,6 +644,20 @@ namespace StarTruckMP.StarTruckClient
                 bool active = hasTruck && p.Truck.activeInHierarchy;
                 StarTruckMP.Log.LogInfo($"  Player {kv.Key}: sector='{p.sector}', hasTruck={hasTruck}, truckLocalScenePos=({localPos.x:F2}, {localPos.y:F2}, {localPos.z:F2}), truckActive={active}, lastKnownAbsPos=({p.truckTrans.Pos.x:F2}, {p.truckTrans.Pos.y:F2}, {p.truckTrans.Pos.z:F2})");
             }
+        }
+
+        private static void HandleRemoteHonk(ushort playerId)
+        {
+            if (Time.realtimeSinceStartup - lastHonkLogTime < 1f) return;
+            lastHonkLogTime = Time.realtimeSinceStartup;
+            try
+            {
+                playerInfo rp;
+                if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
+                Vector3 p = rp.Truck.transform.position;
+                StarTruckMP.Log.LogInfo($"HONK from player {playerId} at ({p.x:F1}, {p.y:F1}, {p.z:F1})");
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning($"HandleRemoteHonk: {ex.Message}"); }
         }
 
         // === MAP PLAYER INDICATORS ===

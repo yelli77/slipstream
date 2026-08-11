@@ -37,6 +37,7 @@ namespace StarTruckMP.Utilities
         public Vector3 Rot;
         public Vector3 Vel;
         public Vector3 AngVel;
+        public bool isHonking;
     }
 
     internal class Utilities

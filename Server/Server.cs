@@ -78,6 +78,7 @@ namespace StarTruckMP.StarTruckServer
 
                         bool isTruck = e.Message.GetBool();
                         bool inSeat = e.Message.GetBool();
+                        bool isHonking = e.Message.GetBool();
 
                         if (isTruck)
                         {
@@ -103,7 +104,7 @@ namespace StarTruckMP.StarTruckServer
                         }
 
                         playerList[e.FromConnection.Id] = currentPlayer;
-                        server.SendToAll(Messages.createMovementMessage(e.FromConnection.Id, playerPos, playerRot, playerVel, playerAngVel, isTruck, inSeat));
+                        server.SendToAll(Messages.createMovementMessage(e.FromConnection.Id, playerPos, playerRot, playerVel, playerAngVel, isTruck, inSeat, isHonking));
                     }
                     break;
 

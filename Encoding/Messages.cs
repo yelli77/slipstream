@@ -272,7 +272,7 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
-        public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat)
+        public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat, bool isHonking = false)
         {
             float[] playerTransform = { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, velocity.x, velocity.y, velocity.z, angVel.x, angVel.y, angVel.z};
 
@@ -281,6 +281,7 @@ namespace StarTruckMP.Encoding
             message.AddFloats(playerTransform);
             message.AddBool(isTruck);
             message.AddBool(inSeat);
+            message.AddBool(isHonking);
 
             return message;
         }
