@@ -782,30 +782,32 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
 
-                // Find Stop(SoundEvent, Transform, Boolean) via reflection once
+                // Find Stop(Transform, bool) — INSTANCE method on SoundEvent
                 if (cachedStopMethod == null)
                 {
-                    var methods = typeof(Sonity.SoundEvent).GetMethods(
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var methods = cachedHornEvent.GetType().GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                     foreach (var m in methods)
                     {
                         if (m.Name == "Stop")
                         {
                             var p = m.GetParameters();
-                            if (p.Length == 3 &&
-                                p[0].ParameterType == typeof(Sonity.SoundEvent) &&
-                                p[1].ParameterType == typeof(Transform))
+                            if (p.Length == 2 &&
+                                p[0].ParameterType == typeof(Transform) &&
+                                p[1].ParameterType == typeof(bool))
                             {
                                 cachedStopMethod = m;
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Found Stop(SoundEvent, Transform, bool) via reflection");
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Found Stop(Transform, bool) via reflection");
                                 break;
                             }
                         }
                     }
+                    if (cachedStopMethod == null)
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonkStop: Stop method not found on {cachedHornEvent.GetType().FullName}");
                 }
                 if (cachedStopMethod != null)
                 {
-                    cachedStopMethod.Invoke(null, new object[] { cachedHornEvent, rp.Truck.transform, false });
+                    cachedStopMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, true });
                     StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Stop for player {playerId}");
                 }
             }
