@@ -417,11 +417,19 @@ namespace StarTruckMP.Encoding
                     if (tmp != null)
                     {
                         tmp.text = name;
-                        tmp.fontSize = 4f;
+                        tmp.fontSize = 12f;
                         tmp.alignment = TMPro.TextAlignmentOptions.Center;
                         tmp.color = Color.yellow;
                         tmp.enableAutoSizing = false;
+                        tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
+                        tmp.enableWordWrapping = false;
                     }
+                    // Ensure renderer is enabled
+                    var renderer = clone.GetComponent<MeshRenderer>();
+                    if (renderer != null) renderer.enabled = true;
+                    // Scale up the clone
+                    clone.transform.localScale = new Vector3(5f, 5f, 5f);
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: clone ready, scale={clone.transform.localScale}");
                     return clone;
                 }
 
