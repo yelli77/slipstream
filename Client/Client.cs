@@ -667,8 +667,50 @@ namespace StarTruckMP.StarTruckClient
                 if (!aiTruckHornTypeSearched)
                 {
                     aiTruckHornTypeSearched = true;
-                    aiTruckHornType = typeof(UnityEngine.Object).Assembly.GetType("AITruckHorn");
-                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn type {(aiTruckHornType != null ? "FOUND" : "NOT FOUND")}");
+                    // AITruckHorn is in Assembly-CSharp, NOT in UnityEngine.CoreModule
+                    // Try common assembly names for the game's IL2CPP interop
+                    string[] assemblyNames = new string[] { "Assembly-CSharp", "StarTruckMP" };
+                    foreach (string asmName in assemblyNames)
+                    {
+                        try
+                        {
+                            var asm = System.Reflection.Assembly.Load(asmName);
+                            aiTruckHornType = asm.GetType("AITruckHorn");
+                            if (aiTruckHornType != null)
+                            {
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn FOUND in assembly '{asmName}'");
+                                break;
+                            }
+                        }
+                        catch { }
+                    }
+                    // Fallback: search ALL loaded assemblies
+                    if (aiTruckHornType == null)
+                    {
+                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: not found in named assemblies, scanning all loaded...");
+                        try
+                        {
+                            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                            {
+                                try
+                                {
+                                    aiTruckHornType = asm.GetType("AITruckHorn");
+                                    if (aiTruckHornType != null)
+                                    {
+                                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn FOUND in assembly '{asm.GetName().Name}'");
+                                        break;
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                        catch (System.Exception ex2)
+                        {
+                            StarTruckMP.Log.LogWarning($"HandleRemoteHonk: GetAssemblies failed: {ex2.Message}");
+                        }
+                    }
+                    if (aiTruckHornType == null)
+                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: AITruckHorn type NOT FOUND in any assembly");
                 }
                 if (aiTruckHornType == null) return;
 
