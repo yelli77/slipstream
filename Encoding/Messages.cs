@@ -428,7 +428,7 @@ namespace StarTruckMP.Encoding
                     var renderer = clone.GetComponent<MeshRenderer>();
                     if (renderer != null) renderer.enabled = true;
                     // Scale up the clone
-                    clone.transform.localScale = new Vector3(20f, 20f, 20f);
+                    clone.transform.localScale = new Vector3(5f, 5f, 5f);
                     StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: clone ready, scale={clone.transform.localScale}");
                     return clone;
                 }

@@ -599,7 +599,7 @@ namespace StarTruckMP.StarTruckClient
                 var p = kv.Value;
                 if (p.NameLabel != null && p.NameLabel.activeInHierarchy && p.Truck != null)
                 {
-                    p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 18f, 0);
+                    p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 35f, 0);
                     Vector3 dir = p.NameLabel.transform.position - cam.transform.position;
                     if (dir.sqrMagnitude > 0.001f)
                         p.NameLabel.transform.rotation = Quaternion.LookRotation(dir);
