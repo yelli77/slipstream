@@ -629,13 +629,12 @@ namespace StarTruckMP.StarTruckClient
 
         // === MAP PLAYER INDICATORS ===
         private static List<GameObject> mapIndicators = new List<GameObject>();
-        private static int mapCheckFrame = 0;
+
+        private static float nextMapRefreshTime = 0f;
+        private static bool lastMapOpen = false;
 
         public static void UpdateMapIndicators()
         {
-            mapCheckFrame++;
-            if (mapCheckFrame % 300 != 0) return; // Log every ~5 seconds for diagnosis
-
             try
             {
                 bool mapOpen = false;
@@ -647,32 +646,29 @@ namespace StarTruckMP.StarTruckClient
                     buttonCount = allBtns != null ? allBtns.Length : 0;
                     mapOpen = buttonCount > 0;
                 }
-                catch (System.Exception ex2)
+                catch { }
+
+                // Map just opened — spawn indicators
+                if (mapOpen && !lastMapOpen)
                 {
-                    StarTruckMP.Log.LogWarning($"UpdateMapIndicators: FindObjectsOfType<MapSectorButton> failed: {ex2.Message}");
+                    ClearMapIndicators();
+                    SpawnMapIndicators();
+                    nextMapRefreshTime = Time.realtimeSinceStartup + 2f;
+                }
+                // Map just closed — destroy indicators
+                else if (!mapOpen && lastMapOpen)
+                {
+                    ClearMapIndicators();
+                }
+                // Map still open — refresh every 2 seconds
+                else if (mapOpen && mapIndicators.Count > 0 && Time.realtimeSinceStartup >= nextMapRefreshTime)
+                {
+                    ClearMapIndicators();
+                    SpawnMapIndicators();
+                    nextMapRefreshTime = Time.realtimeSinceStartup + 2f;
                 }
 
-                StarTruckMP.Log.LogInfo($"UpdateMapIndicators: mapOpen={mapOpen}, buttons={buttonCount}, indicators={mapIndicators.Count}, players={playerList.Count}");
-
-                if (mapOpen)
-                {
-                    // Refresh indicators periodically to track player movements
-                    if (mapCheckFrame % 120 == 0 && mapIndicators.Count > 0)
-                    {
-                        ClearMapIndicators();
-                    }
-                    if (mapIndicators.Count == 0)
-                    {
-                        SpawnMapIndicators();
-                    }
-                }
-                else
-                {
-                    if (mapIndicators.Count > 0)
-                    {
-                        ClearMapIndicators();
-                    }
-                }
+                lastMapOpen = mapOpen;
             }
             catch (System.Exception ex)
             {
@@ -759,6 +755,7 @@ namespace StarTruckMP.StarTruckClient
                     int playerCount = 0;
                     foreach (var kv in playerList)
                     {
+                        if (string.IsNullOrEmpty(kv.Value.sector) || kv.Value.sector == "none") continue;
                         string playerDisplay = SectorToDisplayName(kv.Value.sector);
                         if (SectorNamesMatch(playerDisplay, btnSectorName))
                         {
@@ -766,7 +763,7 @@ namespace StarTruckMP.StarTruckClient
                         }
                     }
                     // Also count local player if in this sector
-                    if (!string.IsNullOrEmpty(currentSector))
+                    if (!string.IsNullOrEmpty(currentSector) && currentSector != "none")
                     {
                         string localDisplay = SectorToDisplayName(currentSector);
                         if (SectorNamesMatch(localDisplay, btnSectorName))
