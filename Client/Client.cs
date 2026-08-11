@@ -41,6 +41,8 @@ namespace StarTruckMP.StarTruckClient
         private static bool hornEventSearched = false;
         private static System.Reflection.MethodInfo cachedPlayMethod = null;
         private static System.Reflection.MethodInfo cachedStopMethod = null;
+        private static System.Reflection.MethodInfo cachedPlayWithParamsMethod = null;
+        private static object cachedVolumeParam = null;
         private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
             = new System.Collections.Generic.Dictionary<ushort, bool>();
 
@@ -733,9 +735,76 @@ namespace StarTruckMP.StarTruckClient
                 float dist = Vector3.Distance(myTruck.transform.position, rp.Truck.transform.position);
                 if (dist > honkMaxDistance) return;
 
-                // --- Distance-based volume: 0dB at 0m, -20dB at 400m ---
-// --- Play horn at remote truck ---
-                cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
+                // --- Build volume boost param once: +12 dB ---
+                if (cachedVolumeParam == null)
+                {
+                    try
+                    {
+                        var seType = cachedHornEvent.GetType();
+                        var asm = seType.Assembly;
+                        var volType = asm.GetType("Sonity.SoundParameterVolumeDecibel");
+                        if (volType == null)
+                        {
+                            foreach (var t in asm.GetTypes())
+                                if (t.Name == "SoundParameterVolumeDecibel") { volType = t; break; }
+                        }
+                        if (volType != null)
+                        {
+                            Type updateModeType = null;
+                            foreach (var t in asm.GetTypes())
+                                if (t.Name == "UpdateMode") { updateModeType = t; break; }
+                            var ctor = volType.GetConstructor(new Type[] { typeof(float), updateModeType });
+                            if (ctor != null && updateModeType != null)
+                            {
+                                object updateModeOnce = Enum.GetValues(updateModeType).GetValue(0);
+                                foreach (var val in Enum.GetValues(updateModeType))
+                                    if (val.ToString() == "Once") { updateModeOnce = val; break; }
+                                cachedVolumeParam = ctor.Invoke(new object[] { 12f, updateModeOnce });
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: SoundParameterVolumeDecibel(+12dB, {updateModeOnce})");
+                            }
+                        }
+                        if (volType == null)
+                            StarTruckMP.Log.LogWarning("HandleRemoteHonk: SoundParameterVolumeDecibel type not found");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: volume param error: {ex.Message}");
+                    }
+                }
+
+                // --- Find Play(Transform, SoundParameterInternals[]) once ---
+                if (cachedPlayWithParamsMethod == null)
+                {
+                    var methods = cachedHornEvent.GetType().GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var m in methods)
+                    {
+                        if (m.Name == "Play")
+                        {
+                            var p = m.GetParameters();
+                            if (p.Length == 2 && p[0].ParameterType == typeof(Transform) &&
+                                p[1].ParameterType.Name.Contains("SoundParameterInternals"))
+                            {
+                                cachedPlayWithParamsMethod = m;
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Found Play(Transform, SoundParameterInternals[])");
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // --- Play horn at remote truck ---
+                if (cachedPlayWithParamsMethod != null && cachedVolumeParam != null)
+                {
+                    var arrType = typeof(Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<>)
+                        .MakeGenericType(cachedVolumeParam.GetType());
+                    var arr = System.Activator.CreateInstance(arrType, new object[] { new[] { cachedVolumeParam } });
+                    cachedPlayWithParamsMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, arr });
+                }
+                else
+                {
+                    cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
+                }
                 Vector3 pos = rp.Truck.transform.position;
                 StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} dist={dist:F0}");
             }
