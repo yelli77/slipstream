@@ -786,48 +786,124 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                MeshRenderer sourceRenderer = null;
-                try
-                {
-                    var renderers = btn.GetComponentsInChildren<MeshRenderer>();
-                    if (renderers != null && renderers.Length > 0)
-                    {
-                        sourceRenderer = renderers[0];
-                    }
-                }
-                catch { }
+                // Create a root container as child of the button
+                GameObject root = new GameObject($"PlayerInd_{playerId}_{playerName}");
+                root.transform.SetParent(btn.transform, false);
+                root.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+                root.transform.localScale = Vector3.one;
 
-                GameObject indicator;
-                if (sourceRenderer != null)
-                {
-                    indicator = UnityEngine.Object.Instantiate(sourceRenderer.gameObject, btn.transform);
-                    indicator.name = $"PlayerDot_{playerId}_{playerName}";
-                    indicator.transform.localPosition = new Vector3(0f, 0.4f, 0f);
-                    indicator.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
-                }
-                else
-                {
-                    indicator = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    indicator.name = $"PlayerDot_{playerId}_{playerName}";
-                    indicator.transform.SetParent(btn.transform);
-                    indicator.transform.localPosition = new Vector3(0f, 0.3f, 0f);
-                    indicator.transform.localScale = new Vector3(0.15f, 0.15f, 0.15f);
-                    var col = indicator.GetComponent<Collider>();
-                    if (col != null) col.enabled = false;
-                }
+                // Create a visible dot using a scaled cube
+                GameObject dot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                dot.name = "Dot";
+                dot.transform.SetParent(root.transform, false);
+                dot.transform.localPosition = Vector3.zero;
+                dot.transform.localScale = new Vector3(0.08f, 0.08f, 0.08f);
 
-                var mr = indicator.GetComponent<MeshRenderer>();
+                var col = dot.GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+
+                var mr = dot.GetComponent<MeshRenderer>();
                 if (mr != null)
                 {
                     var mat = new Material(Shader.Find("Standard"));
-                    mat.color = new Color(0f, 1f, 0.5f);
+                    mat.color = new Color(1f, 1f, 0f); // bright yellow
+                    mat.SetInt("_Cull", 0);
                     mr.material = mat;
                     mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     mr.receiveShadows = false;
                 }
 
-                mapIndicators.Add(indicator);
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot for '{playerName}' at '{btn.name}'");
+                // Create name label using TextGenerator + Mesh (same technique as truck name labels)
+                try
+                {
+                    Font font = null;
+                    try { font = Font.CreateDynamicFontFromOSFont("Arial", 24); } catch { }
+                    if (font != null)
+                    {
+                        TextGenerator textGen = new TextGenerator();
+                        var settings = new TextGenerationSettings();
+                        settings.font = font;
+                        settings.fontSize = 24;
+                        settings.fontStyle = FontStyle.Bold;
+                        settings.textAnchor = TextAnchor.MiddleCenter;
+                        settings.color = Color.yellow;
+                        settings.scaleFactor = 1f;
+                        settings.lineSpacing = 1f;
+                        settings.richText = false;
+                        settings.resizeTextForBestFit = false;
+                        settings.horizontalOverflow = HorizontalWrapMode.Overflow;
+                        settings.verticalOverflow = VerticalWrapMode.Overflow;
+                        settings.generationExtents = new Vector2(400, 50);
+                        settings.pivot = new Vector2(0.5f, 0.5f);
+                        settings.updateBounds = true;
+                        settings.generateOutOfBounds = true;
+                        settings.alignByGeometry = false;
+
+                        string label = playerName.ToUpperInvariant();
+                        textGen.Populate(label, settings);
+                        var vertList = new Il2CppSystem.Collections.Generic.List<UIVertex>();
+                        textGen.GetVertices(vertList);
+                        UIVertex[] uiVerts = vertList.ToArray();
+
+                        if (uiVerts != null && uiVerts.Length > 0)
+                        {
+                            Mesh mesh = new Mesh();
+                            Vector3[] verts = new Vector3[uiVerts.Length];
+                            Vector2[] uvs = new Vector2[uiVerts.Length];
+                            Color32[] colors = new Color32[uiVerts.Length];
+                            for (int vi = 0; vi < uiVerts.Length; vi++)
+                            {
+                                verts[vi] = uiVerts[vi].position;
+                                float uvY = Mathf.Clamp(uiVerts[vi].uv0.y, 0.01f, 0.99f);
+                                uvs[vi] = new Vector2(uiVerts[vi].uv0.x, uvY);
+                                colors[vi] = uiVerts[vi].color;
+                            }
+                            mesh.vertices = verts;
+                            mesh.uv = uvs;
+                            mesh.colors32 = colors;
+
+                            int quadCount = uiVerts.Length / 4;
+                            int[] tris = new int[quadCount * 6];
+                            int ti = 0;
+                            for (int qi = 0; qi < uiVerts.Length; qi += 4)
+                            {
+                                tris[ti++] = qi; tris[ti++] = qi+1; tris[ti++] = qi+3;
+                                tris[ti++] = qi+3; tris[ti++] = qi+2; tris[ti++] = qi+0;
+                            }
+                            mesh.triangles = tris;
+                            mesh.RecalculateNormals();
+                            mesh.RecalculateBounds();
+
+                            Bounds bounds = mesh.bounds;
+                            float targetW = 3f;
+                            float textScale = (bounds.size.x > 0) ? (targetW / bounds.size.x) : 0.01f;
+
+                            GameObject textObj = new GameObject("Label");
+                            textObj.transform.SetParent(root.transform, false);
+                            textObj.transform.localPosition = new Vector3(0f, -0.15f, 0f);
+                            textObj.transform.localScale = new Vector3(textScale, textScale, textScale);
+
+                            MeshFilter mf = textObj.AddComponent<MeshFilter>();
+                            mf.mesh = mesh;
+
+                            MeshRenderer textMr = textObj.AddComponent<MeshRenderer>();
+                            var textMat = new Material(font.material);
+                            textMat.SetInt("_Cull", 0);
+                            textMr.material = textMat;
+                            textMr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                            textMr.receiveShadows = false;
+
+                            StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{label}' created ({uiVerts.Length} verts, scale={textScale:F4})");
+                        }
+                    }
+                }
+                catch (System.Exception ex3)
+                {
+                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: text label failed: {ex3.Message}");
+                }
+
+                mapIndicators.Add(root);
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: indicator for '{playerName}' at '{btn.name}' created");
             }
             catch (System.Exception ex)
             {
