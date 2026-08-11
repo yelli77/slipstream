@@ -652,7 +652,7 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
                 Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"[HONK-RECV] player {playerId} honked at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) — sound playback TBD after local diagnosis");
+                StarTruckMP.Log.LogInfo($"[HONK-RECV] player {playerId} honked at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) — awaiting SoundEvent diagnosis");
             }
             catch (System.Exception ex)
             {

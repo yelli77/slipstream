@@ -17,7 +17,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-108";
+    public const string customBuildNumber = "custom-build-109";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -38,7 +38,7 @@ public class StarTruckMP : BasePlugin
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
         HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
-        Harmony.CreateAndPatchAll(typeof(HornDiagnostic));
+        Harmony.CreateAndPatchAll(typeof(SonityDiagnostic));
 
     }
 
@@ -74,30 +74,35 @@ public class StarTruckMP : BasePlugin
     }
 
     [HarmonyPatch]
-    public class HornDiagnostic
+    public class SonityDiagnostic
     {
-        private static bool loggedOnce = false;
+        private static int playCount = 0;
 
-        [HarmonyPatch(typeof(AITruckHorn), nameof(AITruckHorn.ProcessHorn))]
-        [HarmonyPrefix]
-        public static bool ProcessHorn_Prefix(AITruckHorn __instance, float duration)
+        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.Play))]
+        [HarmonyPostfix]
+        public static void Play_Postfix(Sonity.SoundEvent __instance)
         {
-            try
-            {
-                var go = (__instance as Component)?.gameObject;
-                string goName = go != null ? go.name : "no-GameObject";
-                StarTruckMP.Log.LogInfo($"[HORN-DIAG] ProcessHorn(duration={duration}) on GO='{goName}' type={__instance.GetType().FullName}");
-                if (!loggedOnce)
-                {
-                    loggedOnce = true;
-                    StarTruckMP.Log.LogInfo($"[HORN-DIAG] Stack trace: {Environment.StackTrace}");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"[HORN-DIAG] ProcessHorn error: {ex.Message}");
-            }
-            return true; // let original run
+            playCount++;
+            if (playCount <= 20)
+                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] Play() name='{__instance.name}' count={playCount}");
+        }
+
+        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.PlayAtPosition), new Type[] { typeof(UnityEngine.Vector3) })]
+        [HarmonyPostfix]
+        public static void PlayAtPosition_V3_Postfix(Sonity.SoundEvent __instance, UnityEngine.Vector3 position)
+        {
+            playCount++;
+            if (playCount <= 20)
+                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] PlayAtPosition(V3) name='{__instance.name}' pos=({position.x:F1},{position.y:F1},{position.z:F1}) count={playCount}");
+        }
+
+        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.Play2D))]
+        [HarmonyPostfix]
+        public static void Play2D_Postfix(Sonity.SoundEvent __instance)
+        {
+            playCount++;
+            if (playCount <= 20)
+                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] Play2D() name='{__instance.name}' count={playCount}");
         }
     }
 }

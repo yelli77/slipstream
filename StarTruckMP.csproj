@@ -96,5 +96,18 @@
       <HintPath>/bepinex/interop/UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  
+    <Reference Include="Sonity.Public.Runtime">
+      <HintPath>/bepinex/interop/Sonity.Public.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Sonity.Runtime">
+      <HintPath>/bepinex/interop/Sonity.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>/bepinex/interop/UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 </Project>
