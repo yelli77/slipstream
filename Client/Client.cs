@@ -661,36 +661,28 @@ namespace StarTruckMP.StarTruckClient
                 Vector3 honkPos = rp.Truck.transform.position;
                 StarTruckMP.Log.LogInfo($"HONK from player {playerId} at ({honkPos.x:F1}, {honkPos.y:F1}, {honkPos.z:F1})");
 
-                // Find horn AudioClip — search ALL scene objects for m_honkSound field
+                // Find horn sound — look for ProcessHorn method on any Component (truck horn controller)
                 if (!hornClipSearched)
                 {
                     hornClipSearched = true;
                     try
                     {
+                        // Strategy 1: Find a Component with ProcessHorn method
                         var allComps = UnityEngine.Object.FindObjectsOfType<Component>();
-                        int compCount = allComps != null ? allComps.Length : 0;
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: searching {compCount} components for m_honkSound...");
                         foreach (var comp in allComps)
                         {
                             if (comp == null) continue;
                             try
                             {
-                                var fields = comp.GetType().GetFields(
-                                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                                foreach (var field in fields)
+                                var phMethod = comp.GetType().GetMethod("ProcessHorn",
+                                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                                if (phMethod != null)
                                 {
-                                    if (field.Name == "m_honkSound")
-                                    {
-                                        var clip = field.GetValue(comp);
-                                        if (clip != null)
-                                        {
-                                            cachedHornClip = clip;
-                                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: FOUND m_honkSound on {comp.GetType().Name}");
-                                            break;
-                                        }
-                                    }
+                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: FOUND ProcessHorn on {comp.GetType().Name}");
+                                    // Store the component reference for later use
+                                    cachedHornClip = comp; // reuse field to store the component
+                                    break;
                                 }
-                                if (cachedHornClip != null) break;
                             }
                             catch { }
                         }
@@ -700,21 +692,22 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogWarning($"HandleRemoteHonk: search error: {ex.Message}");
                     }
                     if (cachedHornClip == null)
-                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: m_honkSound not found on any component");
+                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: ProcessHorn not found on any component");
                 }
 
                 if (cachedHornClip == null) return;
 
-                // Play via AudioSource.PlayClipAtPoint reflection
-                var audioSourceType = cachedHornClip.GetType().Assembly.GetType("UnityEngine.AudioSource");
-                if (audioSourceType != null)
+                // cachedHornClip is actually a Component with ProcessHorn method
+                var hornComp = cachedHornClip as Component;
+                if (hornComp != null)
                 {
-                    var playMethod = audioSourceType.GetMethod("PlayClipAtPoint",
-                        new[] { cachedHornClip.GetType(), typeof(Vector3) });
-                    if (playMethod != null)
+                    var phMethod = hornComp.GetType().GetMethod("ProcessHorn",
+                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    if (phMethod != null)
                     {
-                        playMethod.Invoke(null, new object[] { cachedHornClip, honkPos });
-                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: playing horn sound");
+                        // Call ProcessHorn with a positive value to trigger the horn
+                        phMethod.Invoke(hornComp, new object[] { 1.0f });
+                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: called ProcessHorn to play horn");
                     }
                 }
             }
