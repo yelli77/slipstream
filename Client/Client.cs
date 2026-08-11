@@ -808,22 +808,31 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                // Create a fresh UI.Image as child of the button — guaranteed Canvas-visible
-                GameObject indicator = new GameObject($"PlayerDot_{playerId}_{playerName}");
-                indicator.transform.SetParent(btn.transform, false);
+                // Create a root container positioned above the node
+                GameObject root = new GameObject($"PlayerInd_{playerId}_{playerName}");
+                root.transform.SetParent(btn.transform, false);
+                var rootRT = root.AddComponent<RectTransform>();
+                rootRT.anchorMin = new Vector2(0.5f, 0.5f);
+                rootRT.anchorMax = new Vector2(0.5f, 0.5f);
+                rootRT.anchoredPosition = new Vector2(0f, 50f); // above node center
+                rootRT.sizeDelta = new Vector2(50f, 50f);
 
-                // Position it above the center of the node
-                var rt = indicator.AddComponent<RectTransform>();
-                rt.anchorMin = new Vector2(0.5f, 0.5f);
-                rt.anchorMax = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = new Vector2(0f, 0.7f);
-                rt.sizeDelta = new Vector2(0.5f, 0.5f);
+                // Orange dot — big enough to see
+                GameObject dot = new GameObject("Dot");
+                dot.transform.SetParent(root.transform, false);
+                var dotRT = dot.AddComponent<RectTransform>();
+                dotRT.anchorMin = Vector2.zero;
+                dotRT.anchorMax = Vector2.one;
+                dotRT.sizeDelta = Vector2.zero;
+                dotRT.localScale = Vector3.one;
 
-                var img = indicator.AddComponent<UnityEngine.UI.Image>();
-                img.color = new Color(1f, 0.2f, 0f); // bright orange-red
+                var img = dot.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(1f, 0.3f, 0f); // bright orange
                 img.raycastTarget = false;
 
-                // Also create a name label above the dot using TMP clone from scene
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot created, anchoredPos=(0,50), sizeDelta=(50,50)");
+
+                // Name label — clone existing TMP from scene
                 try
                 {
                     var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
@@ -842,31 +851,28 @@ namespace StarTruckMP.StarTruckClient
 
                     if (sourceTMP != null)
                     {
-                        GameObject labelClone = UnityEngine.Object.Instantiate(sourceTMP.gameObject, indicator.transform);
+                        GameObject labelClone = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
                         labelClone.name = "NameLabel";
                         var lrt = labelClone.GetComponent<RectTransform>();
                         if (lrt != null)
                         {
                             lrt.anchorMin = new Vector2(0.5f, 0.5f);
                             lrt.anchorMax = new Vector2(0.5f, 0.5f);
-                            lrt.anchoredPosition = new Vector2(0f, 0.4f);
-                            lrt.sizeDelta = new Vector2(2f, 0.3f);
+                            lrt.anchoredPosition = new Vector2(0f, -30f); // below dot
+                            lrt.sizeDelta = new Vector2(200f, 40f);
+                            lrt.localScale = Vector3.one;
                         }
                         var labelTMP = labelClone.GetComponent<TMPro.TextMeshProUGUI>();
                         if (labelTMP != null)
                         {
                             labelTMP.text = playerName.ToUpperInvariant();
-                            labelTMP.fontSize = 5;
+                            labelTMP.fontSize = 14;
                             labelTMP.color = Color.yellow;
                             labelTMP.alignment = TMPro.TextAlignmentOptions.Center;
                             labelTMP.raycastTarget = false;
                         }
                         mapIndicators.Add(labelClone);
-                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{playerName}' cloned from TMP");
-                    }
-                    else
-                    {
-                        StarTruckMP.Log.LogWarning($"  CreateMapIndicator: no TextMeshProUGUI found for label");
+                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{playerName}' at sizeDelta=(200,40)");
                     }
                 }
                 catch (System.Exception ex2)
@@ -874,8 +880,8 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"  CreateMapIndicator: label failed: {ex2.Message}");
                 }
 
-                mapIndicators.Add(indicator);
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot for '{playerName}' at '{btn.name}' (Image component)");
+                mapIndicators.Add(root);
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: indicator for '{playerName}' at '{btn.name}' done");
             }
             catch (System.Exception ex)
             {
