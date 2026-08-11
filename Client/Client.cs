@@ -755,15 +755,21 @@ namespace StarTruckMP.StarTruckClient
 
                     StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': sectorText='{btnSectorName}'");
 
+                    // Count players in this sector
+                    int playerCount = 0;
                     foreach (var kv in playerList)
                     {
                         string playerDisplay = SectorToDisplayName(kv.Value.sector);
                         if (SectorNamesMatch(playerDisplay, btnSectorName))
                         {
+                            playerCount++;
                             string pName = !string.IsNullOrEmpty(kv.Value.Name) ? kv.Value.Name : $"P{kv.Key}";
                             StarTruckMP.Log.LogInfo($"    => Player {kv.Key} ({pName}) at '{btnSectorName}'!");
-                            CreateMapIndicator(btn, pName, kv.Key);
                         }
+                    }
+                    if (playerCount > 0)
+                    {
+                        CreateMapIndicator(btn, playerCount);
                     }
                 }
 
@@ -804,20 +810,20 @@ namespace StarTruckMP.StarTruckClient
             return string.Equals(displayName, mapLabel, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void CreateMapIndicator(MapSectorButton btn, string playerName, ushort playerId)
+        private static void CreateMapIndicator(MapSectorButton btn, int playerCount)
         {
             try
             {
-                // Create a root container positioned above the node
-                GameObject root = new GameObject($"PlayerInd_{playerId}_{playerName}");
+                // Root container above the node
+                GameObject root = new GameObject($"PlayerCount_{playerCount}");
                 root.transform.SetParent(btn.transform, false);
                 var rootRT = root.AddComponent<RectTransform>();
                 rootRT.anchorMin = new Vector2(0.5f, 0.5f);
                 rootRT.anchorMax = new Vector2(0.5f, 0.5f);
-                rootRT.anchoredPosition = new Vector2(0f, 50f); // above node center
+                rootRT.anchoredPosition = new Vector2(0f, 50f);
                 rootRT.sizeDelta = new Vector2(50f, 50f);
 
-                // Orange dot — big enough to see
+                // Round dot using Filled image type
                 GameObject dot = new GameObject("Dot");
                 dot.transform.SetParent(root.transform, false);
                 var dotRT = dot.AddComponent<RectTransform>();
@@ -828,11 +834,13 @@ namespace StarTruckMP.StarTruckClient
 
                 var img = dot.AddComponent<UnityEngine.UI.Image>();
                 img.color = new Color(1f, 0.3f, 0f); // bright orange
+                img.type = UnityEngine.UI.Image.Type.Filled;
+                img.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
+                img.fillAmount = 1f;
+                img.fillClockwise = true;
                 img.raycastTarget = false;
 
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot created, anchoredPos=(0,50), sizeDelta=(50,50)");
-
-                // Name label — clone existing TMP from scene
+                // Player count text centered on the dot
                 try
                 {
                     var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
@@ -852,40 +860,39 @@ namespace StarTruckMP.StarTruckClient
                     if (sourceTMP != null)
                     {
                         GameObject labelClone = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
-                        labelClone.name = "NameLabel";
+                        labelClone.name = "CountLabel";
                         var lrt = labelClone.GetComponent<RectTransform>();
                         if (lrt != null)
                         {
                             lrt.anchorMin = new Vector2(0.5f, 0.5f);
                             lrt.anchorMax = new Vector2(0.5f, 0.5f);
-                            lrt.anchoredPosition = new Vector2(0f, -30f); // below dot
-                            lrt.sizeDelta = new Vector2(200f, 40f);
+                            lrt.anchoredPosition = Vector2.zero; // centered on dot
+                            lrt.sizeDelta = new Vector2(50f, 50f);
                             lrt.localScale = Vector3.one;
                         }
                         var labelTMP = labelClone.GetComponent<TMPro.TextMeshProUGUI>();
                         if (labelTMP != null)
                         {
-                            labelTMP.text = playerName.ToUpperInvariant();
-                            labelTMP.fontSize = 14;
-                            labelTMP.color = Color.yellow;
+                            labelTMP.text = playerCount.ToString();
+                            labelTMP.fontSize = 20;
+                            labelTMP.color = Color.white;
                             labelTMP.alignment = TMPro.TextAlignmentOptions.Center;
                             labelTMP.raycastTarget = false;
                         }
                         mapIndicators.Add(labelClone);
-                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{playerName}' at sizeDelta=(200,40)");
                     }
                 }
                 catch (System.Exception ex2)
                 {
-                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: label failed: {ex2.Message}");
+                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: count label failed: {ex2.Message}");
                 }
 
                 mapIndicators.Add(root);
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: indicator for '{playerName}' at '{btn.name}' done");
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: {playerCount} player(s) at '{btn.name}'");
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"CreateMapIndicator error for {playerName}: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"CreateMapIndicator error: {ex.Message}");
             }
         }
 
