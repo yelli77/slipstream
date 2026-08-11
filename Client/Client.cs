@@ -667,35 +667,71 @@ namespace StarTruckMP.StarTruckClient
                     hornClipSearched = true;
                     try
                     {
-                        // Strategy: find any AudioSource with a clip that has horn-related name
-                        // OR find any AudioSource on an NPC truck (AITruckHorn)
-                        var allAudioSources = UnityEngine.Object.FindObjectsOfType<UnityEngine.AudioSource>();
-                        int srcCount = allAudioSources != null ? allAudioSources.Length : 0;
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: found {srcCount} AudioSources in scene");
-                        foreach (var src in allAudioSources)
+                        // Find AudioSources by scanning all GameObjects and their Components
+                        var audioSourceType2 = typeof(UnityEngine.Object).Assembly.GetType("UnityEngine.AudioSource");
+                        var clipProp = audioSourceType2?.GetProperty("clip");
+                        
+                        if (audioSourceType2 != null)
                         {
-                            if (src == null || src.clip == null) continue;
-                            string clipName = src.clip.name ?? "";
-                            if (clipName.ToLower().Contains("honk") || clipName.ToLower().Contains("horn"))
+                            // Find all GameObjects, then check for AudioSource components
+                            var allGOs = UnityEngine.Object.FindObjectsOfType<UnityEngine.GameObject>();
+                            int goCount = allGOs != null ? allGOs.Length : 0;
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: scanning {goCount} GameObjects for AudioSource...");
+                            
+                            foreach (var go in allGOs)
                             {
-                                cachedHornClip = src.clip;
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: FOUND horn clip {clipName} on AudioSource");
-                                break;
-                            }
-                        }
-                        // Fallback: find any AudioSource that currently has a clip loaded
-                        if (cachedHornClip == null && allAudioSources != null)
-                        {
-                            foreach (var src in allAudioSources)
-                            {
-                                if (src == null || src.clip == null) continue;
-                                // Check if this AudioSource is on a truck (has TruckHorn or similar in hierarchy)
-                                var truckCheck = src.GetComponentInParent<Component>();
-                                if (truckCheck != null && truckCheck.GetType().Name.Contains("Truck"))
+                                if (go == null) continue;
+                                var comps = go.GetComponents<Component>();
+                                foreach (var comp in comps)
                                 {
-                                    cachedHornClip = src.clip;
-                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: fallback — using clip {src.clip.name} from truck AudioSource");
-                                    break;
+                                    if (comp == null) continue;
+                                    if (comp.GetType() == audioSourceType2 || comp.GetType().IsSubclassOf(audioSourceType2))
+                                    {
+                                        // This is an AudioSource — get its clip
+                                        if (clipProp != null)
+                                        {
+                                            var clip = clipProp.GetValue(comp);
+                                            if (clip == null) continue;
+                                            var nameProp = clip.GetType().GetProperty("name");
+                                            string clipName = nameProp != null ? (nameProp.GetValue(clip)?.ToString() ?? "") : "";
+                                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AudioSource on {go.name}, clip={clipName}");
+                                            if (clipName.ToLower().Contains("honk") || clipName.ToLower().Contains("horn"))
+                                            {
+                                                cachedHornClip = clip;
+                                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: FOUND horn clip {clipName}");
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (cachedHornClip != null) break;
+                            }
+                            
+                            // Fallback: use first AudioSource clip
+                            if (cachedHornClip == null)
+                            {
+                                foreach (var go in allGOs)
+                                {
+                                    if (go == null) continue;
+                                    var comps = go.GetComponents<Component>();
+                                    foreach (var comp in comps)
+                                    {
+                                        if (comp == null) continue;
+                                        if (comp.GetType() == audioSourceType2 || comp.GetType().IsSubclassOf(audioSourceType2))
+                                        {
+                                            if (clipProp != null)
+                                            {
+                                                var clip = clipProp.GetValue(comp);
+                                                if (clip != null)
+                                                {
+                                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: using fallback clip from {go.name}");
+                                                    cachedHornClip = clip;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    if (cachedHornClip != null) break;
                                 }
                             }
                         }
@@ -710,15 +746,16 @@ namespace StarTruckMP.StarTruckClient
 
                 if (cachedHornClip == null) return;
 
-                // cachedHornClip is now an AudioClip — play it via PlayClipAtPoint
-                var audioSourceType = cachedHornClip.GetType().Assembly.GetType("UnityEngine.AudioSource");
-                if (audioSourceType != null)
+                // Play via PlayClipAtPoint (method cached from search)
+                // Re-derive it from the clip type
+                var pt = cachedHornClip.GetType().Assembly.GetType("UnityEngine.AudioSource");
+                if (pt != null)
                 {
-                    var playMethod = audioSourceType.GetMethod("PlayClipAtPoint",
+                    var pm = pt.GetMethod("PlayClipAtPoint",
                         new[] { cachedHornClip.GetType(), typeof(Vector3) });
-                    if (playMethod != null)
+                    if (pm != null)
                     {
-                        playMethod.Invoke(null, new object[] { cachedHornClip, honkPos });
+                        pm.Invoke(null, new object[] { cachedHornClip, honkPos });
                         StarTruckMP.Log.LogInfo("HandleRemoteHonk: playing horn via PlayClipAtPoint");
                     }
                 }
