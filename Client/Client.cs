@@ -656,6 +656,11 @@ namespace StarTruckMP.StarTruckClient
 
                 if (mapOpen)
                 {
+                    // Refresh indicators periodically to track player movements
+                    if (mapCheckFrame % 120 == 0 && mapIndicators.Count > 0)
+                    {
+                        ClearMapIndicators();
+                    }
                     if (mapIndicators.Count == 0)
                     {
                         SpawnMapIndicators();
