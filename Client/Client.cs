@@ -667,73 +667,40 @@ namespace StarTruckMP.StarTruckClient
                     hornClipSearched = true;
                     try
                     {
-                        // Find AudioSources by scanning all GameObjects and their Components
-                        var audioSourceType2 = typeof(UnityEngine.Object).Assembly.GetType("UnityEngine.AudioSource");
-                        var clipProp = audioSourceType2?.GetProperty("clip");
-                        
-                        if (audioSourceType2 != null)
+                        var asm = typeof(UnityEngine.Object).Assembly;
+                        var audioMgrType = asm.GetType("AudioManager");
+                        if (audioMgrType != null)
                         {
-                            // Find all GameObjects, then check for AudioSource components
-                            var allGOs = UnityEngine.Object.FindObjectsOfType<UnityEngine.GameObject>();
-                            int goCount = allGOs != null ? allGOs.Length : 0;
-                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: scanning {goCount} GameObjects for AudioSource...");
-                            
-                            foreach (var go in allGOs)
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AudioManager type found: {audioMgrType.FullName}");
+                            var honkField = audioMgrType.GetField("m_honkSound",
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: m_honkSound on AudioManager: {(honkField != null ? "YES" : "NO")}");
+                            var staticFields = audioMgrType.GetFields(
+                                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                            foreach (var sf in staticFields)
+                                StarTruckMP.Log.LogInfo($"  static: {sf.Name} ({sf.FieldType.Name})");
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: IsMonoBehaviour: {typeof(UnityEngine.MonoBehaviour).IsAssignableFrom(audioMgrType)}");
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: IsComponent: {typeof(UnityEngine.Component).IsAssignableFrom(audioMgrType)}");
+                        }
+                        else
+                        {
+                            StarTruckMP.Log.LogInfo("HandleRemoteHonk: AudioManager NOT found - searching all types...");
+                            int foundCount = 0;
+                            foreach (var t in asm.GetTypes())
                             {
-                                if (go == null) continue;
-                                var comps = go.GetComponents<Component>();
-                                foreach (var comp in comps)
+                                try
                                 {
-                                    if (comp == null) continue;
-                                    if (comp.GetType() == audioSourceType2 || comp.GetType().IsSubclassOf(audioSourceType2))
+                                    var hf = t.GetField("m_honkSound",
+                                        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                                    if (hf != null)
                                     {
-                                        // This is an AudioSource — get its clip
-                                        if (clipProp != null)
-                                        {
-                                            var clip = clipProp.GetValue(comp);
-                                            if (clip == null) continue;
-                                            var nameProp = clip.GetType().GetProperty("name");
-                                            string clipName = nameProp != null ? (nameProp.GetValue(clip)?.ToString() ?? "") : "";
-                                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AudioSource on {go.name}, clip={clipName}");
-                                            if (clipName.ToLower().Contains("honk") || clipName.ToLower().Contains("horn"))
-                                            {
-                                                cachedHornClip = clip;
-                                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: FOUND horn clip {clipName}");
-                                                break;
-                                            }
-                                        }
+                                        StarTruckMP.Log.LogInfo($"  m_honkSound on: {t.FullName} (IsComponent={typeof(UnityEngine.Component).IsAssignableFrom(t)})");
+                                        foundCount++;
                                     }
                                 }
-                                if (cachedHornClip != null) break;
+                                catch { }
                             }
-                            
-                            // Fallback: use first AudioSource clip
-                            if (cachedHornClip == null)
-                            {
-                                foreach (var go in allGOs)
-                                {
-                                    if (go == null) continue;
-                                    var comps = go.GetComponents<Component>();
-                                    foreach (var comp in comps)
-                                    {
-                                        if (comp == null) continue;
-                                        if (comp.GetType() == audioSourceType2 || comp.GetType().IsSubclassOf(audioSourceType2))
-                                        {
-                                            if (clipProp != null)
-                                            {
-                                                var clip = clipProp.GetValue(comp);
-                                                if (clip != null)
-                                                {
-                                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: using fallback clip from {go.name}");
-                                                    cachedHornClip = clip;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    if (cachedHornClip != null) break;
-                                }
-                            }
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: found m_honkSound on {foundCount} types total");
                         }
                     }
                     catch (System.Exception ex)
@@ -741,7 +708,7 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogWarning($"HandleRemoteHonk: search error: {ex.Message}");
                     }
                     if (cachedHornClip == null)
-                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: no horn AudioSource found");
+                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: no horn clip found");
                 }
 
                 if (cachedHornClip == null) return;
