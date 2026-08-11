@@ -403,9 +403,6 @@ namespace StarTruckMP.Encoding
                 var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
                 StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTMPUGUI?.Length ?? 0} TextMeshProUGUI (Canvas) objects");
 
-                var allTM = GameObject.FindObjectsOfType<TextMesh>();
-                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTM?.Length ?? 0} TextMesh (legacy) objects");
-
                 // If we find a 3D TextMeshPro, clone it
                 if (allTMP != null && allTMP.Length > 0)
                 {
