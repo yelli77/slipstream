@@ -4,6 +4,7 @@ using Object = UnityEngine.Object;
 using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
+using System.Linq;
 using System;
 using BepInEx.Logging;
 using BepInEx.Configuration;
@@ -17,7 +18,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-109";
+    public const string customBuildNumber = "custom-build-110";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -73,36 +74,46 @@ public class StarTruckMP : BasePlugin
 
     }
 
-    [HarmonyPatch]
+    [HarmonyPatch(typeof(Sonity.SoundEvent))]
     public class SonityDiagnostic
     {
-        private static int playCount = 0;
+        private static int hornLogCount = 0;
 
-        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.Play))]
-        [HarmonyPostfix]
-        public static void Play_Postfix(Sonity.SoundEvent __instance)
+        static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            playCount++;
-            if (playCount <= 20)
-                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] Play() name='{__instance.name}' count={playCount}");
+            var type = typeof(Sonity.SoundEvent);
+            return type.GetMethods(
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Static)
+                .Where(m => m.Name == "Play" || m.Name == "PlayAtPosition" ||
+                            m.Name == "Play2D" || m.Name == "PlayMusic")
+                .Cast<System.Reflection.MethodBase>();
         }
 
-        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.PlayAtPosition), new Type[] { typeof(UnityEngine.Vector3) })]
         [HarmonyPostfix]
-        public static void PlayAtPosition_V3_Postfix(Sonity.SoundEvent __instance, UnityEngine.Vector3 position)
+        public static void Postfix(object __instance, System.Reflection.MethodBase __originalMethod)
         {
-            playCount++;
-            if (playCount <= 20)
-                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] PlayAtPosition(V3) name='{__instance.name}' pos=({position.x:F1},{position.y:F1},{position.z:F1}) count={playCount}");
-        }
+            try
+            {
+                Sonity.SoundEvent se = null;
+                if (__instance is Sonity.SoundEvent s1)
+                    se = s1;
 
-        [HarmonyPatch(typeof(Sonity.SoundEvent), nameof(Sonity.SoundEvent.Play2D))]
-        [HarmonyPostfix]
-        public static void Play2D_Postfix(Sonity.SoundEvent __instance)
-        {
-            playCount++;
-            if (playCount <= 20)
-                StarTruckMP.Log.LogInfo($"[SONITY-DIAG] Play2D() name='{__instance.name}' count={playCount}");
+                if (se == null) return;
+                string name = se.name ?? "";
+                if (string.IsNullOrEmpty(name)) return;
+                string lower = name.ToLower();
+                if (!lower.Contains("horn") && !lower.Contains("honk") && !lower.Contains("klaxon"))
+                    return;
+
+                hornLogCount++;
+                string paramStr = string.Join(", ",
+                    __originalMethod.GetParameters().Select(p => p.ParameterType.Name));
+                StarTruckMP.Log.LogInfo(
+                    $"[SONITY-DIAG] {__originalMethod.Name}({paramStr}) name='{name}' count={hornLogCount}");
+            }
+            catch { }
         }
     }
 }
