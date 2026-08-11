@@ -816,35 +816,16 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                // Root container above the node
+                // Root container — centered on the node
                 GameObject root = new GameObject($"PlayerCount_{playerCount}");
                 root.transform.SetParent(btn.transform, false);
                 var rootRT = root.AddComponent<RectTransform>();
                 rootRT.anchorMin = new Vector2(0.5f, 0.5f);
                 rootRT.anchorMax = new Vector2(0.5f, 0.5f);
-                rootRT.anchoredPosition = new Vector2(0f, 50f);
-                rootRT.sizeDelta = new Vector2(50f, 50f);
+                rootRT.anchoredPosition = Vector2.zero; // dead center on node
+                rootRT.sizeDelta = new Vector2(80f, 80f); // big enough to cover the gray circle
 
-                // Find ANY circular sprite from ANY Image in the button hierarchy
-                UnityEngine.Sprite circleSprite = null;
-                try
-                {
-                    var allImgs = btn.GetComponentsInChildren<UnityEngine.UI.Image>();
-                    if (allImgs != null)
-                    {
-                        foreach (var img in allImgs)
-                        {
-                            if (img.sprite != null)
-                            {
-                                circleSprite = img.sprite;
-                                break;
-                            }
-                        }
-                    }
-                }
-                catch { }
-
-                // Orange round dot
+                // Orange filled circle — NO sprite, use built-in UI default
                 GameObject dot = new GameObject("Dot");
                 dot.transform.SetParent(root.transform, false);
                 var dotRT = dot.AddComponent<RectTransform>();
@@ -854,21 +835,14 @@ namespace StarTruckMP.StarTruckClient
                 dotRT.localScale = Vector3.one;
 
                 var imgComp = dot.AddComponent<UnityEngine.UI.Image>();
-                imgComp.color = new Color(1f, 0.3f, 0f);
-                if (circleSprite != null)
-                {
-                    imgComp.sprite = circleSprite;
-                    imgComp.type = UnityEngine.UI.Image.Type.Filled;
-                    imgComp.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
-                    imgComp.fillAmount = 1f;
-                }
-                else
-                {
-                    imgComp.type = UnityEngine.UI.Image.Type.Filled;
-                    imgComp.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
-                    imgComp.fillAmount = 1f;
-                }
+                imgComp.color = new Color(1f, 0.3f, 0f, 0.9f); // bright orange, slightly transparent
+                // Use Unity's built-in knob sprite for a circle
+                imgComp.sprite = CreateCircleSprite();
+                imgComp.type = UnityEngine.UI.Image.Type.Simple;
+                imgComp.preserveAspect = true;
                 imgComp.raycastTarget = false;
+
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot centered on node, size=80x80");
 
                 // Player count text centered on the dot
                 try
@@ -897,19 +871,20 @@ namespace StarTruckMP.StarTruckClient
                             lrt.anchorMin = new Vector2(0.5f, 0.5f);
                             lrt.anchorMax = new Vector2(0.5f, 0.5f);
                             lrt.anchoredPosition = Vector2.zero;
-                            lrt.sizeDelta = new Vector2(50f, 50f);
+                            lrt.sizeDelta = new Vector2(80f, 80f);
                             lrt.localScale = Vector3.one;
                         }
                         var labelTMP = labelClone.GetComponent<TMPro.TextMeshProUGUI>();
                         if (labelTMP != null)
                         {
                             labelTMP.text = playerCount.ToString();
-                            labelTMP.fontSize = 20;
+                            labelTMP.fontSize = 24;
                             labelTMP.color = Color.white;
                             labelTMP.alignment = TMPro.TextAlignmentOptions.Center;
                             labelTMP.raycastTarget = false;
                         }
                         mapIndicators.Add(labelClone);
+                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: count label '{playerCount}' created");
                     }
                 }
                 catch (System.Exception ex2)
@@ -924,6 +899,31 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"CreateMapIndicator error: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Creates a simple white circle sprite at runtime using a Texture2D.
+        /// </summary>
+        private static UnityEngine.Sprite CreateCircleSprite()
+        {
+            int size = 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = size / 2f;
+            float radius = size / 2f - 1f;
+            Color transparent = new Color(0, 0, 0, 0);
+            Color white = Color.white;
+
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center));
+                    tex.SetPixel(x, y, dist <= radius ? white : transparent);
+                }
+            }
+            tex.Apply();
+
+            return UnityEngine.Sprite.Create(tex, new UnityEngine.Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 
         private static void ClearMapIndicators()
