@@ -40,7 +40,6 @@ namespace StarTruckMP.StarTruckClient
         private static Sonity.SoundEvent cachedHornEvent = null;
         private static bool hornEventSearched = false;
         private static System.Reflection.MethodInfo cachedPlayMethod = null;
-        private static System.Reflection.MethodInfo cachedVolumeMethod = null;
         private static System.Reflection.MethodInfo cachedStopMethod = null;
         private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
             = new System.Collections.Generic.Dictionary<ushort, bool>();
@@ -745,32 +744,10 @@ namespace StarTruckMP.StarTruckClient
                 if (dist > honkMaxDistance) return;
 
                 // --- Distance-based volume: 0dB at 0m, -20dB at 400m ---
-                if (cachedVolumeMethod == null)
-                {
-                    var vmethods = cachedHornEvent.GetType().GetMethods(
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    foreach (var vm in vmethods)
-                    {
-                        if (vm.Name == "SetVolumeDecibel")
-                        {
-                            var vp = vm.GetParameters();
-                            if (vp.Length == 1 && vp[0].ParameterType == typeof(float))
-                            { cachedVolumeMethod = vm; break; }
-                        }
-                    }
-                    if (cachedVolumeMethod != null)
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Found SetVolumeDecibel via reflection");
-                }
-                if (cachedVolumeMethod != null)
-                {
-                    float volumeDb = -20f * Math.Min(dist / honkMaxDistance, 1f);
-                    cachedVolumeMethod.Invoke(cachedHornEvent, new object[] { volumeDb });
-                }
-
-                // --- Play horn at remote truck ---
+// --- Play horn at remote truck ---
                 cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
                 Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} dist={dist:F0} volDb={(-20f * Math.Min(dist / honkMaxDistance, 1f)):F1}");
+                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} dist={dist:F0}");
             }
             catch (System.Exception ex)
             {
