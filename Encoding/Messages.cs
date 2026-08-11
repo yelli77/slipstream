@@ -438,13 +438,27 @@ namespace StarTruckMP.Encoding
                 Vector3[] verts = new Vector3[uiVerts.Length];
                 Vector2[] uvs = new Vector2[uiVerts.Length];
                 Color32[] colors = new Color32[uiVerts.Length];
-                for (int i = 0; i < uiVerts.Length; i++)
+                for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    verts[i] = uiVerts[i].position;
-                    // Clamp UV y to avoid bottom atlas edge artifact
-                    float uvY = Mathf.Clamp(uiVerts[i].uv0.y, 0.01f, 0.99f);
-                    uvs[i] = new Vector2(uiVerts[i].uv0.x, uvY);
-                    colors[i] = uiVerts[i].color;
+                    // TextGenerator outputs: i=BL, i+1=TL, i+2=BR, i+3=TR
+                    // We need standard quad: i=BL, i+1=TL, i+2=TR, i+3=BR
+                    // So swap i+2 and i+3 positions
+                    verts[i]   = uiVerts[i].position;
+                    verts[i+1] = uiVerts[i+1].position;
+                    verts[i+2] = uiVerts[i+3].position; // TR
+                    verts[i+3] = uiVerts[i+2].position; // BR
+                    float uvY0 = Mathf.Clamp(uiVerts[i].uv0.y, 0.01f, 0.99f);
+                    float uvY1 = Mathf.Clamp(uiVerts[i+1].uv0.y, 0.01f, 0.99f);
+                    float uvY2 = Mathf.Clamp(uiVerts[i+3].uv0.y, 0.01f, 0.99f);
+                    float uvY3 = Mathf.Clamp(uiVerts[i+2].uv0.y, 0.01f, 0.99f);
+                    uvs[i]   = new Vector2(uiVerts[i].uv0.x, uvY0);
+                    uvs[i+1] = new Vector2(uiVerts[i+1].uv0.x, uvY1);
+                    uvs[i+2] = new Vector2(uiVerts[i+3].uv0.x, uvY2);
+                    uvs[i+3] = new Vector2(uiVerts[i+2].uv0.x, uvY3);
+                    colors[i]   = uiVerts[i].color;
+                    colors[i+1] = uiVerts[i+1].color;
+                    colors[i+2] = uiVerts[i+3].color;
+                    colors[i+3] = uiVerts[i+2].color;
                 }
                 mesh.vertices = verts;
                 mesh.uv = uvs;
@@ -455,9 +469,9 @@ namespace StarTruckMP.Encoding
                 int ti = 0;
                 for (int i = 0; i < uiVerts.Length; i += 4)
                 {
-                    // Both triangles CCW (front-face): top + bottom
-                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+3;
-                    tris[ti++] = i+3; tris[ti++] = i+2; tris[ti++] = i;
+                    // Standard quad triangulation: BL,TL,TR + BL,TR,BR
+                    tris[ti++] = i; tris[ti++] = i+1; tris[ti++] = i+2;
+                    tris[ti++] = i; tris[ti++] = i+2; tris[ti++] = i+3;
                 }
                 mesh.triangles = tris;
                 mesh.RecalculateNormals();
