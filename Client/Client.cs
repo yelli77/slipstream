@@ -787,7 +787,12 @@ namespace StarTruckMP.StarTruckClient
                                 p[1].ParameterType.Name.Contains("SoundParameterInternals"))
                             {
                                 cachedPlayWithParamsMethod = m;
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Found Play(Transform, SoundParameterInternals[])");
+                                if (!loggedPlayOverload)
+                                {
+                                    loggedPlayOverload = true;
+                                    var pp = m.GetParameters();
+                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play overload signature: ({pp[0].ParameterType.FullName}, {pp[1].ParameterType.FullName})");
+                                }
                                 break;
                             }
                         }
@@ -797,17 +802,26 @@ namespace StarTruckMP.StarTruckClient
                 // --- Play horn at remote truck ---
                 if (cachedPlayWithParamsMethod != null && cachedVolumeParam != null)
                 {
-                    var arrType = typeof(Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<>)
-                        .MakeGenericType(cachedVolumeParam.GetType());
-                    var arr = System.Activator.CreateInstance(arrType, new object[] { new[] { cachedVolumeParam } });
-                    cachedPlayWithParamsMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, arr });
+                    // Plain CLR array via covariance
+                    var arr = System.Array.CreateInstance(cachedVolumeParam.GetType(), 1);
+                    arr.SetValue(cachedVolumeParam, 0);
+                    try
+                    {
+                        cachedPlayWithParamsMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, arr });
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(params) OK for player {playerId} dist={dist:F0} vol=+12dB");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: Play(params) failed: {ex.InnerException?.Message ?? ex.Message}");
+                        cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) fallback for player {playerId} dist={dist:F0}");
+                    }
                 }
                 else
                 {
                     cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
+                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) for player {playerId} dist={dist:F0}");
                 }
-                Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} dist={dist:F0}");
             }
             catch (System.Exception ex)
             {
