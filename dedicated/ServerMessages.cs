@@ -5,11 +5,11 @@ namespace StarTruckMP.Dedicated;
 
 public static class ServerMessages
 {
-    public static Message CreateMovement(ushort playerId, Vector3f pos, Vector3f rot, Vector3f vel, Vector3f angVel, bool isTruck, bool inSeat)
+    public static Message CreateMovement(ushort playerId, Vector3f pos, Vector3f rot, Vector3f vel, Vector3f angVel, bool isTruck, bool inSeat, bool isHonking = false)
     {
         float[] t = { pos.X,pos.Y,pos.Z, rot.X,rot.Y,rot.Z, vel.X,vel.Y,vel.Z, angVel.X,angVel.Y,angVel.Z };
         var msg = Message.Create(MessageSendMode.Unreliable, (ushort)MessageType.MovementUpdate);
-        msg.AddUShort(playerId); msg.AddFloats(t); msg.AddBool(isTruck); msg.AddBool(inSeat);
+        msg.AddUShort(playerId); msg.AddFloats(t); msg.AddBool(isTruck); msg.AddBool(inSeat); msg.AddBool(isHonking);
         return msg;
     }
 

@@ -250,7 +250,6 @@ namespace StarTruckMP.StarTruckClient
                     bool isTruck = e.Message.GetBool();
                     bool inSeat = e.Message.GetBool();
                     bool remoteIsHonking = e.Message.GetBool();
-                    if (remoteIsHonking) StarTruckMP.Log.LogInfo($"MOVEMENT: remoteIsHonking=true from player {playerId}");
 
                     playerInfo currentPlayer;
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
@@ -425,7 +424,6 @@ namespace StarTruckMP.StarTruckClient
             {
                 isHonking = true;
                 honkEndTime = Time.realtimeSinceStartup + 0.5f;
-                StarTruckMP.Log.LogInfo($"CheckHonk: honk flag SET, isHonking={isHonking}");
             }
             if (isHonking && Time.realtimeSinceStartup >= honkEndTime)
                 isHonking = false;
@@ -443,7 +441,6 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (!sentFirstUpdate || isHonking || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
-                        StarTruckMP.Log.LogInfo($"SendMovement: sending truck with isHonking={isHonking}");
                         client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, isHonking));
                         truckTrans.Pos = floatingOrigin.m_currentOrigin + myTruck.transform.position;
                         truckTrans.Rot = myTruck.transform.eulerAngles;
@@ -650,7 +647,6 @@ namespace StarTruckMP.StarTruckClient
 
         private static void HandleRemoteHonk(ushort playerId)
         {
-            StarTruckMP.Log.LogInfo($"HandleRemoteHonk ENTERED for player {playerId}");
             if (Time.realtimeSinceStartup - lastHonkLogTime < 1f) return;
             lastHonkLogTime = Time.realtimeSinceStartup;
             try

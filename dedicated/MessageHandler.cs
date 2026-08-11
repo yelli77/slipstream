@@ -37,13 +37,13 @@ public class MessageHandler
         float[] t = e.Message.GetFloats();
         var pos=new Vector3f(t[0],t[1],t[2]); var rot=new Vector3f(t[3],t[4],t[5]);
         var vel=new Vector3f(t[6],t[7],t[8]); var ang=new Vector3f(t[9],t[10],t[11]);
-        bool isTruck=e.Message.GetBool(); bool inSeat=e.Message.GetBool();
+        bool isTruck=e.Message.GetBool(); bool inSeat=e.Message.GetBool(); bool isHonking=e.Message.GetBool();
         if(isTruck){p.TruckPosition=pos;p.TruckRotation=rot;p.TruckVelocity=vel;p.TruckAngularVelocity=ang;
             if(inSeat){p.PlayerPosition=pos;p.PlayerRotation=rot;p.PlayerVelocity=vel;p.PlayerAngularVelocity=ang;}}
         else{p.PlayerPosition=pos;p.PlayerRotation=rot;p.PlayerVelocity=vel;p.PlayerAngularVelocity=ang;}
         p.InTruck=isTruck;p.Seated=inSeat;p.LastUpdate=DateTime.UtcNow;
         _players[e.FromConnection.Id]=p;
-        server.SendToAll(ServerMessages.CreateMovement(e.FromConnection.Id,pos,rot,vel,ang,isTruck,inSeat));
+        server.SendToAll(ServerMessages.CreateMovement(e.FromConnection.Id,pos,rot,vel,ang,isTruck,inSeat,isHonking));
     }
 
     private void HandleTrailer(MessageReceivedEventArgs e, Riptide.Server server)
