@@ -17,7 +17,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-114";
+    public const string customBuildNumber = "custom-build-115";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -52,8 +52,8 @@ public class StarTruckMP : BasePlugin
             StarTruckClient.StarTruckClient.Update();
             StarTruckServer.StarTruckServer.FixedUpdate();
             StarTruckClient.StarTruckClient.FixedUpdate();
-            StarTruckClient.StarTruckClient.SendMovement();
             StarTruckClient.StarTruckClient.CheckHonk();
+            StarTruckClient.StarTruckClient.SendMovement();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]

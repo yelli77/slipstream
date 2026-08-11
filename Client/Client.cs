@@ -34,6 +34,7 @@ namespace StarTruckMP.StarTruckClient
         private const float PositionLogIntervalSeconds = 60f;
         private static bool isHonking = false;
         private static bool wasHonking = false;
+        private static int sendMovementCallCount = 0;
         private static float honkMaxDistance = 400f;
         private static System.Collections.Generic.Dictionary<ushort, float> lastRemoteHonkTime
             = new System.Collections.Generic.Dictionary<ushort, float>();
@@ -425,10 +426,20 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        private static int getKeyDownCallCount = 0;
+        private static bool lastGetKeyDown = false;
+
         public static void CheckHonk()
         {
             if (!client.IsConnected) return;
-            if (UnityEngine.Input.GetKeyDown(StarTruckMP.HonkKey.Value))
+            bool keyDown = UnityEngine.Input.GetKeyDown(StarTruckMP.HonkKey.Value);
+            bool keyHeld = UnityEngine.Input.GetKey(StarTruckMP.HonkKey.Value);
+            getKeyDownCallCount++;
+            if (getKeyDownCallCount % 100 == 0 || (keyDown && !lastGetKeyDown) || (keyDown && lastGetKeyDown))
+                StarTruckMP.Log.LogInfo($"[HONK-DIAG] CheckHonk#{getKeyDownCallCount}: GetKeyDown={keyDown}, GetKey={keyHeld}, isHonking(before)={isHonking}");
+            lastGetKeyDown = keyDown;
+
+            if (keyDown)
             {
                 isHonking = true;
                 honkEndTime = Time.realtimeSinceStartup + 0.5f;
@@ -451,6 +462,9 @@ namespace StarTruckMP.StarTruckClient
                     bool honkJustEnded = !isHonking && wasHonking;
                     bool sendHonk = honkJustStarted || honkJustEnded;
                     if (honkJustStarted || honkJustEnded) wasHonking = isHonking;
+                    sendMovementCallCount++;
+                    if (sendHonk || (sendMovementCallCount % 10 == 0))
+                        StarTruckMP.Log.LogInfo($"[HONK-DIAG] Send #{sendMovementCallCount}: isHonking={isHonking}, wasHonking={wasHonking}, sendHonk={sendHonk}");
                     if (!sentFirstUpdate || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
                         client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk));
