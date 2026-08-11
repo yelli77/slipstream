@@ -808,49 +808,74 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                // Find IconRingParent child — this is a Canvas UI element that renders on the map
-                Transform iconRingParent = null;
+                // Create a fresh UI.Image as child of the button — guaranteed Canvas-visible
+                GameObject indicator = new GameObject($"PlayerDot_{playerId}_{playerName}");
+                indicator.transform.SetParent(btn.transform, false);
+
+                // Position it above the center of the node
+                var rt = indicator.AddComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = new Vector2(0f, 0.7f);
+                rt.sizeDelta = new Vector2(0.5f, 0.5f);
+
+                var img = indicator.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(1f, 0.2f, 0f); // bright orange-red
+                img.raycastTarget = false;
+
+                // Also create a name label above the dot using TMP clone from scene
                 try
                 {
-                    for (int ci = 0; ci < btn.transform.childCount; ci++)
+                    var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
+                    TMPro.TextMeshProUGUI sourceTMP = null;
+                    if (allTMP != null)
                     {
-                        var child = btn.transform.GetChild(ci);
-                        if (child.name.Contains("IconRingParent"))
+                        foreach (var tmp in allTMP)
                         {
-                            iconRingParent = child;
-                            break;
+                            if (tmp != null && !string.IsNullOrEmpty(tmp.text) && tmp.gameObject.scene.IsValid())
+                            {
+                                sourceTMP = tmp;
+                                break;
+                            }
                         }
                     }
-                }
-                catch { }
 
-                if (iconRingParent == null)
-                {
-                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: no IconRingParent found on '{btn.name}', skipping");
-                    return;
+                    if (sourceTMP != null)
+                    {
+                        GameObject labelClone = UnityEngine.Object.Instantiate(sourceTMP.gameObject, indicator.transform);
+                        labelClone.name = "NameLabel";
+                        var lrt = labelClone.GetComponent<RectTransform>();
+                        if (lrt != null)
+                        {
+                            lrt.anchorMin = new Vector2(0.5f, 0.5f);
+                            lrt.anchorMax = new Vector2(0.5f, 0.5f);
+                            lrt.anchoredPosition = new Vector2(0f, 0.4f);
+                            lrt.sizeDelta = new Vector2(2f, 0.3f);
+                        }
+                        var labelTMP = labelClone.GetComponent<TMPro.TextMeshProUGUI>();
+                        if (labelTMP != null)
+                        {
+                            labelTMP.text = playerName.ToUpperInvariant();
+                            labelTMP.fontSize = 5;
+                            labelTMP.color = Color.yellow;
+                            labelTMP.alignment = TMPro.TextAlignmentOptions.Center;
+                            labelTMP.raycastTarget = false;
+                        }
+                        mapIndicators.Add(labelClone);
+                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: label '{playerName}' cloned from TMP");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogWarning($"  CreateMapIndicator: no TextMeshProUGUI found for label");
+                    }
                 }
-
-                // Clone IconRingParent as visible indicator
-                GameObject indicator = UnityEngine.Object.Instantiate(iconRingParent.gameObject, btn.transform);
-                indicator.name = $"PlayerIndicator_{playerId}_{playerName}";
-                indicator.transform.localPosition = iconRingParent.localPosition;
-                indicator.transform.localScale = iconRingParent.localScale * 1.2f; // slightly bigger
-
-                // Tint all renderers yellow to make it stand out
-                foreach (var renderer in indicator.GetComponentsInChildren<MeshRenderer>())
+                catch (System.Exception ex2)
                 {
-                    var mat = new Material(Shader.Find("Standard"));
-                    mat.color = new Color(1f, 1f, 0f); // bright yellow
-                    mat.SetInt("_Cull", 0);
-                    renderer.material = mat;
-                }
-                foreach (var img in indicator.GetComponentsInChildren<UnityEngine.UI.Image>())
-                {
-                    img.color = new Color(1f, 1f, 0f, 0.9f); // bright yellow
+                    StarTruckMP.Log.LogWarning($"  CreateMapIndicator: label failed: {ex2.Message}");
                 }
 
                 mapIndicators.Add(indicator);
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: cloned IconRing for '{playerName}' at '{btn.name}'");
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot for '{playerName}' at '{btn.name}' (Image component)");
             }
             catch (System.Exception ex)
             {
