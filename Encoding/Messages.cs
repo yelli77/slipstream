@@ -388,6 +388,46 @@ namespace StarTruckMP.Encoding
                 var sectorGO = GameObject.Find("[Sector]");
                 if (sectorGO == null) return null;
 
+                // Diagnostic: find all text components in scene
+                var allTMP = GameObject.FindObjectsOfType<TMPro.TextMeshPro>();
+                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTMP?.Length ?? 0} TextMeshPro (3D) objects");
+                if (allTMP != null && allTMP.Length > 0)
+                {
+                    for (int t = 0; t < Mathf.Min(allTMP.Length, 5); t++)
+                    {
+                        if (allTMP[t] != null)
+                            StarTruckMP.Log.LogInfo($"  TMP3D[{t}]: '{allTMP[t].text}' name='{allTMP[t].gameObject.name}'");
+                    }
+                }
+
+                var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
+                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTMPUGUI?.Length ?? 0} TextMeshProUGUI (Canvas) objects");
+
+                var allTM = GameObject.FindObjectsOfType<TextMesh>();
+                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTM?.Length ?? 0} TextMesh (legacy) objects");
+
+                // If we find a 3D TextMeshPro, clone it
+                if (allTMP != null && allTMP.Length > 0)
+                {
+                    var source = allTMP[0];
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloning 3D TMP '{source.text}' from '{source.gameObject.name}'");
+                    GameObject clone = GameObject.Instantiate(source.gameObject);
+                    clone.name = "NameLabel_" + playerId;
+                    SceneManager.MoveGameObjectToScene(clone, sectorGO.scene);
+                    clone.transform.SetParent(null);
+
+                    var tmp = clone.GetComponent<TMPro.TextMeshPro>();
+                    if (tmp != null)
+                    {
+                        tmp.text = name;
+                        tmp.fontSize = 4f;
+                        tmp.alignment = TMPro.TextAlignmentOptions.Center;
+                        tmp.color = Color.yellow;
+                        tmp.enableAutoSizing = false;
+                    }
+                    return clone;
+                }
+
                 Font font = null;
                 try { font = Font.CreateDynamicFontFromOSFont("Arial", 80); } catch { }
                 if (font == null)
