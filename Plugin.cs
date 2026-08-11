@@ -1,7 +1,9 @@
 using BepInEx.Unity.IL2CPP;
 using BepInEx;
 using Object = UnityEngine.Object;
+using UnityEngine;
 using HarmonyLib;
+using System.Reflection;
 using System;
 using BepInEx.Logging;
 using BepInEx.Configuration;
@@ -15,7 +17,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-107";
+    public const string customBuildNumber = "custom-build-108";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -36,6 +38,7 @@ public class StarTruckMP : BasePlugin
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
         HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
+        Harmony.CreateAndPatchAll(typeof(HornDiagnostic));
 
     }
 
@@ -68,5 +71,33 @@ public class StarTruckMP : BasePlugin
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
         }
 
+    }
+
+    [HarmonyPatch]
+    public class HornDiagnostic
+    {
+        private static bool loggedOnce = false;
+
+        [HarmonyPatch(typeof(AITruckHorn), nameof(AITruckHorn.ProcessHorn))]
+        [HarmonyPrefix]
+        public static bool ProcessHorn_Prefix(AITruckHorn __instance, float duration)
+        {
+            try
+            {
+                var go = (__instance as Component)?.gameObject;
+                string goName = go != null ? go.name : "no-GameObject";
+                StarTruckMP.Log.LogInfo($"[HORN-DIAG] ProcessHorn(duration={duration}) on GO='{goName}' type={__instance.GetType().FullName}");
+                if (!loggedOnce)
+                {
+                    loggedOnce = true;
+                    StarTruckMP.Log.LogInfo($"[HORN-DIAG] Stack trace: {Environment.StackTrace}");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"[HORN-DIAG] ProcessHorn error: {ex.Message}");
+            }
+            return true; // let original run
+        }
     }
 }

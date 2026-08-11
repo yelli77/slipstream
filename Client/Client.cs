@@ -644,145 +644,19 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        // Per-truck AITruckHorn cache (keyed by remote playerId)
-        private static System.Collections.Generic.Dictionary<ushort, object> cachedHornInstances
-            = new System.Collections.Generic.Dictionary<ushort, object>();
-        private static System.Type aiTruckHornType = null;
-        private static bool aiTruckHornTypeSearched = false;
-        private static float lastHonkTime = 0f;
-
+                                                    
         private static void HandleRemoteHonk(ushort playerId)
         {
-            // Rate-limit: max one honk per 0.5s per player (network duplicates)
-            float now = Time.realtimeSinceStartup;
-            if (now - lastHonkTime < 0.5f) return;
-            lastHonkTime = now;
-
             try
             {
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
-
-                // --- Step 1: resolve AITruckHorn type once ---
-                if (!aiTruckHornTypeSearched)
-                {
-                    aiTruckHornTypeSearched = true;
-                    // AITruckHorn is in Assembly-CSharp, NOT in UnityEngine.CoreModule
-                    // Try common assembly names for the game's IL2CPP interop
-                    string[] assemblyNames = new string[] { "Assembly-CSharp", "StarTruckMP" };
-                    foreach (string asmName in assemblyNames)
-                    {
-                        try
-                        {
-                            var asm = System.Reflection.Assembly.Load(asmName);
-                            aiTruckHornType = asm.GetType("AITruckHorn");
-                            if (aiTruckHornType != null)
-                            {
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn FOUND in assembly '{asmName}'");
-                                break;
-                            }
-                        }
-                        catch { }
-                    }
-                    // Fallback: search ALL loaded assemblies
-                    if (aiTruckHornType == null)
-                    {
-                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: not found in named assemblies, scanning all loaded...");
-                        try
-                        {
-                            foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
-                            {
-                                try
-                                {
-                                    aiTruckHornType = asm.GetType("AITruckHorn");
-                                    if (aiTruckHornType != null)
-                                    {
-                                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn FOUND in assembly '{asm.GetName().Name}'");
-                                        break;
-                                    }
-                                }
-                                catch { }
-                            }
-                        }
-                        catch (System.Exception ex2)
-                        {
-                            StarTruckMP.Log.LogWarning($"HandleRemoteHonk: GetAssemblies failed: {ex2.Message}");
-                        }
-                    }
-                    if (aiTruckHornType == null)
-                        StarTruckMP.Log.LogWarning("HandleRemoteHonk: AITruckHorn type NOT FOUND in any assembly");
-                }
-                if (aiTruckHornType == null) return;
-
-                // --- Step 2: get or find horn instance for this truck ---
-                object hornInstance = null;
-                if (!cachedHornInstances.TryGetValue(playerId, out hornInstance) || hornInstance == null)
-                {
-                    // 2a: Scan components on the remote truck for one whose type IS AITruckHorn
-                    Component[] allComps = rp.Truck.GetComponentsInChildren<Component>();
-                    for (int i = 0; i < allComps.Length; i++)
-                    {
-                        Component c = allComps[i];
-                        if (c == null) continue;
-                        if (aiTruckHornType.IsAssignableFrom(c.GetType()))
-                        {
-                            hornInstance = c;
-                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn via component scan on '{rp.Truck.name}' -> '{c.gameObject.name}' (type={c.GetType().FullName})");
-                            break;
-                        }
-                    }
-
-                    // 2b: Fallback — scan for one with m_truckHorn field referencing AITruckHorn
-                    if (hornInstance == null)
-                    {
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Direct AITruckHorn not found on '{rp.Truck.name}', scanning for m_truckHorn field...");
-                        for (int i = 0; i < allComps.Length; i++)
-                        {
-                            Component c = allComps[i];
-                            if (c == null) continue;
-                            var field = c.GetType().GetField("m_truckHorn",
-                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                            if (field != null && aiTruckHornType.IsAssignableFrom(field.FieldType))
-                            {
-                                hornInstance = field.GetValue(c);
-                                if (hornInstance != null)
-                                {
-                                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: AITruckHorn via m_truckHorn on '{c.GetType().FullName}' (go='{c.gameObject.name}')");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (hornInstance != null)
-                    {
-                        cachedHornInstances[playerId] = hornInstance;
-                    }
-                    else
-                    {
-                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: No AITruckHorn found for player {playerId} on '{rp.Truck.name}' (scanned {allComps.Length} components)");
-                        return;
-                    }
-                }
-
-                // --- Step 3: call ProcessHorn(1f) via reflection ---
-                var processMethod = hornInstance.GetType().GetMethod("ProcessHorn",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-                if (processMethod != null)
-                {
-                    processMethod.Invoke(hornInstance, new object[] { 1f });
-                    Vector3 pos = rp.Truck.transform.position;
-                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: ProcessHorn(1f) OK for player {playerId} at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1})");
-                }
-                else
-                {
-                    StarTruckMP.Log.LogWarning($"HandleRemoteHonk: ProcessHorn not found on {hornInstance.GetType().FullName}");
-                    cachedHornInstances.Remove(playerId);
-                }
+                Vector3 pos = rp.Truck.transform.position;
+                StarTruckMP.Log.LogInfo($"[HONK-RECV] player {playerId} honked at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) — sound playback TBD after local diagnosis");
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"HandleRemoteHonk error: {ex.GetType().Name}: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"HandleRemoteHonk error: {ex.Message}");
             }
         }
 
