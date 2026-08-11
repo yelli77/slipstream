@@ -823,7 +823,39 @@ namespace StarTruckMP.StarTruckClient
                 rootRT.anchoredPosition = new Vector2(0f, 50f);
                 rootRT.sizeDelta = new Vector2(50f, 50f);
 
-                // Round dot using Filled image type
+                // Find a circular Image from the button's IconRing to get its sprite
+                UnityEngine.Sprite circleSprite = null;
+                try
+                {
+                    for (int ci = 0; ci < btn.transform.childCount; ci++)
+                    {
+                        var child = btn.transform.GetChild(ci);
+                        if (child.name.Contains("IconRing"))
+                        {
+                            var ringImg = child.GetComponent<UnityEngine.UI.Image>();
+                            if (ringImg != null && ringImg.sprite != null)
+                            {
+                                circleSprite = ringImg.sprite;
+                                break;
+                            }
+                            // Check grandchildren
+                            for (int gi = 0; gi < child.childCount; gi++)
+                            {
+                                var gc = child.GetChild(gi);
+                                var gcImg = gc.GetComponent<UnityEngine.UI.Image>();
+                                if (gcImg != null && gcImg.sprite != null)
+                                {
+                                    circleSprite = gcImg.sprite;
+                                    break;
+                                }
+                            }
+                            if (circleSprite != null) break;
+                        }
+                    }
+                }
+                catch { }
+
+                // Round dot using the game's own circular sprite
                 GameObject dot = new GameObject("Dot");
                 dot.transform.SetParent(root.transform, false);
                 var dotRT = dot.AddComponent<RectTransform>();
@@ -834,11 +866,22 @@ namespace StarTruckMP.StarTruckClient
 
                 var img = dot.AddComponent<UnityEngine.UI.Image>();
                 img.color = new Color(1f, 0.3f, 0f); // bright orange
-                img.type = UnityEngine.UI.Image.Type.Filled;
-                img.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
-                img.fillAmount = 1f;
-                img.fillClockwise = true;
+                if (circleSprite != null)
+                {
+                    img.sprite = circleSprite;
+                    img.type = UnityEngine.UI.Image.Type.Simple;
+                    img.preserveAspect = false;
+                }
+                else
+                {
+                    // Fallback: no sprite found, use filled
+                    img.type = UnityEngine.UI.Image.Type.Filled;
+                    img.fillMethod = UnityEngine.UI.Image.FillMethod.Radial360;
+                    img.fillAmount = 1f;
+                }
                 img.raycastTarget = false;
+
+                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot with sprite={(circleSprite != null ? "YES" : "NO")}");
 
                 // Player count text centered on the dot
                 try
@@ -866,7 +909,7 @@ namespace StarTruckMP.StarTruckClient
                         {
                             lrt.anchorMin = new Vector2(0.5f, 0.5f);
                             lrt.anchorMax = new Vector2(0.5f, 0.5f);
-                            lrt.anchoredPosition = Vector2.zero; // centered on dot
+                            lrt.anchoredPosition = Vector2.zero;
                             lrt.sizeDelta = new Vector2(50f, 50f);
                             lrt.localScale = Vector3.one;
                         }
