@@ -79,6 +79,7 @@ namespace StarTruckMP.StarTruckServer
                         bool isTruck = e.Message.GetBool();
                         bool inSeat = e.Message.GetBool();
                         bool isHonking = e.Message.GetBool();
+                        StarTruckMP.Log.LogInfo("Server movement: isHonking=" + isHonking + " from " + e.FromConnection.Id);
 
                         if (isTruck)
                         {
