@@ -38,7 +38,7 @@ namespace StarTruckMP.StarTruckClient
             client.Update();
             ReanchorRemotePlayersToFloatingOrigin();
             BillboardNameLabels();
-//             UpdateMapIndicators();
+            UpdateMapIndicators();
 
             if (client.IsConnected && Time.realtimeSinceStartup >= nextPositionLogTime)
             {
@@ -634,18 +634,25 @@ namespace StarTruckMP.StarTruckClient
         public static void UpdateMapIndicators()
         {
             mapCheckFrame++;
-            if (mapCheckFrame % 30 != 0) return;
+            if (mapCheckFrame % 300 != 0) return; // Log every ~5 seconds for diagnosis
 
             try
             {
                 bool mapOpen = false;
+                int buttonCount = 0;
 
                 try
                 {
                     var allBtns = UnityEngine.Object.FindObjectsOfType<MapSectorButton>();
-                    mapOpen = allBtns != null && allBtns.Length > 0;
+                    buttonCount = allBtns != null ? allBtns.Length : 0;
+                    mapOpen = buttonCount > 0;
                 }
-                catch { }
+                catch (System.Exception ex2)
+                {
+                    StarTruckMP.Log.LogWarning($"UpdateMapIndicators: FindObjectsOfType<MapSectorButton> failed: {ex2.Message}");
+                }
+
+                StarTruckMP.Log.LogInfo($"UpdateMapIndicators: mapOpen={mapOpen}, buttons={buttonCount}, indicators={mapIndicators.Count}, players={playerList.Count}");
 
                 if (mapOpen)
                 {
