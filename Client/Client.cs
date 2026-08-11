@@ -35,6 +35,11 @@ namespace StarTruckMP.StarTruckClient
         private static bool isHonking = false;
         private static float honkEndTime = 0f;
 
+        // Sonity horn SoundEvent cache
+        private static Sonity.SoundEvent cachedHornEvent = null;
+        private static bool hornEventSearched = false;
+        private static System.Reflection.MethodInfo cachedPlayMethod = null;
+
         public static void FixedUpdate()
         {
             client.Update();
@@ -651,12 +656,86 @@ namespace StarTruckMP.StarTruckClient
             {
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
+
+                // --- Lazy-find the horn SoundEvent asset ---
+                if (!hornEventSearched)
+                {
+                    hornEventSearched = true;
+                    var allEvents = UnityEngine.Resources.FindObjectsOfTypeAll<Sonity.SoundEvent>();
+                    int totalCount = allEvents != null ? allEvents.Length : 0;
+                    // Log ALL horn-related SoundEvents for reference
+                    string hornNames = "";
+                    if (allEvents != null)
+                    {
+                        foreach (var evt in allEvents)
+                        {
+                            if (evt != null && !string.IsNullOrEmpty(evt.name) &&
+                                evt.name.ToLower().Contains("horn"))
+                            {
+                                hornNames += evt.name + ", ";
+                            }
+                        }
+                    }
+                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: {totalCount} SoundEvents total, horn-related: [{hornNames}]");
+
+                    // Prefer Ext, fallback to Int
+                    if (allEvents != null)
+                    {
+                        foreach (var evt in allEvents)
+                        {
+                            if (evt != null && evt.name == "Truck_Horn_Ext_SE")
+                            { cachedHornEvent = evt; break; }
+                        }
+                    }
+                    if (cachedHornEvent == null && allEvents != null)
+                    {
+                        foreach (var evt in allEvents)
+                        {
+                            if (evt != null && evt.name == "Truck_Horn_Int_SE")
+                            { cachedHornEvent = evt; break; }
+                        }
+                    }
+                    if (cachedHornEvent != null)
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Using horn SoundEvent '{cachedHornEvent.name}'");
+                    else
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: No horn SoundEvent found");
+                }
+
+                if (cachedHornEvent == null) return;
+
+                // --- Find Play(Transform) via reflection once ---
+                if (cachedPlayMethod == null)
+                {
+                    var methods = cachedHornEvent.GetType().GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var m in methods)
+                    {
+                        if (m.Name == "Play")
+                        {
+                            var p = m.GetParameters();
+                            if (p.Length == 1 && p[0].ParameterType == typeof(Transform))
+                            {
+                                cachedPlayMethod = m;
+                                break;
+                            }
+                        }
+                    }
+                    if (cachedPlayMethod != null)
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Found Play(Transform) via reflection");
+                    else
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: Play(Transform) not found on {cachedHornEvent.GetType().FullName}");
+                }
+
+                if (cachedPlayMethod == null) return;
+
+                // --- Play horn at remote truck ---
+                cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
                 Vector3 pos = rp.Truck.transform.position;
-                StarTruckMP.Log.LogInfo($"[HONK-RECV] player {playerId} honked at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1}) — awaiting SoundEvent diagnosis");
+                StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Truck) for player {playerId} at ({pos.x:F1}, {pos.y:F1}, {pos.z:F1})");
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"HandleRemoteHonk error: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"HandleRemoteHonk error: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

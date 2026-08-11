@@ -4,7 +4,6 @@ using Object = UnityEngine.Object;
 using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
-using System.Linq;
 using System;
 using BepInEx.Logging;
 using BepInEx.Configuration;
@@ -18,7 +17,7 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-110";
+    public const string customBuildNumber = "custom-build-111";
     internal static new ManualLogSource Log;
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
@@ -39,7 +38,6 @@ public class StarTruckMP : BasePlugin
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
         HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
-        Harmony.CreateAndPatchAll(typeof(SonityDiagnostic));
 
     }
 
@@ -74,46 +72,4 @@ public class StarTruckMP : BasePlugin
 
     }
 
-    [HarmonyPatch(typeof(Sonity.SoundEvent))]
-    public class SonityDiagnostic
-    {
-        private static int hornLogCount = 0;
-
-        static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
-        {
-            var type = typeof(Sonity.SoundEvent);
-            return type.GetMethods(
-                System.Reflection.BindingFlags.Public |
-                System.Reflection.BindingFlags.Instance |
-                System.Reflection.BindingFlags.Static)
-                .Where(m => m.Name == "Play" || m.Name == "PlayAtPosition" ||
-                            m.Name == "Play2D" || m.Name == "PlayMusic")
-                .Cast<System.Reflection.MethodBase>();
-        }
-
-        [HarmonyPostfix]
-        public static void Postfix(object __instance, System.Reflection.MethodBase __originalMethod)
-        {
-            try
-            {
-                Sonity.SoundEvent se = null;
-                if (__instance is Sonity.SoundEvent s1)
-                    se = s1;
-
-                if (se == null) return;
-                string name = se.name ?? "";
-                if (string.IsNullOrEmpty(name)) return;
-                string lower = name.ToLower();
-                if (!lower.Contains("horn") && !lower.Contains("honk") && !lower.Contains("klaxon"))
-                    return;
-
-                hornLogCount++;
-                string paramStr = string.Join(", ",
-                    __originalMethod.GetParameters().Select(p => p.ParameterType.Name));
-                StarTruckMP.Log.LogInfo(
-                    $"[SONITY-DIAG] {__originalMethod.Name}({paramStr}) name='{name}' count={hornLogCount}");
-            }
-            catch { }
-        }
-    }
 }
