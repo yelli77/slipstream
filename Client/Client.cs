@@ -441,7 +441,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 if (myTruck != null && playerLocation)
                 {
-                    if (!sentFirstUpdate || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
+                    if (!sentFirstUpdate || isHonking || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
                         StarTruckMP.Log.LogInfo($"SendMovement: sending truck with isHonking={isHonking}");
                         client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, isHonking));
