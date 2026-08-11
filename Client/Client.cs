@@ -660,11 +660,10 @@ namespace StarTruckMP.StarTruckClient
                 {
                     ClearMapIndicators();
                 }
-                // Map still open — refresh every 2 seconds
-                else if (mapOpen && mapIndicators.Count > 0 && Time.realtimeSinceStartup >= nextMapRefreshTime)
+                // Map still open — update counts in place every 2 seconds
+                else if (mapOpen && Time.realtimeSinceStartup >= nextMapRefreshTime)
                 {
-                    ClearMapIndicators();
-                    SpawnMapIndicators();
+                    UpdateIndicatorCounts();
                     nextMapRefreshTime = Time.realtimeSinceStartup + 2f;
                 }
 
@@ -926,6 +925,105 @@ namespace StarTruckMP.StarTruckClient
             tex.Apply();
 
             return UnityEngine.Sprite.Create(tex, new UnityEngine.Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+        }
+
+        private static void UpdateIndicatorCounts()
+        {
+            try
+            {
+                // Re-scan all buttons and update existing indicator counts
+                var allButtons = UnityEngine.Object.FindObjectsOfType<MapSectorButton>();
+                if (allButtons == null || allButtons.Length == 0) return;
+
+                // Build a map of existing indicators by button name
+                var existingByButton = new System.Collections.Generic.Dictionary<string, GameObject>();
+                foreach (var ind in mapIndicators)
+                {
+                    if (ind != null && ind.transform.parent != null)
+                    {
+                        existingByButton[ind.transform.parent.name] = ind;
+                    }
+                }
+
+                for (int i = 0; i < allButtons.Length; i++)
+                {
+                    var btn = allButtons[i];
+                    if (btn == null) continue;
+
+                    string btnSectorName = "";
+                    try
+                    {
+                        var tmps = btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>();
+                        if (tmps != null)
+                        {
+                            foreach (var tmp in tmps)
+                            {
+                                if (!string.IsNullOrEmpty(tmp.text) && tmp.text.Trim().Length > 1)
+                                {
+                                    btnSectorName = tmp.text.Trim();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    // Count players
+                    int playerCount = 0;
+                    foreach (var kv in playerList)
+                    {
+                        if (string.IsNullOrEmpty(kv.Value.sector) || kv.Value.sector == "none") continue;
+                        string playerDisplay = SectorToDisplayName(kv.Value.sector);
+                        if (SectorNamesMatch(playerDisplay, btnSectorName))
+                            playerCount++;
+                    }
+                    if (!string.IsNullOrEmpty(currentSector) && currentSector != "none")
+                    {
+                        string localDisplay = SectorToDisplayName(currentSector);
+                        if (SectorNamesMatch(localDisplay, btnSectorName))
+                            playerCount++;
+                    }
+
+                    // Update existing indicator or create/remove as needed
+                    if (playerCount > 0)
+                    {
+                        if (existingByButton.ContainsKey(btn.name))
+                        {
+                            // Update the count label text
+                            var root = existingByButton[btn.name];
+                            var countLabel = root.transform.Find("CountLabel");
+                            if (countLabel != null)
+                            {
+                                var tmp = countLabel.GetComponent<TMPro.TextMeshProUGUI>();
+                                if (tmp != null && tmp.text != playerCount.ToString())
+                                {
+                                    tmp.text = playerCount.ToString();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // New indicator needed
+                            SpawnMapIndicators();
+                            return; // respawned everything
+                        }
+                    }
+                    else
+                    {
+                        if (existingByButton.ContainsKey(btn.name))
+                        {
+                            // Remove indicator for this button
+                            var root = existingByButton[btn.name];
+                            mapIndicators.Remove(root);
+                            GameObject.Destroy(root);
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"UpdateIndicatorCounts error: {ex.Message}");
+            }
         }
 
         private static void ClearMapIndicators()
