@@ -687,18 +687,8 @@ namespace StarTruckMP.StarTruckClient
                     }
                     StarTruckMP.Log.LogInfo($"HandleRemoteHonk: {totalCount} SoundEvents total, horn-related: [{hornNames}]");
 
-                    // Prefer: NPC exterior horn sequences (louder, meant for outside)
+                    // Find truck horn SoundEvent
                     if (allEvents != null)
-                    {
-                        foreach (var evt in allEvents)
-                        {
-                            if (evt != null && !string.IsNullOrEmpty(evt.name) &&
-                                evt.name.StartsWith("NPC_Truck_Ext_Horn_Sequence_Neutral"))
-                            { cachedHornEvent = evt; break; }
-                        }
-                    }
-                    // Fallback: interior truck horn
-                    if (cachedHornEvent == null && allEvents != null)
                     {
                         foreach (var evt in allEvents)
                         {
