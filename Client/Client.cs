@@ -36,14 +36,15 @@ namespace StarTruckMP.StarTruckClient
         private static bool wasHonking = false;
         private static int sendMovementCallCount = 0;
         private static float honkMaxDistance = 400f;
-        private static System.Collections.Generic.Dictionary<ushort, float> lastRemoteHonkTime
-            = new System.Collections.Generic.Dictionary<ushort, float>();
         private static float honkEndTime = 0f;
 
         // Sonity horn SoundEvent cache
         private static Sonity.SoundEvent cachedHornEvent = null;
         private static bool hornEventSearched = false;
         private static System.Reflection.MethodInfo cachedPlayMethod = null;
+        private static System.Reflection.MethodInfo cachedStopMethod = null;
+        private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
+            = new System.Collections.Generic.Dictionary<ushort, bool>();
 
         public static void FixedUpdate()
         {
@@ -300,8 +301,14 @@ namespace StarTruckMP.StarTruckClient
                             }
                         }
                         playerList[playerId] = currentPlayer;
-                        if (remoteIsHonking && currentPlayer.Truck != null)
+                        // Receiver-side edge detection: only play on false→true, stop on true→false
+                        bool wasRemoteHonking = false;
+                        lastRemoteHonking.TryGetValue(playerId, out wasRemoteHonking);
+                        if (remoteIsHonking && !wasRemoteHonking && currentPlayer.Truck != null)
                             HandleRemoteHonk(playerId);
+                        else if (!remoteIsHonking && wasRemoteHonking && currentPlayer.Truck != null)
+                            HandleRemoteHonkStop(playerId);
+                        lastRemoteHonking[playerId] = remoteIsHonking;
                     }
                 }
             }
@@ -676,12 +683,6 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                // Rate-limit: max 1 play per 1.5s per player
-                float now = Time.realtimeSinceStartup;
-                float lastTime;
-                if (lastRemoteHonkTime.TryGetValue(playerId, out lastTime) && (now - lastTime) < 1.5f) return;
-                lastRemoteHonkTime[playerId] = now;
-
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
 
@@ -706,15 +707,17 @@ namespace StarTruckMP.StarTruckClient
                     }
                     StarTruckMP.Log.LogInfo($"HandleRemoteHonk: {totalCount} SoundEvents total, horn-related: [{hornNames}]");
 
-                    // Prefer Ext, fallback to Int
+                    // Prefer: NPC exterior horn sequences (louder, meant for outside)
                     if (allEvents != null)
                     {
                         foreach (var evt in allEvents)
                         {
-                            if (evt != null && evt.name == "Truck_Horn_Ext_SE")
+                            if (evt != null && !string.IsNullOrEmpty(evt.name) &&
+                                evt.name.StartsWith("NPC_Truck_Ext_Horn_Sequence_Neutral"))
                             { cachedHornEvent = evt; break; }
                         }
                     }
+                    // Fallback: interior truck horn
                     if (cachedHornEvent == null && allEvents != null)
                     {
                         foreach (var evt in allEvents)
@@ -771,6 +774,48 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        private static void HandleRemoteHonkStop(ushort playerId)
+        {
+            try
+            {
+                if (cachedHornEvent == null) return;
+                playerInfo rp;
+                if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
+
+                // Find Stop(SoundEvent, Transform, Boolean) via reflection once
+                if (cachedStopMethod == null)
+                {
+                    var methods = typeof(Sonity.SoundEvent).GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    foreach (var m in methods)
+                    {
+                        if (m.Name == "Stop")
+                        {
+                            var p = m.GetParameters();
+                            if (p.Length == 3 &&
+                                p[0].ParameterType == typeof(Sonity.SoundEvent) &&
+                                p[1].ParameterType == typeof(Transform))
+                            {
+                                cachedStopMethod = m;
+                                StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Found Stop(SoundEvent, Transform, bool) via reflection");
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (cachedStopMethod != null)
+                {
+                    cachedStopMethod.Invoke(null, new object[] { cachedHornEvent, rp.Truck.transform, false });
+                    StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Stop for player {playerId}");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"HandleRemoteHonkStop error: {ex.Message}");
+            }
+        }
+
+        // === MAP PLAYER INDICATORS ===
         // === MAP PLAYER INDICATORS ===
         private static List<GameObject> mapIndicators = new List<GameObject>();
 
