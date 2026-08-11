@@ -693,24 +693,19 @@ namespace StarTruckMP.StarTruckClient
                     var btn = allButtons[i];
                     if (btn == null) continue;
 
-                    // DIAGNOSTIC: dump first button's children
+                    // DIAGNOSTIC: dump ALL sprites on first button
                     if (i == 0)
                     {
-                        StarTruckMP.Log.LogInfo($"  Button[0] '{btn.name}' children ({btn.transform.childCount}):");
-                        for (int ci = 0; ci < btn.transform.childCount; ci++)
+                        StarTruckMP.Log.LogInfo($"  Button[0] '{btn.name}' SPRITES:");
+                        var allImgs = btn.GetComponentsInChildren<UnityEngine.UI.Image>();
+                        if (allImgs != null)
                         {
-                            var child = btn.transform.GetChild(ci);
-                            string compList = "";
-                            foreach (var comp in child.GetComponents<Component>())
-                                compList += comp.GetType().Name + " ";
-                            StarTruckMP.Log.LogInfo($"    Child[{ci}] '{child.name}': localPos={child.localPosition}, localScale={child.localScale}, comps=[{compList.Trim()}]");
-                            for (int gi = 0; gi < child.childCount; gi++)
+                            for (int ii = 0; ii < allImgs.Length; ii++)
                             {
-                                var gc = child.GetChild(gi);
-                                string gcComps = "";
-                                foreach (var comp in gc.GetComponents<Component>())
-                                    gcComps += comp.GetType().Name + " ";
-                                StarTruckMP.Log.LogInfo($"      GC[{gi}] '{gc.name}': localPos={gc.localPosition}, comps=[{gcComps.Trim()}]");
+                                var img = allImgs[ii];
+                                string spriteName = img.sprite != null ? img.sprite.name : "NULL";
+                                string type = img.type.ToString();
+                                StarTruckMP.Log.LogInfo($"    Image[{ii}] '{img.gameObject.name}': sprite='{spriteName}' type={type} color=({img.color.r:F2},{img.color.g:F2},{img.color.b:F2})");
                             }
                         }
                     }
