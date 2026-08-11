@@ -693,19 +693,19 @@ namespace StarTruckMP.StarTruckClient
                     var btn = allButtons[i];
                     if (btn == null) continue;
 
-                    // DIAGNOSTIC: dump ALL sprites on first button
-                    if (i == 0)
+                    // DIAGNOSTIC: dump ALL sprites on ALL buttons (only first 3 to avoid log flood)
+                    if (i < 3)
                     {
-                        StarTruckMP.Log.LogInfo($"  Button[0] '{btn.name}' SPRITES:");
                         var allImgs = btn.GetComponentsInChildren<UnityEngine.UI.Image>();
+                        int imgCount = allImgs != null ? allImgs.Length : 0;
+                        StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': {imgCount} images");
                         if (allImgs != null)
                         {
                             for (int ii = 0; ii < allImgs.Length; ii++)
                             {
                                 var img = allImgs[ii];
                                 string spriteName = img.sprite != null ? img.sprite.name : "NULL";
-                                string type = img.type.ToString();
-                                StarTruckMP.Log.LogInfo($"    Image[{ii}] '{img.gameObject.name}': sprite='{spriteName}' type={type} color=({img.color.r:F2},{img.color.g:F2},{img.color.b:F2})");
+                                StarTruckMP.Log.LogInfo($"    Image[{ii}] '{img.gameObject.name}': sprite='{spriteName}' color=({img.color.r:F2},{img.color.g:F2},{img.color.b:F2},{img.color.a:F2})");
                             }
                         }
                     }
