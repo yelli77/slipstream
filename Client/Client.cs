@@ -693,6 +693,28 @@ namespace StarTruckMP.StarTruckClient
                     var btn = allButtons[i];
                     if (btn == null) continue;
 
+                    // DIAGNOSTIC: dump first button's children
+                    if (i == 0)
+                    {
+                        StarTruckMP.Log.LogInfo($"  Button[0] '{btn.name}' children ({btn.transform.childCount}):");
+                        for (int ci = 0; ci < btn.transform.childCount; ci++)
+                        {
+                            var child = btn.transform.GetChild(ci);
+                            string compList = "";
+                            foreach (var comp in child.GetComponents<Component>())
+                                compList += comp.GetType().Name + " ";
+                            StarTruckMP.Log.LogInfo($"    Child[{ci}] '{child.name}': localPos={child.localPosition}, localScale={child.localScale}, comps=[{compList.Trim()}]");
+                            for (int gi = 0; gi < child.childCount; gi++)
+                            {
+                                var gc = child.GetChild(gi);
+                                string gcComps = "";
+                                foreach (var comp in gc.GetComponents<Component>())
+                                    gcComps += comp.GetType().Name + " ";
+                                StarTruckMP.Log.LogInfo($"      GC[{gi}] '{gc.name}': localPos={gc.localPosition}, comps=[{gcComps.Trim()}]");
+                            }
+                        }
+                    }
+
                     string btnSectorName = "";
                     try
                     {
