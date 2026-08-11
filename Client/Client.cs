@@ -746,19 +746,8 @@ namespace StarTruckMP.StarTruckClient
 
                 if (cachedHornClip == null) return;
 
-                // Play via PlayClipAtPoint (method cached from search)
-                // Re-derive it from the clip type
-                var pt = cachedHornClip.GetType().Assembly.GetType("UnityEngine.AudioSource");
-                if (pt != null)
-                {
-                    var pm = pt.GetMethod("PlayClipAtPoint",
-                        new[] { cachedHornClip.GetType(), typeof(Vector3) });
-                    if (pm != null)
-                    {
-                        pm.Invoke(null, new object[] { cachedHornClip, honkPos });
-                        StarTruckMP.Log.LogInfo("HandleRemoteHonk: playing horn via PlayClipAtPoint");
-                    }
-                }
+                // Sound playback not yet implemented — diagnostic only
+                StarTruckMP.Log.LogInfo("HandleRemoteHonk: sound playback pending — clip found but no audio path");
             }
             catch (System.Exception ex)
             {
