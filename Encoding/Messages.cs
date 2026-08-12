@@ -181,23 +181,59 @@ namespace StarTruckMP.Encoding
 
 
         /// <summary>
-        /// Spawns a visible trailer for a remote player by instantiating the local
-        /// player hitched CargoContainer mesh. Falls back to a placeholder cube
-        /// if no local trailer is currently hitched.
+        /// Spawns a visible trailer for a remote player by instantiating a
+        /// matching CargoContainer mesh if available. Falls back to a placeholder
+        /// cube if no local trailer is currently hitched.
         /// </summary>
-        public static GameObject createTrailerMesh(ushort playerId)
+        public static GameObject createTrailerMesh(ushort playerId, string containerType = null)
         {
             try
             {
-                // Find any CargoContainer in the scene to clone as visual mesh
+                // Find a CargoContainer matching the requested type, or fall back to any
                 var allCargo = GameObject.FindObjectsOfType<CargoContainer>();
                 CargoContainer sampleCargo = null;
-                foreach (var cargo in allCargo)
+
+                if (!string.IsNullOrEmpty(containerType))
                 {
-                    if (cargo != null && cargo.gameObject != null)
+                    // First pass: try to find a container matching the type via reflection
+                    foreach (var cargo in allCargo)
                     {
-                        sampleCargo = cargo;
-                        break;
+                        if (cargo == null || cargo.gameObject == null) continue;
+                        try
+                        {
+                            string cargoTypeStr = "";
+                            var field = typeof(CargoContainer).GetField("containerType",
+                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                            if (field != null) cargoTypeStr = field.GetValue(cargo) as string ?? "";
+                            if (string.IsNullOrEmpty(cargoTypeStr))
+                            {
+                                var prop = typeof(CargoContainer).GetProperty("containerType",
+                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                                if (prop != null) cargoTypeStr = prop.GetValue(cargo) as string ?? "";
+                            }
+                            if (!string.IsNullOrEmpty(cargoTypeStr) && cargoTypeStr == containerType)
+                            {
+                                sampleCargo = cargo;
+                                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}]: matched containerType='{containerType}'");
+                                break;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+
+                // Second pass: fall back to any container if no match found
+                if (sampleCargo == null)
+                {
+                    foreach (var cargo in allCargo)
+                    {
+                        if (cargo != null && cargo.gameObject != null)
+                        {
+                            sampleCargo = cargo;
+                            if (!string.IsNullOrEmpty(containerType))
+                                StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no container matching type='{containerType}', using fallback");
+                            break;
+                        }
                     }
                 }
 
@@ -319,6 +355,14 @@ namespace StarTruckMP.Encoding
             message.AddUShort(playerId);
             message.AddString(itemId);
 
+            return message;
+        }
+
+        public static Message createTrailerModelMessage(ushort playerId, string containerType)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.updateTrailerModel);
+            message.AddUShort(playerId);
+            message.AddString(containerType ?? "");
             return message;
         }
 

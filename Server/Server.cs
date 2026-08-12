@@ -183,6 +183,21 @@ namespace StarTruckMP.StarTruckServer
                         server.SendToAll(message);
                     }
                     break;
+
+                case (ushort)messageType.updateTrailerModel:
+                    foundPlayer = playerList.TryGetValue(e.FromConnection.Id, out currentPlayer);
+
+                    if (foundPlayer)
+                    {
+                        e.Message.GetUShort();
+                        string containerType = e.Message.GetString();
+                        playerList[e.FromConnection.Id] = currentPlayer;
+                        Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.updateTrailerModel);
+                        message.AddUShort(e.FromConnection.Id);
+                        message.AddString(containerType);
+                        server.SendToAll(message);
+                    }
+                    break;
             }
         }
 

@@ -21,6 +21,7 @@ public class MessageHandler
             case MessageType.UpdateSector: HandleSector(e, server); break;
             case MessageType.UpdateLivery: HandleLivery(e, server); break;
             case MessageType.SetPlayerName: HandleSetName(e, server); break;
+            case MessageType.UpdateTrailerModel: HandleTrailerModel(e, server); break;
             case MessageType.ChatMessage: Console.WriteLine($"[CHAT] {e.FromConnection.Id}: {e.Message.GetString()}"); break;
         }
         }
@@ -91,6 +92,18 @@ public class MessageHandler
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.SetPlayerName);
         msg.AddUShort(e.FromConnection.Id);
         msg.AddString(name);
+        server.SendToAll(msg);
+    }
+
+    private void HandleTrailerModel(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
+        e.Message.GetUShort();
+        string model = e.Message.GetString();
+        p.TrailerModel = model; p.LastUpdate = DateTime.UtcNow;
+        _players[e.FromConnection.Id] = p;
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.UpdateTrailerModel);
+        msg.AddUShort(e.FromConnection.Id); msg.AddString(model);
         server.SendToAll(msg);
     }
 }

@@ -12,7 +12,8 @@ namespace StarTruckMP.Utilities
         updateLivery,
         playerConnected,
         trailerMovementUpdate,
-        setPlayerName
+        setPlayerName,
+        updateTrailerModel
     }
 
     public struct playerInfo
@@ -28,6 +29,7 @@ namespace StarTruckMP.Utilities
         public string sector;
         public bool seated;
         public string livery;
+        public string trailerModel;
         public GameObject NameLabel;
     }
 
