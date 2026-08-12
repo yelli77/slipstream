@@ -46,6 +46,10 @@ namespace StarTruckMP.StarTruckClient
         private static bool loggedPlayOverload = false;
         private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
             = new System.Collections.Generic.Dictionary<ushort, bool>();
+        private static float hornMaxLength = 0f;
+        private static bool hornMaxLengthFetched = false;
+        private static System.Collections.Generic.Dictionary<ushort, float> honkPlayingUntil
+            = new System.Collections.Generic.Dictionary<ushort, float>();
 
         public static void FixedUpdate()
         {
@@ -669,6 +673,11 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo rp;
                 if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
 
+                // --- Don't interrupt a still-playing sequence: let every honk play to completion ---
+                float lockUntil;
+                if (honkPlayingUntil.TryGetValue(playerId, out lockUntil) && UnityEngine.Time.realtimeSinceStartup < lockUntil)
+                    return;
+
                 // --- Lazy-find the horn SoundEvent asset ---
                 if (!hornEventSearched)
                 {
@@ -717,6 +726,27 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 if (cachedHornEvent == null) return;
+
+                if (!hornMaxLengthFetched)
+                {
+                    hornMaxLengthFetched = true;
+                    try
+                    {
+                        var getMaxLen = cachedHornEvent.GetType().GetMethod("GetMaxLength",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                            null, Type.EmptyTypes, null);
+                        if (getMaxLen != null)
+                        {
+                            hornMaxLength = (float)getMaxLen.Invoke(cachedHornEvent, null);
+                            StarTruckMP.Log.LogInfo($"HandleRemoteHonk: GetMaxLength() = {hornMaxLength:F2}s");
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        StarTruckMP.Log.LogWarning($"HandleRemoteHonk: GetMaxLength() failed: {ex.Message}");
+                    }
+                    if (hornMaxLength <= 0f) hornMaxLength = 2.5f; // sane fallback if the API didn't give us a value
+                }
 
                 // --- Find Play(Transform) via reflection once ---
                 if (cachedPlayMethod == null)
@@ -823,29 +853,6 @@ namespace StarTruckMP.StarTruckClient
                     }
                 }
 
-                // --- Best-effort: stop any still-playing instance for this truck first,
-                // so a fresh honk can retrigger even if the previous sequence hasn't finished.
-                // Sequence-type assets may ignore this, but it's harmless either way.
-                if (cachedStopMethod == null)
-                {
-                    var stopMethods = cachedHornEvent.GetType().GetMethods(
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    foreach (var m in stopMethods)
-                    {
-                        if (m.Name == "Stop")
-                        {
-                            var sp = m.GetParameters();
-                            if (sp.Length == 2 && sp[0].ParameterType == typeof(Transform) && sp[1].ParameterType == typeof(bool))
-                            { cachedStopMethod = m; break; }
-                        }
-                    }
-                }
-                if (cachedStopMethod != null)
-                {
-                    try { cachedStopMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, false }); }
-                    catch { /* best-effort, ignore */ }
-                }
-
                 // --- Play horn at remote truck ---
                 if (cachedPlayWithParamsMethod != null && cachedVolumeParam != null)
                 {
@@ -855,19 +862,22 @@ namespace StarTruckMP.StarTruckClient
                     try
                     {
                         cachedPlayWithParamsMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, arr });
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(params) OK for player {playerId} dist={dist:F0} vol=+24dB");
+                        honkPlayingUntil[playerId] = UnityEngine.Time.realtimeSinceStartup + hornMaxLength;
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(params) OK for player {playerId} dist={dist:F0} vol=+24dB, locked for {hornMaxLength:F2}s");
                     }
                     catch (System.Exception ex)
                     {
                         StarTruckMP.Log.LogWarning($"HandleRemoteHonk: Play(params) failed: {ex.InnerException?.Message ?? ex.Message}");
                         cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
-                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) fallback for player {playerId} dist={dist:F0}");
+                        honkPlayingUntil[playerId] = UnityEngine.Time.realtimeSinceStartup + hornMaxLength;
+                        StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) fallback for player {playerId} dist={dist:F0}, locked for {hornMaxLength:F2}s");
                     }
                 }
                 else
                 {
                     cachedPlayMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform });
-                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) for player {playerId} dist={dist:F0}");
+                    honkPlayingUntil[playerId] = UnityEngine.Time.realtimeSinceStartup + hornMaxLength;
+                    StarTruckMP.Log.LogInfo($"HandleRemoteHonk: Play(Transform) for player {playerId} dist={dist:F0}, locked for {hornMaxLength:F2}s");
                 }
             }
             catch (System.Exception ex)
@@ -878,45 +888,11 @@ namespace StarTruckMP.StarTruckClient
 
         private static void HandleRemoteHonkStop(ushort playerId)
         {
-            try
-            {
-                if (cachedHornEvent == null) return;
-                playerInfo rp;
-                if (!playerList.TryGetValue(playerId, out rp) || rp.Truck == null) return;
-
-                // Find Stop(Transform, bool) — INSTANCE method on SoundEvent
-                if (cachedStopMethod == null)
-                {
-                    var methods = cachedHornEvent.GetType().GetMethods(
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    foreach (var m in methods)
-                    {
-                        if (m.Name == "Stop")
-                        {
-                            var p = m.GetParameters();
-                            if (p.Length == 2 &&
-                                p[0].ParameterType == typeof(Transform) &&
-                                p[1].ParameterType == typeof(bool))
-                            {
-                                cachedStopMethod = m;
-                                StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Found Stop(Transform, bool) via reflection");
-                                break;
-                            }
-                        }
-                    }
-                    if (cachedStopMethod == null)
-                        StarTruckMP.Log.LogWarning($"HandleRemoteHonkStop: Stop method not found on {cachedHornEvent.GetType().FullName}");
-                }
-                if (cachedStopMethod != null)
-                {
-                    cachedStopMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, true });
-                    StarTruckMP.Log.LogInfo($"HandleRemoteHonkStop: Stop for player {playerId}");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"HandleRemoteHonkStop error: {ex.Message}");
-            }
+            // Intentionally a no-op: the horn sequence (NPC_Truck_Ext_Horn_Sequence_*)
+            // should always play to completion once triggered, regardless of when the
+            // remote player releases the honk key. Cutting it off early caused stuttering
+            // when honking repeatedly. HandleRemoteHonk's honkPlayingUntil lockout already
+            // prevents re-triggering while a sequence is still in progress.
         }
 
         // === MAP PLAYER INDICATORS ===
