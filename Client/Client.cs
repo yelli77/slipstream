@@ -690,13 +690,24 @@ namespace StarTruckMP.StarTruckClient
                     }
                     StarTruckMP.Log.LogInfo($"HandleRemoteHonk: {totalCount} SoundEvents total, horn-related: [{hornNames}]");
 
-                    // Find truck horn SoundEvent
+                    // Find truck horn SoundEvent — prefer the EXTERNAL horn (audible at range)
+                    // over the interior cabin sound, which is intentionally very short-range.
+                    string[] preferredOrder = new string[] {
+                        "NPC_Truck_Ext_Horn_Sequence_Neutral_02",
+                        "NPC_Truck_Ext_Horn_Sequence_Neutral_01",
+                        "NPC_Truck_Ext_Horn_Sequence_Neutral_03",
+                        "Truck_Horn_Int_SE"
+                    };
                     if (allEvents != null)
                     {
-                        foreach (var evt in allEvents)
+                        foreach (var preferredName in preferredOrder)
                         {
-                            if (evt != null && evt.name == "Truck_Horn_Int_SE")
-                            { cachedHornEvent = evt; break; }
+                            foreach (var evt in allEvents)
+                            {
+                                if (evt != null && evt.name == preferredName)
+                                { cachedHornEvent = evt; break; }
+                            }
+                            if (cachedHornEvent != null) break;
                         }
                     }
                     if (cachedHornEvent != null)
@@ -810,6 +821,29 @@ namespace StarTruckMP.StarTruckClient
                             }
                         }
                     }
+                }
+
+                // --- Best-effort: stop any still-playing instance for this truck first,
+                // so a fresh honk can retrigger even if the previous sequence hasn't finished.
+                // Sequence-type assets may ignore this, but it's harmless either way.
+                if (cachedStopMethod == null)
+                {
+                    var stopMethods = cachedHornEvent.GetType().GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var m in stopMethods)
+                    {
+                        if (m.Name == "Stop")
+                        {
+                            var sp = m.GetParameters();
+                            if (sp.Length == 2 && sp[0].ParameterType == typeof(Transform) && sp[1].ParameterType == typeof(bool))
+                            { cachedStopMethod = m; break; }
+                        }
+                    }
+                }
+                if (cachedStopMethod != null)
+                {
+                    try { cachedStopMethod.Invoke(cachedHornEvent, new object[] { rp.Truck.transform, false }); }
+                    catch { /* best-effort, ignore */ }
                 }
 
                 // --- Play horn at remote truck ---
