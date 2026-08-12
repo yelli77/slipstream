@@ -72,7 +72,15 @@ public class DedicatedServer
         foreach (var kv in _players)
         {
             if (kv.Value.TrailerHitched)
+            {
                 _server.Send(ServerMessages.CreateTrailerMovement(kv.Key, true, kv.Value.TrailerPosition, kv.Value.TrailerRotation), e.Client);
+                if (!string.IsNullOrEmpty(kv.Value.TrailerModel))
+                {
+                    var tmMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.UpdateTrailerModel);
+                    tmMsg.AddUShort(kv.Key); tmMsg.AddString(kv.Value.TrailerModel);
+                    _server.Send(tmMsg, e.Client);
+                }
+            }
         }
         _players.Add(e.Client.Id, p);
         var bc = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.PlayerConnected);

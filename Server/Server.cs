@@ -191,6 +191,7 @@ namespace StarTruckMP.StarTruckServer
                     {
                         e.Message.GetUShort();
                         string containerType = e.Message.GetString();
+                        currentPlayer.trailerModel = containerType;
                         playerList[e.FromConnection.Id] = currentPlayer;
                         Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.updateTrailerModel);
                         message.AddUShort(e.FromConnection.Id);
@@ -236,6 +237,12 @@ namespace StarTruckMP.StarTruckServer
                 if (kv.Value.trailerHitched)
                 {
                     server.Send(Messages.createTrailerMovementMessage(kv.Key, true, kv.Value.trailerTrans.Pos, kv.Value.trailerTrans.Rot), e.Client);
+                    // Also send the trailer model so the new client can spawn the correct mesh
+                    if (!string.IsNullOrEmpty(kv.Value.trailerModel))
+                    {
+                        server.Send(Messages.createTrailerModelMessage(kv.Key, kv.Value.trailerModel), e.Client);
+                        StarTruckMP.Log.LogInfo($"Server_ClientConnected: sending initial trailerModel='{kv.Value.trailerModel}' for player {kv.Key}");
+                    }
                 }
             }
 

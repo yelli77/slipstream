@@ -441,9 +441,26 @@ namespace StarTruckMP.StarTruckClient
                     string containerType = e.Message.GetString();
                     playerInfo clientInfo;
                     playerList.TryGetValue(trailerPlayerId, out clientInfo);
+                    string oldModel = clientInfo.trailerModel ?? "";
                     clientInfo.trailerModel = containerType;
+                    StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} received model='{containerType}' (old='{oldModel}')");
+                    // If trailer already spawned with wrong model, respawn it
+                    if (!string.IsNullOrEmpty(containerType) && containerType != oldModel && clientInfo.Trailer != null)
+                    {
+                        StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} model changed '{oldModel}' -> '{containerType}', respawning trailer");
+                        try { GameObject.Destroy(clientInfo.Trailer); } catch { }
+                        clientInfo.Trailer = Messages.createTrailerMesh(trailerPlayerId, containerType);
+                        if (clientInfo.Trailer != null)
+                        {
+                            Messages.updateMovement(clientInfo.Trailer, clientInfo.trailerTrans.Pos, clientInfo.trailerTrans.Rot, Vector3.zero, Vector3.zero);
+                            StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} trailer respawned OK");
+                        }
+                        else
+                        {
+                            StarTruckMP.Log.LogWarning($"updateTrailerModel: player {trailerPlayerId} trailer respawn FAILED");
+                        }
+                    }
                     playerList[trailerPlayerId] = clientInfo;
-                    StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} model='{containerType}'");
                 }
             }
         }
@@ -546,14 +563,17 @@ namespace StarTruckMP.StarTruckClient
             if (hitched && hitchedCargo.gameObject != null)
             {
                 currentTrailerModel = hitchedCargo.gameObject.name.Replace("(Clone)", "").Trim();
+                StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitched cargo detected, GO.name='{hitchedCargo.gameObject.name}', model='{currentTrailerModel}'");
             }
             if (hitched && currentTrailerModel != lastTrailerModel)
             {
+                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: sending model='{currentTrailerModel}' (old='{lastTrailerModel}')");
                 client.Send(Messages.createTrailerModelMessage(client.Id, currentTrailerModel));
                 lastTrailerModel = currentTrailerModel;
             }
             else if (!hitched && lastTrailerModel != "")
             {
+                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: unhitched, clearing model (was '{lastTrailerModel}')");
                 lastTrailerModel = "";
             }
 
