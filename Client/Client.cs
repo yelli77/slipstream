@@ -57,6 +57,7 @@ namespace StarTruckMP.StarTruckClient
             client.Update();
             ReanchorRemotePlayersToFloatingOrigin();
             SmoothTrailerMovement();
+            SmoothTruckMovement();
             BillboardNameLabels();
             UpdateMapIndicators();
 
@@ -276,12 +277,25 @@ namespace StarTruckMP.StarTruckClient
                     {
                         if (isTruck)
                         {
-                            Messages.updateMovement(currentPlayer.Truck, playerPos, playerRot, playerVel, playerAngVel);
+                            // Store target for smooth truck interpolation (no hard snap)
+                            currentPlayer.truckTargetPos = playerPos;
+                            currentPlayer.truckTargetRot = playerRot;
+                            // Set velocity on truck Rigidbody for physics extrapolation
+                            if (currentPlayer.Truck != null)
+                            {
+                                var truckRb = currentPlayer.Truck.GetComponent<Rigidbody>();
+                                if (truckRb != null)
+                                {
+                                    truckRb.velocity = playerVel;
+                                    truckRb.angularVelocity = playerAngVel;
+                                }
+                            }
                             currentPlayer.truckTrans.Pos = playerPos;
                             currentPlayer.truckTrans.Rot = playerRot;
                             currentPlayer.truckTrans.Vel = playerVel;
                             currentPlayer.truckTrans.AngVel = playerAngVel;
 
+                            // Player (hidden behind truck) — hard snap is fine since invisible
                             Messages.updateMovement(currentPlayer.Player, playerPos, playerRot, playerVel, playerAngVel);
                             currentPlayer.playerTrans.Pos = playerPos;
                             currentPlayer.playerTrans.Rot = playerRot;
@@ -737,6 +751,52 @@ namespace StarTruckMP.StarTruckClient
                     targetQuat,
                     Time.deltaTime * TrailerRotationSpeed
                 );
+
+                playerList[kv.Key] = rp;
+            }
+        }
+
+        // Smooth velocity-correction for remote trucks.
+        // Instead of hard-snapping transform.position (which fights rb.velocity extrapolation),
+        // we apply a gentle velocity correction to close the gap between extrapolated and
+        // target position. The spring-like correction works WITH the physics, not against it.
+        private static readonly float TruckCorrectionK = 5.0f;      // spring constant for position
+        private static readonly float TruckRotCorrectionK = 8.0f;   // spring constant for rotation
+        private static readonly float TruckMaxCorrection = 10f;      // max correction distance (meters)
+
+        public static void SmoothTruckMovement()
+        {
+            foreach (var kv in playerList)
+            {
+                playerInfo rp = kv.Value;
+                if (rp.Truck == null) continue;
+
+                Rigidbody rb = rp.Truck.GetComponent<Rigidbody>();
+                if (rb == null) continue;
+
+                // Position: velocity-based correction (spring approach)
+                Vector3 targetPos = rp.truckTargetPos - floatingOrigin.m_currentOrigin;
+                Vector3 error = targetPos - rb.position;
+                float errorDist = error.magnitude;
+                if (errorDist > TruckMaxCorrection)
+                    error = error.normalized * TruckMaxCorrection;
+
+                // Apply correction as velocity addition — works WITH physics, not against it
+                rb.velocity = rp.truckTrans.Vel + error * TruckCorrectionK;
+
+                // Rotation: angular velocity correction
+                Quaternion targetQuat = Quaternion.Euler(rp.truckTargetRot);
+                Quaternion rotError = targetQuat * Quaternion.Inverse(rb.rotation);
+                rotError.ToAngleAxis(out float angle, out Vector3 axis);
+                if (Mathf.Abs(angle) > 0.01f)
+                {
+                    if (angle > 180f) angle -= 360f;
+                    rb.angularVelocity = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * TruckRotCorrectionK;
+                }
+                else
+                {
+                    rb.angularVelocity = rp.truckTrans.AngVel;
+                }
 
                 playerList[kv.Key] = rp;
             }

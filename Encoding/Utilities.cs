@@ -34,6 +34,8 @@ namespace StarTruckMP.Utilities
         public Vector3 trailerSmoothVel;
         public Vector3 trailerTargetPos;
         public Vector3 trailerTargetRot;
+        public Vector3 truckTargetPos;
+        public Vector3 truckTargetRot;
     }
 
     public struct movementTrans
