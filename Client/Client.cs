@@ -560,10 +560,21 @@ namespace StarTruckMP.StarTruckClient
 
             // Send container model update when hitched container changes
             string currentTrailerModel = "";
-            if (hitched && hitchedCargo.gameObject != null)
+            if (hitched && hitchedCargo != null)
             {
-                currentTrailerModel = hitchedCargo.gameObject.name.Replace("(Clone)", "").Trim();
-                StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitched cargo detected, GO.name='{hitchedCargo.gameObject.name}', model='{currentTrailerModel}'");
+                // Use stable type identifier instead of gameObject.name (per-instance ID)
+                string typeId = Messages.GetContainerTypeIdentifier(hitchedCargo);
+                if (!string.IsNullOrEmpty(typeId))
+                {
+                    currentTrailerModel = typeId;
+                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitched cargo detected, containerType='{typeId}' (GO.name='{hitchedCargo.gameObject?.name}')");
+                }
+                else
+                {
+                    // Fallback: warn and use gameObject.name as last resort
+                    currentTrailerModel = hitchedCargo.gameObject?.name?.Replace("(Clone)", "").Trim() ?? "";
+                    StarTruckMP.Log.LogWarning($"SendTrailerMovement: cargo.record.cargoType.containerType is null! Falling back to GO.name='{currentTrailerModel}' — trailer model sync may not match correctly.");
+                }
             }
             if (hitched && currentTrailerModel != lastTrailerModel)
             {

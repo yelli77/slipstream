@@ -181,9 +181,49 @@ namespace StarTruckMP.Encoding
 
 
         /// <summary>
+        /// Extracts a stable, type-level container identifier from a CargoContainer.
+        /// Uses cargo.record.cargoType.containerType (stable across all instances of the same
+        /// container type) instead of gameObject.name (which is a per-instance unique ID).
+        /// Returns null if any level of the chain is null (caller should fall back to
+        /// gameObject.name with a warning).
+        /// </summary>
+        public static string GetContainerTypeIdentifier(CargoContainer cargo)
+        {
+            try
+            {
+                if (cargo == null) return null;
+                var record = cargo.record;
+                if (record == null) return null;
+                var cargoType = record.cargoType;
+                if (cargoType == null) return null;
+
+                // Primary: containerType string (e.g. "Container_Blue_3Y")
+                string containerType = cargoType.containerType;
+                if (!string.IsNullOrEmpty(containerType))
+                    return containerType;
+
+                // Fallback: container.id from CargoContainerDescription
+                var containerDesc = cargoType.container;
+                if (containerDesc != null && !string.IsNullOrEmpty(containerDesc.id))
+                    return containerDesc.id;
+
+                return null;
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"GetContainerTypeIdentifier: failed: {ex.Message}");
+                return null;
+            }
+        }
+
+
+        /// <summary>
         /// Spawns a visible trailer for a remote player by instantiating a
         /// matching CargoContainer mesh if available. Falls back to a placeholder
         /// cube if no local trailer is currently hitched.
+        /// NOTE: Matching only works if a CargoContainer of the same type is currently
+        /// instantiated in the local scene. If the receiver doesn't have the same container
+        /// type locally, fallback to any available container or placeholder is used.
         /// </summary>
         public static GameObject createTrailerMesh(ushort playerId, string containerType = null)
         {
@@ -195,26 +235,17 @@ namespace StarTruckMP.Encoding
 
                 if (!string.IsNullOrEmpty(containerType))
                 {
-                    // First pass: try to find a container matching the type via reflection
+                    // Match using cargo.record.cargoType.containerType (stable type identifier)
                     foreach (var cargo in allCargo)
                     {
                         if (cargo == null || cargo.gameObject == null) continue;
                         try
                         {
-                            string cargoTypeStr = "";
-                            var field = typeof(CargoContainer).GetField("containerType",
-                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                            if (field != null) cargoTypeStr = field.GetValue(cargo) as string ?? "";
-                            if (string.IsNullOrEmpty(cargoTypeStr))
-                            {
-                                var prop = typeof(CargoContainer).GetProperty("containerType",
-                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                                if (prop != null) cargoTypeStr = prop.GetValue(cargo) as string ?? "";
-                            }
-                            if (!string.IsNullOrEmpty(cargoTypeStr) && cargoTypeStr == containerType)
+                            string localType = GetContainerTypeIdentifier(cargo);
+                            if (!string.IsNullOrEmpty(localType) && localType == containerType)
                             {
                                 sampleCargo = cargo;
-                                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}]: matched containerType='{containerType}'");
+                                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}]: matched containerType='{containerType}' (via cargo.record.cargoType.containerType)");
                                 break;
                             }
                         }
@@ -222,7 +253,7 @@ namespace StarTruckMP.Encoding
                     }
                 }
 
-                // Second pass: fall back to any container if no match found
+                // Fall back to any container if no match found
                 if (sampleCargo == null)
                 {
                     foreach (var cargo in allCargo)
@@ -231,7 +262,7 @@ namespace StarTruckMP.Encoding
                         {
                             sampleCargo = cargo;
                             if (!string.IsNullOrEmpty(containerType))
-                                StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no container matching type='{containerType}', using fallback");
+                                StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no container matching type='{containerType}' in local scene, using fallback. NOTE: matching requires a local CargoContainer of the same type to be instantiated.");
                             break;
                         }
                     }
