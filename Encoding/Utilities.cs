@@ -31,6 +31,9 @@ namespace StarTruckMP.Utilities
         public string livery;
         public string trailerModel;
         public GameObject NameLabel;
+        public Vector3 trailerSmoothVel;
+        public Vector3 trailerTargetPos;
+        public Vector3 trailerTargetRot;
     }
 
     public struct movementTrans

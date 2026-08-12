@@ -56,6 +56,7 @@ namespace StarTruckMP.StarTruckClient
         {
             client.Update();
             ReanchorRemotePlayersToFloatingOrigin();
+            SmoothTrailerMovement();
             BillboardNameLabels();
             UpdateMapIndicators();
 
@@ -349,6 +350,15 @@ namespace StarTruckMP.StarTruckClient
                         if (hitched && currentPlayer.Trailer == null)
                         {
                             currentPlayer.Trailer = Messages.createTrailerMesh(playerId, currentPlayer.trailerModel);
+                            // Set initial position immediately so smoothing starts from the right place
+                            if (currentPlayer.Trailer != null)
+                            {
+                                currentPlayer.Trailer.transform.position = trailerPos - floatingOrigin.m_currentOrigin;
+                                currentPlayer.Trailer.transform.eulerAngles = trailerRot;
+                                currentPlayer.trailerSmoothVel = Vector3.zero;
+                                currentPlayer.trailerTargetPos = trailerPos;
+                                currentPlayer.trailerTargetRot = trailerRot;
+                            }
                         }
                         else if (!hitched && currentPlayer.Trailer != null)
                         {
@@ -358,7 +368,9 @@ namespace StarTruckMP.StarTruckClient
 
                         if (currentPlayer.Trailer != null)
                         {
-                            Messages.updateMovement(currentPlayer.Trailer, trailerPos, trailerRot, Vector3.zero, Vector3.zero);
+                            // Set target for per-frame smoothing (no hard-set here)
+                            currentPlayer.trailerTargetPos = trailerPos;
+                            currentPlayer.trailerTargetRot = trailerRot;
                         }
 
                         playerList[playerId] = currentPlayer;
@@ -452,7 +464,11 @@ namespace StarTruckMP.StarTruckClient
                         clientInfo.Trailer = Messages.createTrailerMesh(trailerPlayerId, containerType);
                         if (clientInfo.Trailer != null)
                         {
-                            Messages.updateMovement(clientInfo.Trailer, clientInfo.trailerTrans.Pos, clientInfo.trailerTrans.Rot, Vector3.zero, Vector3.zero);
+                            clientInfo.Trailer.transform.position = clientInfo.trailerTrans.Pos - floatingOrigin.m_currentOrigin;
+                            clientInfo.Trailer.transform.eulerAngles = clientInfo.trailerTrans.Rot;
+                            clientInfo.trailerSmoothVel = Vector3.zero;
+                            clientInfo.trailerTargetPos = clientInfo.trailerTrans.Pos;
+                            clientInfo.trailerTargetRot = clientInfo.trailerTrans.Rot;
                             StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} trailer respawned OK");
                         }
                         else
@@ -690,6 +706,39 @@ namespace StarTruckMP.StarTruckClient
                 {
                     p.Trailer.transform.position = p.trailerTrans.Pos - floatingOrigin.m_currentOrigin;
                 }
+            }
+        }
+
+        // Smooth interpolation for remote trailers (no Rigidbody — can't rely on physics extrapolation)
+        // Uses Vector3.SmoothDamp for position and Quaternion.Slerp for rotation.
+        // smoothTime ~0.1s matches the ~100ms network update interval: the trailer stays close
+        // to the target with only a tiny, constant lag — no visible stuttering at any speed.
+        private static readonly float TrailerSmoothTime = 0.1f;
+        private static readonly float TrailerRotationSpeed = 12f;
+
+        public static void SmoothTrailerMovement()
+        {
+            foreach (var kv in playerList)
+            {
+                playerInfo rp = kv.Value;
+                if (rp.Trailer == null || !rp.trailerHitched) continue;
+
+                Vector3 targetLocal = rp.trailerTargetPos - floatingOrigin.m_currentOrigin;
+                rp.Trailer.transform.position = Vector3.SmoothDamp(
+                    rp.Trailer.transform.position,
+                    targetLocal,
+                    ref rp.trailerSmoothVel,
+                    TrailerSmoothTime
+                );
+
+                Quaternion targetQuat = Quaternion.Euler(rp.trailerTargetRot);
+                rp.Trailer.transform.rotation = Quaternion.Slerp(
+                    rp.Trailer.transform.rotation,
+                    targetQuat,
+                    Time.deltaTime * TrailerRotationSpeed
+                );
+
+                playerList[kv.Key] = rp;
             }
         }
 
