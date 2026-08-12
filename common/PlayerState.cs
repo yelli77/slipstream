@@ -22,5 +22,6 @@ public class PlayerState
     public Vector3f TrailerRotation { get; set; }
     public string Livery { get; set; } = "";
     public string TrailerModel { get; set; } = "";
+    public ulong SteamId { get; set; }
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
 }

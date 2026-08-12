@@ -406,6 +406,14 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
+        public static Message createPlayerSteamIdMessage(ushort playerId, ulong steamId)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.setPlayerSteamId);
+            message.AddUShort(playerId);
+            message.AddULong(steamId);
+            return message;
+        }
+
         private static Transform FindPath(Transform root, string path)
         {
             var current = root;

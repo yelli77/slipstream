@@ -1,4 +1,5 @@
 using Riptide;
+using System.Reflection;
 using System;
 using UnityEngine;
 using StarTruckMP.Utilities;
@@ -179,6 +180,47 @@ namespace StarTruckMP.StarTruckClient
                 string myName = StarTruckMP.PlayerName.Value;
                 client.Send(Messages.createPlayerNameMessage(client.Id, myName));
                 StarTruckMP.Log.LogInfo($"Sent player name: '{myName}'");
+
+                // Send SteamID to server (fire-and-forget, non-critical)
+                try
+                {
+                    ulong mySteamId = 0;
+                    try
+                    {
+                        var steamUserType = System.Type.GetType("Steamworks.SteamUser, com.rlabrecque.steamworks.net");
+                        if (steamUserType != null)
+                        {
+                            var getSteamIdMethod = steamUserType.GetMethod("GetSteamID", BindingFlags.Public | BindingFlags.Static);
+                            if (getSteamIdMethod != null)
+                            {
+                                object result = getSteamIdMethod.Invoke(null, null);
+                                if (result != null)
+                                {
+                                    // CSteamID has m_SteamID ulong field
+                                    var steamIdField = result.GetType().GetField("m_SteamID");
+                                    if (steamIdField != null)
+                                        mySteamId = (ulong)steamIdField.GetValue(result);
+                                    else
+                                    {
+                                        // Try implicit conversion or ToString
+                                        mySteamId = Convert.ToUInt64(result);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (System.Exception steamEx)
+                    {
+                        StarTruckMP.Log.LogWarning($"Steamworks not available: {steamEx.Message}");
+                    }
+
+                    client.Send(Messages.createPlayerSteamIdMessage(client.Id, mySteamId));
+                    StarTruckMP.Log.LogInfo($"Sent SteamID: {mySteamId}");
+                }
+                catch (System.Exception ex2)
+                {
+                    StarTruckMP.Log.LogWarning($"Failed to send SteamID: {ex2.Message}");
+                }
             }
             catch (System.Exception ex)
             {
@@ -491,6 +533,23 @@ namespace StarTruckMP.StarTruckClient
                         }
                     }
                     playerList[trailerPlayerId] = clientInfo;
+                }
+            }
+
+            if (e.MessageId == (ushort)messageType.setPlayerSteamId)
+            {
+                try
+                {
+                    ushort playerId = e.Message.GetUShort();
+                    ulong steamId = e.Message.GetULong();
+                    if (playerList.TryGetValue(playerId, out var currentPlayer))
+                    {
+                        StarTruckMP.Log.LogInfo($"Player {playerId} SteamID: {steamId}");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"setPlayerSteamId error: {ex.Message}");
                 }
             }
         }

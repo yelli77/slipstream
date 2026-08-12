@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 using Riptide;
 using StarTruckMP.Common;
 
@@ -7,6 +10,10 @@ namespace StarTruckMP.Dedicated;
 
 public class MessageHandler
 {
+    private static readonly string BridgeBaseUrl = Environment.GetEnvironmentVariable("STARTTRUCKMP_BRIDGE_URL") ?? "http://localhost:4500";
+    private static readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+    private static float _lastBridgeWarnTime = 0f;
+    private static float _lastLinkWarnTime = 0f;
     private readonly Dictionary<ushort, PlayerState> _players;
     public MessageHandler(Dictionary<ushort, PlayerState> players) { _players = players; }
 
@@ -22,7 +29,8 @@ public class MessageHandler
             case MessageType.UpdateLivery: HandleLivery(e, server); break;
             case MessageType.SetPlayerName: HandleSetName(e, server); break;
             case MessageType.UpdateTrailerModel: HandleTrailerModel(e, server); break;
-            case MessageType.ChatMessage: Console.WriteLine($"[CHAT] {e.FromConnection.Id}: {e.Message.GetString()}"); break;
+            case MessageType.SetPlayerSteamId: HandleSteamId(e, server); break;
+            case MessageType.ChatMessage: HandleChatMessage(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -67,6 +75,10 @@ public class MessageHandler
         var msg=Message.Create(MessageSendMode.Reliable,(ushort)MessageType.UpdateSector);
         msg.AddUShort(e.FromConnection.Id); msg.AddString(sector);
         server.SendToAll(msg);
+
+        // Notify Discord bridge about sector change (fire-and-forget)
+        string sectorJson = "{\"steamId\":" + p.SteamId + ",\"sector\":\"" + sector + "\"}";
+        _ = PostBridge($"{BridgeBaseUrl}/move", sectorJson);
     }
 
     private void HandleLivery(MessageReceivedEventArgs e, Riptide.Server server)
@@ -76,7 +88,7 @@ public class MessageHandler
         string item=e.Message.GetString();
         p.Livery=item;p.LastUpdate=DateTime.UtcNow;
         _players[e.FromConnection.Id]=p;
-        var msg=Message.Create(MessageSendMode.Unreliable,(ushort)MessageType.UpdateLivery);
+        var msg = Message.Create(MessageSendMode.Unreliable,(ushort)MessageType.UpdateLivery);
         msg.AddUShort(e.FromConnection.Id); msg.AddString(item);
         server.SendToAll(msg);
     }
@@ -105,5 +117,52 @@ public class MessageHandler
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.UpdateTrailerModel);
         msg.AddUShort(e.FromConnection.Id); msg.AddString(model);
         server.SendToAll(msg);
+    }
+
+    private void HandleSteamId(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
+        e.Message.GetUShort();
+        ulong steamId = e.Message.GetULong();
+        p.SteamId = steamId;
+        _players[e.FromConnection.Id] = p;
+        Console.WriteLine($"[INFO] Player {e.FromConnection.Id} SteamID set to {steamId}");
+    }
+
+    private void HandleChatMessage(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
+        string chatMsg = e.Message.GetString().Trim();
+        Console.WriteLine($"[CHAT] {e.FromConnection.Id} ({p.Name}): {chatMsg}");
+
+        // !link command — send link-confirm to Discord bridge
+        if (chatMsg.StartsWith("!link ", StringComparison.OrdinalIgnoreCase))
+        {
+            string code = chatMsg.Substring(6).Trim();
+            if (!string.IsNullOrEmpty(code))
+            {
+                string linkJson = "{\"code\":\"" + code + "\",\"steamId\":" + p.SteamId + "}";
+                _ = PostBridge($"{BridgeBaseUrl}/link-confirm", linkJson);
+            }
+        }
+    }
+
+    private static async Task PostBridge(string url, string json)
+    {
+        try
+        {
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            await _http.PostAsync(url, content);
+        }
+        catch (Exception ex)
+        {
+            // Rate-limit warning: max once per 30 seconds
+            float now = (float)DateTime.UtcNow.TimeOfDay.TotalSeconds;
+            if (now - _lastBridgeWarnTime > 30f)
+            {
+                _lastBridgeWarnTime = now;
+                Console.WriteLine($"[WARN] Bridge POST failed ({url}): {ex.Message}");
+            }
+        }
     }
 }
