@@ -1,4 +1,4 @@
-!define APPNAME "Slipstream Updater"
+!define APPNAME "Slipstream"
 !define COMPANYNAME "Slipstream"
 !define DESCRIPTION "Installer & Auto-Updater fuer den StarTruckMP Multiplayer-Mod (Slipstream)"
 !define INSTALLDIR "$LOCALAPPDATA\Slipstream"
@@ -14,14 +14,14 @@ SetCompressor /SOLID lzma
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
-!define MUI_WELCOMEPAGE_TITLE "Slipstream Updater Setup"
-!define MUI_WELCOMEPAGE_TEXT "Dieser Assistent installiert den Slipstream Updater, mit dem du den StarTruckMP Multiplayer-Mod installierst und aktuell haeltst.$\r$\n$\r$\nDer Updater laedt bei jedem Start automatisch die neueste Mod-Version von GitHub (yelli77/slipstream)."
+!define MUI_WELCOMEPAGE_TITLE "Slipstream Setup"
+!define MUI_WELCOMEPAGE_TEXT "Dieser Assistent installiert Slipstream, mit dem du den StarTruckMP Multiplayer-Mod installierst und aktuell haeltst.$\r$\n$\r$\nSlipstream laedt bei jedem Start automatisch die neueste Mod-Version von GitHub (yelli77/slipstream)."
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\Slipstream.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Slipstream Updater jetzt starten"
+!define MUI_FINISHPAGE_RUN_TEXT "Slipstream jetzt starten"
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
@@ -34,7 +34,7 @@ Section "Install"
     File /r "..\bin\Release\net6.0\win-x64\publish\*.*"
 
     CreateDirectory "$SMPROGRAMS\Slipstream"
-    CreateShortcut "$SMPROGRAMS\Slipstream\Slipstream Updater.lnk" "$INSTDIR\Slipstream.exe"
+    CreateShortcut "$SMPROGRAMS\Slipstream\Slipstream.lnk" "$INSTDIR\Slipstream.exe"
     CreateShortcut "$SMPROGRAMS\Slipstream\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 
     WriteUninstaller "$INSTDIR\Uninstall.exe"
