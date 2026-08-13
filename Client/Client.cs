@@ -1378,6 +1378,10 @@ namespace StarTruckMP.StarTruckClient
                 {
                     text += $"\nDiscord-Link-Code: {myLinkCode}";
                 }
+                else
+                {
+                    text += "\nSlipstream";
+                }
 
                 if (statusOverlayText != null)
                 {

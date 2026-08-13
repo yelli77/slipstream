@@ -1,5 +1,11 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Neu in custom-build-137: Slipstream-Branding im HUD
+
+- Sobald der Discord-Link-Code ausgeblendet wird (nach erfolgreicher
+  Verknuepfung), steht an seiner Stelle jetzt "Slipstream" im HUD.
+
+
 ## Neu in custom-build-136: Link-Code verschwindet nach Verknuepfung, weniger Log-Spam
 
 - Discord-Link-Code im HUD wird jetzt automatisch ausgeblendet, sobald die
