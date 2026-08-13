@@ -32,6 +32,7 @@ public class MessageHandler
             case MessageType.UpdateTrailerModel: HandleTrailerModel(e, server); break;
             case MessageType.SetPlayerSteamId: HandleSteamId(e, server); break;
             case MessageType.ChatMessage: HandleChatMessage(e, server); break;
+            case MessageType.RequestLinkStatus: HandleRequestLinkStatus(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -150,6 +151,34 @@ public class MessageHandler
             {
                 string linkJson = JsonSerializer.Serialize(new { code = code, steamId = p.SteamId.ToString() });
                 _ = PostBridge($"{BridgeBaseUrl}/link-confirm", linkJson);
+            }
+        }
+    }
+
+    private void HandleRequestLinkStatus(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
+        e.Message.GetUShort();
+        _ = CheckAndReplyLinkStatus(p.SteamId, e.FromConnection, server);
+    }
+
+    private static async Task CheckAndReplyLinkStatus(ulong steamId, Riptide.Connection connection, Riptide.Server server)
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{BridgeBaseUrl}/link-status/{steamId}");
+            string body = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            bool linked = doc.RootElement.TryGetProperty("linked", out var linkedProp) && linkedProp.GetBoolean();
+            server.Send(ServerMessages.CreateLinkStatus(linked), connection);
+        }
+        catch (Exception ex)
+        {
+            float now = (float)DateTime.UtcNow.TimeOfDay.TotalSeconds;
+            if (now - _lastBridgeWarnTime > 30f)
+            {
+                _lastBridgeWarnTime = now;
+                Console.WriteLine($"[WARN] Bridge GET link-status failed: {ex.Message}");
             }
         }
     }

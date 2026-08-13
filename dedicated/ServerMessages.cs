@@ -13,7 +13,14 @@ public static class ServerMessages
         return msg;
     }
 
-    public static Message CreateTrailerMovement(ushort playerId, bool hitched, Vector3f pos, Vector3f rot)
+    public static Message CreateLinkStatus(bool linked)
+    {
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.LinkStatus);
+        msg.AddBool(linked);
+        return msg;
+    }
+
+        public static Message CreateTrailerMovement(ushort playerId, bool hitched, Vector3f pos, Vector3f rot)
     {
         float[] t = { pos.X,pos.Y,pos.Z, rot.X,rot.Y,rot.Z };
         var msg = Message.Create(MessageSendMode.Unreliable, (ushort)MessageType.TrailerMovementUpdate);

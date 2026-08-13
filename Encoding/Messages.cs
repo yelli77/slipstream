@@ -414,6 +414,20 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
+        public static Message createRequestLinkStatusMessage(ushort playerId)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.requestLinkStatus);
+            message.AddUShort(playerId);
+            return message;
+        }
+
+        public static Message createLinkStatusMessage(bool linked)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.linkStatus);
+            message.AddBool(linked);
+            return message;
+        }
+
         private static Transform FindPath(Transform root, string path)
         {
             var current = root;

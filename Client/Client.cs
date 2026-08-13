@@ -53,6 +53,10 @@ namespace StarTruckMP.StarTruckClient
         private static System.Collections.Generic.Dictionary<ushort, float> honkPlayingUntil
             = new System.Collections.Generic.Dictionary<ushort, float>();
 
+        private static bool isLinked = false;
+        private static float nextLinkStatusPollTime = 0f;
+        private const float LinkStatusPollIntervalSeconds = 8f;
+
         public static void FixedUpdate()
         {
             client.Update();
@@ -66,6 +70,13 @@ namespace StarTruckMP.StarTruckClient
             {
                 nextPositionLogTime = Time.realtimeSinceStartup + PositionLogIntervalSeconds;
                 LogRemotePlayersPeriodically();
+            }
+
+            if (client.IsConnected && !isLinked && Time.realtimeSinceStartup >= nextLinkStatusPollTime)
+            {
+                nextLinkStatusPollTime = Time.realtimeSinceStartup + LinkStatusPollIntervalSeconds;
+                try { client.Send(Messages.createRequestLinkStatusMessage(client.Id)); }
+                catch (System.Exception ex) { StarTruckMP.Log.LogWarning($"RequestLinkStatus send failed: {ex.Message}"); }
             }
         }
 
@@ -179,6 +190,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 string myName = StarTruckMP.PlayerName.Value;
                 myPlayerName = myName;
+                isLinked = false;
                 client.Send(Messages.createPlayerNameMessage(client.Id, myName));
                 StarTruckMP.Log.LogInfo($"Sent player name: '{myName}'");
                 UpdateStatusOverlay();
@@ -561,6 +573,25 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"setPlayerSteamId error: {ex.Message}");
                 }
             }
+
+            if (e.MessageId == (ushort)messageType.linkStatus)
+            {
+                try
+                {
+                    bool linked = e.Message.GetBool();
+                    if (linked && !isLinked)
+                    {
+                        isLinked = true;
+                        myLinkCode = "";
+                        UpdateStatusOverlay();
+                        StarTruckMP.Log.LogInfo("Discord link confirmed, hiding link code.");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"linkStatus error: {ex.Message}");
+                }
+            }
         }
 
             }
@@ -665,7 +696,6 @@ namespace StarTruckMP.StarTruckClient
                 if (!string.IsNullOrEmpty(typeId))
                 {
                     currentTrailerModel = typeId;
-                    StarTruckMP.Log.LogInfo($"SendTrailerMovement: hitched cargo detected, containerType='{typeId}' (GO.name='{hitchedCargo.gameObject?.name}')");
                 }
                 else
                 {

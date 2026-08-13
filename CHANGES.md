@@ -1,5 +1,16 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Neu in custom-build-136: Link-Code verschwindet nach Verknuepfung, weniger Log-Spam
+
+- Discord-Link-Code im HUD wird jetzt automatisch ausgeblendet, sobald die
+  Verknuepfung erfolgreich war. Client fragt alle 8 Sekunden beim Server nach
+  dem Verknuepfungsstatus (RequestLinkStatus/LinkStatus-Nachrichten), Server
+  prueft das bei der Discord-Bridge (neuer Endpunkt /link-status/:steamId).
+- Log-Spam entfernt: die "hitched cargo detected"-Zeile wurde jeden Frame
+  geloggt, sobald ein Anhaenger dran war. Der eigentliche Statuswechsel wird
+  weiterhin sauber geloggt, nur das Dauerfeuer ist weg.
+
+
 ## Neu in custom-build-135: Sofort-Verschieben beim Linken + Name/System im HUD
 
 - HUD oben links zeigt jetzt dauerhaft Spielername und aktuelles System an

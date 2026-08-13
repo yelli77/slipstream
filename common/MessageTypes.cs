@@ -12,5 +12,7 @@ public enum MessageType : ushort
     TrailerMovementUpdate = 7,
     SetPlayerName = 8,
     UpdateTrailerModel = 9,
-    SetPlayerSteamId = 10
+    SetPlayerSteamId = 10,
+    RequestLinkStatus = 11,
+    LinkStatus = 12
 }

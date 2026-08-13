@@ -14,7 +14,9 @@ namespace StarTruckMP.Utilities
         trailerMovementUpdate,
         setPlayerName,
         updateTrailerModel,
-        setPlayerSteamId
+        setPlayerSteamId,
+        requestLinkStatus,
+        linkStatus
     }
 
     public struct playerInfo
