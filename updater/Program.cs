@@ -195,6 +195,18 @@ namespace StarTruckMPUpdater
                     Log("Spielprozess wurde nach dem ersten Start nicht erkannt (Timeout).");
                 }
 
+                // BepInEx.cfg existiert jetzt (wurde durch den ersten Start gerade generiert) -
+                // erst JETZT kann die Konsole tatsaechlich deaktiviert werden, bevor der zweite,
+                // eigentliche Lauf startet.
+                try
+                {
+                    EnsureBepInExConsoleDisabled(gamePath);
+                }
+                catch (Exception ex)
+                {
+                    Log($"Konnte BepInEx-Konsole vor dem zweiten Start nicht deaktivieren: {ex.Message}");
+                }
+
                 Log("Fresh-Install: zweiter Start (Mod jetzt aktiv)...");
                 LaunchGame(gamePath);
                 return 0;
