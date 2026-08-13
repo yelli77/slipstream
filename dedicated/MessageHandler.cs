@@ -78,7 +78,7 @@ public class MessageHandler
         server.SendToAll(msg);
 
         // Notify Discord bridge about sector change (fire-and-forget)
-        string sectorJson = JsonSerializer.Serialize(new { steamId = p.SteamId, sector = sector });
+        string sectorJson = JsonSerializer.Serialize(new { steamId = p.SteamId, sector = sector, name = p.Name });
         _ = PostBridge($"{BridgeBaseUrl}/move", sectorJson);
     }
 
