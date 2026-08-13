@@ -92,6 +92,10 @@ public class DedicatedServer
     private void OnClientDisconnected(object sender, ServerDisconnectedEventArgs e)
     {
         Log($"Client disconnected: {e.Client.Id} ({e.Reason})");
+        if (_players.TryGetValue(e.Client.Id, out var disconnectedPlayer))
+        {
+            _handler.NotifyPlayerDisconnected(disconnectedPlayer.SteamId);
+        }
         _players.Remove(e.Client.Id);
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.ClientDisconnect);
         msg.AddUShort(e.Client.Id);

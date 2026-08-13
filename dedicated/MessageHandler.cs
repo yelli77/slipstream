@@ -183,6 +183,13 @@ public class MessageHandler
         }
     }
 
+    public void NotifyPlayerDisconnected(ulong steamId)
+    {
+        if (steamId == 0) return;
+        string json = JsonSerializer.Serialize(new { steamId = steamId.ToString() });
+        _ = PostBridge($"{BridgeBaseUrl}/player-disconnect", json);
+    }
+
     private static async Task PostBridge(string url, string json)
     {
         try

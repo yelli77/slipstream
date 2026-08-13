@@ -1,5 +1,15 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Server-Update (kein neuer Client-Build noetig): Rueckkehr zu General beim Disconnect
+
+- Wenn ein Spieler das Spiel beendet oder die Verbindung zum StarTruckMP-Server
+  verliert, wird er in Discord automatisch aus seinem Sektor-Voice-Channel
+  zurueck in den General-Channel verschoben (falls verknuepft und aktuell in
+  einem Voice-Channel).
+- Discord-Bridge: neuer Endpunkt /player-disconnect, loest den Spieler auch
+  aus dem Online-Tracking (fuer /link) heraus.
+
+
 ## Neu in custom-build-137: Slipstream-Branding im HUD
 
 - Sobald der Discord-Link-Code ausgeblendet wird (nach erfolgreicher
