@@ -82,7 +82,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static void Update()
         {
-            if (UnityEngine.Input.GetKeyDown(StarTruckMP.joinKey.Value) && !StarTruckServer.StarTruckServer.server.IsRunning)
+            if (UnityEngine.Input.GetKeyDown(StarTruckMP.joinKey.Value) )
             {
                 if (!client.IsConnected)
                 {

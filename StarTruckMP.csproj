@@ -21,6 +21,7 @@
     <Compile Remove="updater/**" />
     <Compile Remove="docker/**" />
     <Compile Remove="docs/**" />
+    <Compile Remove="Server/**" />
   </ItemGroup>
 
   <ItemGroup>

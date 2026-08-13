@@ -22,7 +22,6 @@ public class StarTruckMP : BasePlugin
     public static ConfigEntry<string> IPAddress;
     public static ConfigEntry<int> MoveUpdate;
     public static ConfigEntry<UnityEngine.KeyCode> joinKey;
-    public static ConfigEntry<UnityEngine.KeyCode> hostKey;
     public static ConfigEntry<string> PlayerName;
     public static ConfigEntry<UnityEngine.KeyCode> HonkKey;
 
@@ -34,7 +33,6 @@ public class StarTruckMP : BasePlugin
         IPAddress = Config.Bind("Server Info", "ServerIP", "127.0.0.1:7777", "IP Address to Join");
         MoveUpdate = Config.Bind("Server Info", "MovementUpdate", 100, "Movement update frequencey in ms");
         joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
-        hostKey = Config.Bind("Keybinds", "HostKey", UnityEngine.KeyCode.RightBracket, "Set the Key to press for hosting a server");
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
         HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
@@ -48,9 +46,7 @@ public class StarTruckMP : BasePlugin
         [HarmonyPostfix]
         public static void Update()
         {
-            StarTruckServer.StarTruckServer.Update();
             StarTruckClient.StarTruckClient.Update();
-            StarTruckServer.StarTruckServer.FixedUpdate();
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.CheckHonk();
             StarTruckClient.StarTruckClient.SendMovement();
