@@ -1,5 +1,24 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Neu in custom-build-133: SteamID-Erfassung + Discord-Bridge-Hooks
+
+- Client sendet beim Connect die eigene SteamID (per Reflection auf
+  `Steamworks.SteamUser.GetSteamID()`, da CSteamID ein IL2CPP-Interop-Struct
+  ist) an den Server. Bei Fehler (z.B. Steam nicht initialisiert) wird
+  SteamId=0 gesendet und als "nicht identifiziert" behandelt.
+- Neuer Nachrichtentyp `setPlayerSteamId`, neues Feld `PlayerState.SteamId`.
+- Dedicated Server: Bei jedem Sektorwechsel (`HandleSector`) und bei
+  `!link <code>`-Chatbefehlen wird ein Fire-and-Forget-HTTP-POST an einen
+  künftigen Discord-Bridge-Bot geschickt (`STARTTRUCKMP_BRIDGE_URL`, Default
+  `http://localhost:4500`) — Vorbereitung für automatisches Verschieben von
+  Spielern zwischen Discord-Voice-Channels je nach Sektor. Der Bot-Service
+  selbst existiert noch nicht, POSTs laufen aktuell ins Leere (erwartet,
+  fehlerfrei toleriert, rate-limitiertes Warn-Logging max. 1x/30s).
+- JSON für die Bridge-POSTs wird über `System.Text.Json.JsonSerializer`
+  gebaut (nicht mehr manuelle String-Concatenation) — vermeidet kaputtes
+  JSON bei Sonderzeichen (z.B. " im `!link`-Code).
+
+
 Diese Datei dokumentiert alle Änderungen gegenüber dem Original-Repo
 (https://github.com/JayJay34/StarTruckerMP), Stand custom-build-12.
 Die Quelldateien in diesem Repo enthalten die tatsächlich gepatchten Stände
