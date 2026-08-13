@@ -72,6 +72,10 @@
       <HintPath>/bepinex/interop/UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>/bepinex/interop/UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>/bepinex/interop/UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>False</Private>

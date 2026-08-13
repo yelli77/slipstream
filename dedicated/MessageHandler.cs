@@ -78,7 +78,7 @@ public class MessageHandler
         server.SendToAll(msg);
 
         // Notify Discord bridge about sector change (fire-and-forget)
-        string sectorJson = JsonSerializer.Serialize(new { steamId = p.SteamId, sector = sector, name = p.Name });
+        string sectorJson = JsonSerializer.Serialize(new { steamId = p.SteamId.ToString(), sector = sector, name = p.Name });
         _ = PostBridge($"{BridgeBaseUrl}/move", sectorJson);
     }
 
@@ -142,7 +142,7 @@ public class MessageHandler
             string code = chatMsg.Substring(6).Trim();
             if (!string.IsNullOrEmpty(code))
             {
-                string linkJson = JsonSerializer.Serialize(new { code = code, steamId = p.SteamId });
+                string linkJson = JsonSerializer.Serialize(new { code = code, steamId = p.SteamId.ToString() });
                 _ = PostBridge($"{BridgeBaseUrl}/link-confirm", linkJson);
             }
         }

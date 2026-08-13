@@ -216,6 +216,13 @@ namespace StarTruckMP.StarTruckClient
 
                     client.Send(Messages.createPlayerSteamIdMessage(client.Id, mySteamId));
                     StarTruckMP.Log.LogInfo($"Sent SteamID: {mySteamId}");
+
+                    if (mySteamId != 0)
+                    {
+                        string steamIdStr = mySteamId.ToString();
+                        string linkCode = steamIdStr.Length >= 6 ? steamIdStr.Substring(steamIdStr.Length - 6) : steamIdStr;
+                        ShowLinkCodeOverlay(linkCode);
+                    }
                 }
                 catch (System.Exception ex2)
                 {
@@ -1313,6 +1320,80 @@ namespace StarTruckMP.StarTruckClient
         {
             if (string.IsNullOrEmpty(displayName) || string.IsNullOrEmpty(mapLabel)) return false;
             return string.Equals(displayName, mapLabel, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static GameObject linkCodeOverlay;
+        private static TMPro.TextMeshProUGUI linkCodeText;
+
+        /// <summary>
+        /// Shows a small persistent on-screen overlay with the player's Discord
+        /// link code (last 6 digits of their SteamID). Stays visible for the
+        /// whole session — harmless to leave up after linking, keeps things simple.
+        /// </summary>
+        private static void ShowLinkCodeOverlay(string code)
+        {
+            try
+            {
+                if (linkCodeText != null)
+                {
+                    linkCodeText.text = $"Discord-Link-Code: {code}";
+                    return;
+                }
+
+                var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
+                TMPro.TextMeshProUGUI sourceTMP = null;
+                if (allTMP != null)
+                {
+                    foreach (var tmp in allTMP)
+                    {
+                        if (tmp != null && tmp.gameObject.scene.IsValid())
+                        {
+                            sourceTMP = tmp;
+                            break;
+                        }
+                    }
+                }
+                if (sourceTMP == null)
+                {
+                    StarTruckMP.Log.LogWarning("ShowLinkCodeOverlay: no source TMP found, skipping overlay.");
+                    return;
+                }
+
+                GameObject canvasObj = new GameObject("StarTruckMP_LinkCodeCanvas");
+                UnityEngine.Object.DontDestroyOnLoad(canvasObj);
+                var canvas = canvasObj.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 999;
+                canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
+
+                GameObject labelObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, canvasObj.transform);
+                labelObj.name = "LinkCodeLabel";
+                var rt = labelObj.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = new Vector2(0f, 1f);
+                    rt.anchorMax = new Vector2(0f, 1f);
+                    rt.pivot = new Vector2(0f, 1f);
+                    rt.anchoredPosition = new Vector2(20f, -20f);
+                    rt.sizeDelta = new Vector2(420f, 40f);
+                    rt.localScale = Vector3.one;
+                }
+                linkCodeText = labelObj.GetComponent<TMPro.TextMeshProUGUI>();
+                if (linkCodeText != null)
+                {
+                    linkCodeText.text = $"Discord-Link-Code: {code}";
+                    linkCodeText.fontSize = 20;
+                    linkCodeText.color = Color.yellow;
+                    linkCodeText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+                    linkCodeText.raycastTarget = false;
+                }
+                linkCodeOverlay = canvasObj;
+                StarTruckMP.Log.LogInfo($"ShowLinkCodeOverlay: displaying code {code}");
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"ShowLinkCodeOverlay error: {ex.Message}");
+            }
         }
 
         private static void CreateMapIndicator(MapSectorButton btn, int playerCount)

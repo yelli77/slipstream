@@ -1,5 +1,21 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Neu in custom-build-134: Discord-Link-Code im HUD
+
+- Oben links im Spiel wird nach dem Verbinden dauerhaft ein Discord-Link-Code
+  angezeigt (letzte 6 Ziffern der SteamID). Diesen Code gibst du in Discord bei
+  `/link <code>` ein, um deinen Discord-Account eindeutig mit deinem
+  In-Game-Charakter zu verknuepfen — kein Rateflug mehr bei mehreren Online-
+  Spielern.
+- Discord-Bot: `/link` fragt jetzt nach dem Code statt eine Auswahlliste aller
+  online sichtbaren Spieler zu zeigen (verhindert versehentliches/falsches
+  Verknuepfen mit dem falschen Spieler).
+- Bugfix: SteamID wurde beim Uebertragen an die Discord-Bridge als JSON-Zahl
+  gesendet und dabei durch JavaScripts Zahlenpraezision (max. sicher darstellbar
+  bis 2^53) fehlerhaft gerundet — SteamIDs sind 64-Bit-Werte und ueberschreiten
+  das deutlich. Wird jetzt als String uebertragen, keine Praezisionsverluste mehr.
+
+
 ## Neu in custom-build-133: SteamID-Erfassung + Discord-Bridge-Hooks
 
 - Client sendet beim Connect die eigene SteamID (per Reflection auf
