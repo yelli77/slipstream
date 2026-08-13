@@ -80,6 +80,18 @@ namespace StarTruckMPUpdater
                 Log($"Konnte BepInEx-Konsole nicht deaktivieren: {ex.Message}");
             }
 
+            // Alten, falschen ServerIP-Default (127.0.0.1:7777, localhost) in bestehenden Configs
+            // auf den echten oeffentlichen dedizierten Server umbiegen. Nur wenn der Wert noch exakt
+            // dem alten Default entspricht - individuell gesetzte IPs werden nicht angefasst.
+            try
+            {
+                EnsureDefaultServerIpFixed(gamePath);
+            }
+            catch (Exception ex)
+            {
+                Log($"Konnte ServerIP-Default nicht patchen: {ex.Message}");
+            }
+
             // 3. Read locally installed build number
             string localBuild = File.Exists(localVersionPath) ? File.ReadAllText(localVersionPath).Trim() : "(unbekannt)";
             Log($"Aktuell installiert: {localBuild}");
@@ -293,7 +305,48 @@ namespace StarTruckMPUpdater
         /// damit kein Konsolenfenster beim Spielstart aufpoppt. Patcht auch bereits bestehende Installationen,
         /// nicht nur Frisch-Installationen ueber das Bootstrap-Paket.
         /// </summary>
-        static void EnsureBepInExConsoleDisabled(string gamePath)
+        static void EnsureDefaultServerIpFixed(string gamePath)
+        {
+            const string oldDefault = "127.0.0.1:7777";
+            const string newDefault = "31.97.125.237:7777";
+
+            string cfgPath = Path.Combine(gamePath, "BepInEx", "config", "StarTruckMP.cfg");
+            if (!File.Exists(cfgPath)) return;
+
+            var lines = File.ReadAllLines(cfgPath);
+            bool inServerSection = false;
+            bool changed = false;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var trimmed = lines[i].Trim();
+
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    inServerSection = trimmed.Equals("[Server Info]", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+
+                if (inServerSection && trimmed.StartsWith("ServerIP", StringComparison.OrdinalIgnoreCase) && trimmed.Contains("="))
+                {
+                    var parts = trimmed.Split('=', 2);
+                    var currentValue = parts.Length > 1 ? parts[1].Trim() : "";
+                    if (currentValue == oldDefault)
+                    {
+                        lines[i] = $"ServerIP = {newDefault}";
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                File.WriteAllLines(cfgPath, lines);
+                Log($"ServerIP-Default gepatcht: {oldDefault} -> {newDefault}");
+            }
+        }
+
+                static void EnsureBepInExConsoleDisabled(string gamePath)
         {
             string cfgPath = Path.Combine(gamePath, "BepInEx", "config", "BepInEx.cfg");
 

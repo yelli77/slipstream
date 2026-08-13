@@ -30,7 +30,7 @@ public class StarTruckMP : BasePlugin
     {
         Log = base.Log;
         Log.LogInfo($"Plugin {pluginGuid} is loaded! [{customBuildNumber}]");
-        IPAddress = Config.Bind("Server Info", "ServerIP", "127.0.0.1:7777", "IP Address to Join");
+        IPAddress = Config.Bind("Server Info", "ServerIP", "31.97.125.237:7777", "IP Address to Join");
         MoveUpdate = Config.Bind("Server Info", "MovementUpdate", 100, "Movement update frequencey in ms");
         joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
         PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
