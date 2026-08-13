@@ -5,7 +5,7 @@
 
 Unicode true
 Name "${APPNAME}"
-OutFile "..\..\..\..\..\dist-installer\StarTruckMPSetup.exe"
+OutFile "..\..\..\..\..\dist-installer\SlipstreamInstaller.exe"
 InstallDir "${INSTALLDIR}"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
