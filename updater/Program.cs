@@ -165,11 +165,59 @@ namespace StarTruckMPUpdater
 
             if (freshBepInExInstall)
             {
-                Log("BepInEx wurde gerade neu installiert. Star Trucker wird jetzt gestartet, damit BepInEx die Interop-Dateien generieren kann.");
+                // Bei einer Frisch-Installation muss BepInEx/IL2CppInterop beim allerersten Start
+                // erst die Interop-Assemblies generieren - der Mod ist in diesem ersten Lauf noch
+                // nicht wirklich aktiv nutzbar. Deshalb: einmal starten, warten bis das Spiel wieder
+                // geschlossen wird, dann automatisch ein zweites Mal starten (das ist der Lauf, in
+                // dem der Mod dann tatsaechlich funktioniert). Vorher kurz informieren, damit der
+                // Spieler nicht denkt, das Spiel waere abgestuerzt, wenn es sich (normal) schliesst.
+                MessageBox.Show(
+                    "Slipstream wurde gerade frisch installiert.\n\n" +
+                    "Star Trucker startet jetzt zum ersten Mal - dabei generiert BepInEx einmalig " +
+                    "benoetigte Dateien. Das kann etwas dauern. Bitte das Spiel danach normal " +
+                    "schliessen, es startet dann automatisch ein zweites Mal - erst dann ist der " +
+                    "Mod aktiv.",
+                    "Slipstream - Erstinstallation",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                Log("Fresh-Install: erster Start (Interop-Generierung)...");
+                LaunchGame(gamePath);
+
+                bool gameAppeared = WaitForGameState(running: true, timeoutSeconds: 180);
+                if (gameAppeared)
+                {
+                    Log("Spiel laeuft, warte auf Beenden...");
+                    WaitForGameState(running: false, timeoutSeconds: 900);
+                }
+                else
+                {
+                    Log("Spielprozess wurde nach dem ersten Start nicht erkannt (Timeout).");
+                }
+
+                Log("Fresh-Install: zweiter Start (Mod jetzt aktiv)...");
+                LaunchGame(gamePath);
+                return 0;
             }
 
             LaunchGame(gamePath);
             return 0;
+        }
+
+        /// <summary>
+        /// Wartet, bis der Star-Trucker-Prozess den gewuenschten Laufzustand erreicht
+        /// (running=true: warten bis er startet; running=false: warten bis er beendet wird).
+        /// Gibt false zurueck, wenn der Zustand innerhalb des Timeouts nicht erreicht wurde.
+        /// </summary>
+        static bool WaitForGameState(bool running, int timeoutSeconds)
+        {
+            var deadline = DateTime.Now.AddSeconds(timeoutSeconds);
+            while (DateTime.Now < deadline)
+            {
+                if (IsGameRunning() == running) return true;
+                System.Threading.Thread.Sleep(1000);
+            }
+            return IsGameRunning() == running;
         }
 
         // Feste Steam App-ID von Star Trucker (store.steampowered.com/app/2380050).
