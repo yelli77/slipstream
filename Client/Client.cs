@@ -178,8 +178,10 @@ namespace StarTruckMP.StarTruckClient
             try
             {
                 string myName = StarTruckMP.PlayerName.Value;
+                myPlayerName = myName;
                 client.Send(Messages.createPlayerNameMessage(client.Id, myName));
                 StarTruckMP.Log.LogInfo($"Sent player name: '{myName}'");
+                UpdateStatusOverlay();
 
                 // Send SteamID to server (fire-and-forget, non-critical)
                 try
@@ -220,8 +222,8 @@ namespace StarTruckMP.StarTruckClient
                     if (mySteamId != 0)
                     {
                         string steamIdStr = mySteamId.ToString();
-                        string linkCode = steamIdStr.Length >= 6 ? steamIdStr.Substring(steamIdStr.Length - 6) : steamIdStr;
-                        ShowLinkCodeOverlay(linkCode);
+                        myLinkCode = steamIdStr.Length >= 6 ? steamIdStr.Substring(steamIdStr.Length - 6) : steamIdStr;
+                        UpdateStatusOverlay();
                     }
                 }
                 catch (System.Exception ex2)
@@ -715,6 +717,7 @@ namespace StarTruckMP.StarTruckClient
                 currentSector = GameObject.Find("[Sector]").scene.name;
                 client.Send(Messages.updateSector(client.Id, currentSector));
                 StarTruckMP.Log.LogInfo($"Entered Sector: {currentSector}");
+                UpdateStatusOverlay();
 
                 foreach (var client in playerList)
                 {
@@ -1322,21 +1325,33 @@ namespace StarTruckMP.StarTruckClient
             return string.Equals(displayName, mapLabel, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static GameObject linkCodeOverlay;
-        private static TMPro.TextMeshProUGUI linkCodeText;
+        private static GameObject statusOverlay;
+        private static TMPro.TextMeshProUGUI statusOverlayText;
+        private static string myPlayerName = "";
+        private static string myLinkCode = "";
 
         /// <summary>
-        /// Shows a small persistent on-screen overlay with the player's Discord
-        /// link code (last 6 digits of their SteamID). Stays visible for the
-        /// whole session — harmless to leave up after linking, keeps things simple.
+        /// Small persistent top-left HUD overlay: player name, current sector,
+        /// and (until linked) the Discord link code. Stays visible for the
+        /// whole session — harmless to leave the code line up after linking,
+        /// keeps things simple (no link-status feedback channel needed).
         /// </summary>
-        private static void ShowLinkCodeOverlay(string code)
+        private static void UpdateStatusOverlay()
         {
             try
             {
-                if (linkCodeText != null)
+                string sectorDisplay = (!string.IsNullOrEmpty(currentSector) && currentSector != "none")
+                    ? SectorToDisplayName(currentSector)
+                    : "—";
+                string text = $"{myPlayerName} — {sectorDisplay}";
+                if (!string.IsNullOrEmpty(myLinkCode))
                 {
-                    linkCodeText.text = $"Discord-Link-Code: {code}";
+                    text += $"\nDiscord-Link-Code: {myLinkCode}";
+                }
+
+                if (statusOverlayText != null)
+                {
+                    statusOverlayText.text = text;
                     return;
                 }
 
@@ -1355,11 +1370,11 @@ namespace StarTruckMP.StarTruckClient
                 }
                 if (sourceTMP == null)
                 {
-                    StarTruckMP.Log.LogWarning("ShowLinkCodeOverlay: no source TMP found, skipping overlay.");
+                    StarTruckMP.Log.LogWarning("UpdateStatusOverlay: no source TMP found, skipping overlay.");
                     return;
                 }
 
-                GameObject canvasObj = new GameObject("StarTruckMP_LinkCodeCanvas");
+                GameObject canvasObj = new GameObject("StarTruckMP_StatusCanvas");
                 UnityEngine.Object.DontDestroyOnLoad(canvasObj);
                 var canvas = canvasObj.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -1367,7 +1382,7 @@ namespace StarTruckMP.StarTruckClient
                 canvasObj.AddComponent<UnityEngine.UI.CanvasScaler>();
 
                 GameObject labelObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, canvasObj.transform);
-                labelObj.name = "LinkCodeLabel";
+                labelObj.name = "StatusLabel";
                 var rt = labelObj.GetComponent<RectTransform>();
                 if (rt != null)
                 {
@@ -1375,24 +1390,24 @@ namespace StarTruckMP.StarTruckClient
                     rt.anchorMax = new Vector2(0f, 1f);
                     rt.pivot = new Vector2(0f, 1f);
                     rt.anchoredPosition = new Vector2(20f, -20f);
-                    rt.sizeDelta = new Vector2(420f, 40f);
+                    rt.sizeDelta = new Vector2(500f, 70f);
                     rt.localScale = Vector3.one;
                 }
-                linkCodeText = labelObj.GetComponent<TMPro.TextMeshProUGUI>();
-                if (linkCodeText != null)
+                statusOverlayText = labelObj.GetComponent<TMPro.TextMeshProUGUI>();
+                if (statusOverlayText != null)
                 {
-                    linkCodeText.text = $"Discord-Link-Code: {code}";
-                    linkCodeText.fontSize = 20;
-                    linkCodeText.color = Color.yellow;
-                    linkCodeText.alignment = TMPro.TextAlignmentOptions.TopLeft;
-                    linkCodeText.raycastTarget = false;
+                    statusOverlayText.text = text;
+                    statusOverlayText.fontSize = 20;
+                    statusOverlayText.color = Color.yellow;
+                    statusOverlayText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+                    statusOverlayText.raycastTarget = false;
                 }
-                linkCodeOverlay = canvasObj;
-                StarTruckMP.Log.LogInfo($"ShowLinkCodeOverlay: displaying code {code}");
+                statusOverlay = canvasObj;
+                StarTruckMP.Log.LogInfo($"UpdateStatusOverlay: displaying '{text.Replace("\n", " | ")}'");
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"ShowLinkCodeOverlay error: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"UpdateStatusOverlay error: {ex.Message}");
             }
         }
 

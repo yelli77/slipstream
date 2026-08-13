@@ -1,5 +1,21 @@
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
+## Neu in custom-build-135: Sofort-Verschieben beim Linken + Name/System im HUD
+
+- HUD oben links zeigt jetzt dauerhaft Spielername und aktuelles System an
+  (z.B. 'Yelli_ — Purity'), aktualisiert sich bei jedem Sektorwechsel.
+  Solange noch nicht verknuepft, steht der Discord-Link-Code als zweite Zeile
+  mit dabei.
+- Beim Verknuepfen (`/link <code>` in Discord) wird man jetzt SOFORT in den
+  passenden System-Voice-Channel verschoben, falls der Bot bereits einen
+  aktuellen Sektor kennt und man in Discord in einem Voice-Channel ist. Vorher
+  musste man erst einmal springen oder sich neu verbinden, damit die erste
+  Verschiebung ausgeloest wurde.
+- Discord-Bridge: Online-Spieler-Erkennung passiert jetzt sofort beim Connect
+  (SteamID-Empfang), nicht erst beim ersten Sektorwechsel — verhindert, dass
+  Spieler, die lange in einem Sektor bleiben, fuer `/link` unsichtbar sind.
+
+
 ## Neu in custom-build-134: Discord-Link-Code im HUD
 
 - Oben links im Spiel wird nach dem Verbinden dauerhaft ein Discord-Link-Code

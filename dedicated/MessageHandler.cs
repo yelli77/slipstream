@@ -128,6 +128,12 @@ public class MessageHandler
         p.SteamId = steamId;
         _players[e.FromConnection.Id] = p;
         Console.WriteLine($"[INFO] Player {e.FromConnection.Id} SteamID set to {steamId}");
+
+        // Register presence with the Discord bridge immediately on connect —
+        // do not wait for a sector change, some players may sit in one sector
+        // for a long time and would otherwise never become linkable.
+        string seenJson = JsonSerializer.Serialize(new { steamId = p.SteamId.ToString(), name = p.Name });
+        _ = PostBridge($"{BridgeBaseUrl}/player-seen", seenJson);
     }
 
     private void HandleChatMessage(MessageReceivedEventArgs e, Riptide.Server server)
