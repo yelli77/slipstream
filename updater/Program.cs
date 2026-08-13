@@ -91,7 +91,8 @@ namespace StarTruckMPUpdater
 
             if (remote.build == localBuild && File.Exists(dllPath) && !freshBepInExInstall)
             {
-                Console.WriteLine("Du hast bereits die neueste Version. Nichts zu tun.");
+                Console.WriteLine("Du hast bereits die neueste Version.");
+                LaunchGame(gamePath);
                 Pause();
                 return 0;
             }
@@ -135,14 +136,53 @@ namespace StarTruckMPUpdater
             if (freshBepInExInstall)
             {
                 Console.WriteLine();
-                Console.WriteLine("WICHTIG: BepInEx wurde gerade neu installiert.");
-                Console.WriteLine("Bitte starte Star Trucker jetzt EINMAL ganz normal über Steam,");
+                Console.WriteLine("BepInEx wurde gerade neu installiert. Star Trucker wird jetzt gestartet,");
                 Console.WriteLine("damit BepInEx die noetigen Interop-Dateien generieren kann.");
-                Console.WriteLine("Danach ist der Mod einsatzbereit.");
             }
 
+            LaunchGame(gamePath);
             Pause();
             return 0;
+        }
+
+        static void LaunchGame(string gamePath)
+        {
+            try
+            {
+                string appIdFile = Path.Combine(gamePath, "steam_appid.txt");
+                if (File.Exists(appIdFile) && int.TryParse(File.ReadAllText(appIdFile).Trim(), out int appId))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"Starte Star Trucker ueber Steam (App {appId})...");
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = $"steam://run/{appId}",
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
+                string exePath = Path.Combine(gamePath, "Star Trucker.exe");
+                if (File.Exists(exePath))
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Starte Star Trucker...");
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = exePath,
+                        WorkingDirectory = gamePath,
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
+                Console.WriteLine("Konnte Star Trucker.exe nicht finden, bitte manuell starten.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Star Trucker konnte nicht automatisch gestartet werden: {ex.Message}");
+                Console.WriteLine("Bitte manuell ueber Steam starten.");
+            }
         }
 
         static bool IsValidGameFolder(string path)
