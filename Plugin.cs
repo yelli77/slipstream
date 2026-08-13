@@ -6,7 +6,6 @@ using HarmonyLib;
 using System.Reflection;
 using System;
 using BepInEx.Logging;
-using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP.UnityEngine;
 
 namespace StarTruckMP;
@@ -19,22 +18,19 @@ public class StarTruckMP : BasePlugin
     public const string pluginVersion = "0.1";
     public const string customBuildNumber = "custom-build-137";
     internal static new ManualLogSource Log;
-    public static ConfigEntry<string> IPAddress;
-    public static ConfigEntry<int> MoveUpdate;
-    public static ConfigEntry<UnityEngine.KeyCode> joinKey;
-    public static ConfigEntry<string> PlayerName;
-    public static ConfigEntry<UnityEngine.KeyCode> HonkKey;
+
+    // Feste Werte, keine Konfigurationsdatei mehr noetig: Server-Adresse ist der einzige
+    // oeffentliche dedizierte Server, Movement-Sync-Intervall ist eine Netzwerk-Tuning-Konstante,
+    // Hupe laesst sich ohnehin im Spiel selbst binden.
+    public const string ServerAddress = "31.97.125.237:7777";
+    public const int MovementUpdateMs = 100;
+    public static readonly UnityEngine.KeyCode HonkKey = UnityEngine.KeyCode.H;
 
 
     public override void Load()
     {
         Log = base.Log;
         Log.LogInfo($"Plugin {pluginGuid} is loaded! [{customBuildNumber}]");
-        IPAddress = Config.Bind("Server Info", "ServerIP", "31.97.125.237:7777", "IP Address to Join");
-        MoveUpdate = Config.Bind("Server Info", "MovementUpdate", 100, "Movement update frequencey in ms");
-        joinKey = Config.Bind("Keybinds", "JoinKey", UnityEngine.KeyCode.LeftBracket, "Set the Key to press for joining the listed IP");
-        PlayerName = Config.Bind("Player Info", "PlayerName", "", "Your display name shown to other players (leave empty for default)");
-        HonkKey = Config.Bind("Keybinds", "HonkKey", UnityEngine.KeyCode.H, "Set the Key to press for honking your horn");
         Harmony.CreateAndPatchAll(typeof(TruckClient));
 
     }

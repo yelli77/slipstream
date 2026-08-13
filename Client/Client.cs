@@ -80,19 +80,23 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        private static bool isConnecting = false;
+        private static float nextConnectAttemptTime = 0f;
+        private const float ConnectRetryDelaySeconds = 5f;
+
         public static void Update()
         {
-            if (UnityEngine.Input.GetKeyDown(StarTruckMP.joinKey.Value) )
+            // Direkter Online-Modus: kein manueller Verbindungsaufbau mehr noetig. Sobald die
+            // fuer den Verbindungsaufbau benoetigten Spielobjekte existieren (Spieler ist im Truck
+            // geladen), wird automatisch verbunden. Bei Verbindungsabbruch/-fehler wird nach kurzer
+            // Verzoegerung automatisch erneut versucht.
+            if (!client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
             {
-                if (!client.IsConnected)
+                if (GameObject.FindGameObjectWithTag("Player") != null && GameObject.Find("StarTruck(Clone)") != null)
                 {
-                    StarTruckMP.Log.LogInfo($"Client Connecting");
-                    ConnectToServer(StarTruckMP.IPAddress.Value);
-                }
-                else
-                {
-                    StarTruckMP.Log.LogInfo($"Client Disconnecting");
-                    client.Disconnect();
+                    StarTruckMP.Log.LogInfo("Auto-Connect: Client Connecting");
+                    isConnecting = true;
+                    ConnectToServer(StarTruckMP.ServerAddress);
                 }
             }
         }
@@ -166,6 +170,8 @@ namespace StarTruckMP.StarTruckClient
         private static void Client_Disconnected(object sender, DisconnectedEventArgs e)
         {
             StarTruckMP.Log.LogInfo($"Disconnected from Server: {e.Reason.ToString()}");
+            isConnecting = false;
+            nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
 
             foreach (var player in playerList.Values)
             {
@@ -188,7 +194,8 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo($"Connected to Server");
             try
             {
-                string myName = StarTruckMP.PlayerName.Value;
+                isConnecting = false;
+                string myName = GetSteamPersonaName();
                 myPlayerName = myName;
                 isLinked = false;
                 client.Send(Messages.createPlayerNameMessage(client.Id, myName));
@@ -258,6 +265,36 @@ namespace StarTruckMP.StarTruckClient
         public static void Client_ConnectionFailed(object sender, ConnectionFailedEventArgs e)
         {
             StarTruckMP.Log.LogInfo($"Connection Failed");
+            isConnecting = false;
+            nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
+        }
+
+        /// <summary>
+        /// Liest den Steam-Anzeigenamen per Reflection aus (gleiches Muster wie die SteamID weiter unten),
+        /// damit keine harte Kompilierzeit-Abhaengigkeit auf Steamworks.NET noetig ist. Faellt auf "Player"
+        /// zurueck, falls Steamworks nicht verfuegbar ist.
+        /// </summary>
+        private static string GetSteamPersonaName()
+        {
+            try
+            {
+                var steamFriendsType = System.Type.GetType("Steamworks.SteamFriends, com.rlabrecque.steamworks.net");
+                if (steamFriendsType != null)
+                {
+                    var getPersonaNameMethod = steamFriendsType.GetMethod("GetPersonaName", BindingFlags.Public | BindingFlags.Static);
+                    if (getPersonaNameMethod != null)
+                    {
+                        var result = getPersonaNameMethod.Invoke(null, null) as string;
+                        if (!string.IsNullOrWhiteSpace(result))
+                            return result;
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"Steam-Name konnte nicht gelesen werden: {ex.Message}");
+            }
+            return "Player";
         }
 
         public static void Client_MessageReceived(object sender, MessageReceivedEventArgs e)
@@ -605,14 +642,14 @@ namespace StarTruckMP.StarTruckClient
         {
             if (!client.IsConnected) return;
             // Use GetKey (held) so honk lasts as long as the key is pressed
-            isHonking = UnityEngine.Input.GetKey(StarTruckMP.HonkKey.Value);
+            isHonking = UnityEngine.Input.GetKey(StarTruckMP.HonkKey);
         }
 
         public static void SendMovement()
         {
             if (!client.IsConnected) return;
             if (Time.realtimeSinceStartup < nextSendTime) return;
-            nextSendTime = Time.realtimeSinceStartup + StarTruckMP.MoveUpdate.Value / 1000f;
+            nextSendTime = Time.realtimeSinceStartup + StarTruckMP.MovementUpdateMs / 1000f;
 
             try
             {
