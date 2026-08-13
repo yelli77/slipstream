@@ -11,4 +11,5 @@ services:
       - SERVER_PORT=7777
       - MAX_CLIENTS=8
       - SERVER_NAME=StarTruckMP Server
+      - STARTTRUCKMP_BRIDGE_URL=http://discord-bridge-bot:4500
     restart: unless-stopped
