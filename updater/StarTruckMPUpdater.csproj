@@ -7,7 +7,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <AssemblyName>StarTruckMPUpdater</AssemblyName>
+    <AssemblyName>Slipstream</AssemblyName>
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
   </PropertyGroup>
