@@ -172,42 +172,57 @@ namespace StarTruckMPUpdater
             return 0;
         }
 
+        // Feste Steam App-ID von Star Trucker (store.steampowered.com/app/2380050).
+        // Fertige Steam-Builds liefern normalerweise KEINE steam_appid.txt mit (die ist nur fuer
+        // Dev-Testing ohne Steam-Client gedacht) - sich darauf zu verlassen fuehrte dazu, dass der
+        // direkte .exe-Start ohne Steam-Initialisierung sofort abstuerzte (kurzes schwarzes Fenster,
+        // dann nichts mehr, weil SteamAPI_Init() fehlschlaegt).
+        const int SteamAppId = 2380050;
+
         static void LaunchGame(string gamePath)
         {
             try
             {
-                string appIdFile = Path.Combine(gamePath, "steam_appid.txt");
-                if (File.Exists(appIdFile) && int.TryParse(File.ReadAllText(appIdFile).Trim(), out int appId))
+                // Primaer: immer ueber Steam starten (steam:// startet noetigenfalls auch den
+                // Steam-Client selbst und initialisiert die Steam-Session sauber).
+                Log($"Starte Star Trucker ueber Steam (App {SteamAppId})...");
+                Process.Start(new ProcessStartInfo
                 {
-                    Log($"Starte Star Trucker ueber Steam (App {appId})...");
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = $"steam://run/{appId}",
-                        UseShellExecute = true
-                    });
-                    return;
-                }
+                    FileName = $"steam://run/{SteamAppId}",
+                    UseShellExecute = true
+                });
+                return;
+            }
+            catch (Exception ex)
+            {
+                Log($"Start ueber Steam fehlgeschlagen: {ex.Message}. Versuche direkten Start als Fallback.");
+            }
 
+            // Fallback: falls steam:// aus irgendeinem Grund nicht funktioniert (z.B. Steam nicht
+            // installiert) - Hinweis, dass ein Direktstart ohne laufenden Steam-Client meist scheitert.
+            try
+            {
                 string exePath = Path.Combine(gamePath, "Star Trucker.exe");
                 if (File.Exists(exePath))
                 {
-                    Log("Starte Star Trucker...");
+                    Log("Starte Star Trucker direkt (Fallback, ohne Steam)...");
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = exePath,
                         WorkingDirectory = gamePath,
                         UseShellExecute = true
                     });
+                    ShowError("Star Trucker wurde ohne Steam gestartet. Falls das Spiel sich sofort wieder schliesst, bitte Steam vorher manuell starten und Star Trucker darueber oeffnen.");
                     return;
                 }
 
                 Log("Konnte Star Trucker.exe nicht finden.");
-                ShowError("Konnte Star Trucker.exe nicht finden. Bitte manuell starten.");
+                ShowError("Konnte Star Trucker.exe nicht finden. Bitte manuell ueber Steam starten.");
             }
-            catch (Exception ex)
+            catch (Exception ex2)
             {
-                Log($"Star Trucker konnte nicht automatisch gestartet werden: {ex.Message}");
-                ShowError($"Star Trucker konnte nicht automatisch gestartet werden:\n{ex.Message}\n\nBitte manuell ueber Steam starten.");
+                Log($"Star Trucker konnte nicht automatisch gestartet werden: {ex2.Message}");
+                ShowError($"Star Trucker konnte nicht automatisch gestartet werden:\n{ex2.Message}\n\nBitte manuell ueber Steam starten.");
             }
         }
 
