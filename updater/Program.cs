@@ -378,16 +378,19 @@ namespace StarTruckMPUpdater
             }
         }
 
-                static void EnsureBepInExConsoleDisabled(string gamePath)
+        static void EnsureBepInExConsoleDisabled(string gamePath)
         {
             string cfgPath = Path.Combine(gamePath, "BepInEx", "config", "BepInEx.cfg");
 
+            // WICHTIG: Hier absichtlich KEINE eigene Datei mehr anlegen, wenn sie fehlt.
+            // Eine von uns von Hand gebaute Minimal-Config (statt der von BepInEx selbst
+            // generierten, vollstaendigen Datei) hat BepInEx komplett am Laden gehindert -
+            // vermutlich, weil BepInEx beim Parsen einer unvollstaendigen/untypischen Datei
+            // intern abbricht. Deshalb: nur patchen, wenn BepInEx die Datei schon SELBST
+            // erzeugt hat (also mindestens einmal erfolgreich durchgelaufen ist).
             if (!File.Exists(cfgPath))
             {
-                var dir = Path.GetDirectoryName(cfgPath);
-                if (dir != null) Directory.CreateDirectory(dir);
-                File.WriteAllText(cfgPath, "[Logging.Console]\n\nEnabled = false\n");
-                Log("BepInEx.cfg neu angelegt mit deaktivierter Konsole.");
+                Log("BepInEx.cfg existiert noch nicht (erster Lauf) - ueberspringe Konsolen-Patch, BepInEx generiert sie selbst.");
                 return;
             }
 
