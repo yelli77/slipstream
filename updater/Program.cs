@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Diagnostics;
+using System.Windows.Forms;
 
 namespace StarTruckMPUpdater
 {
@@ -13,15 +14,19 @@ namespace StarTruckMPUpdater
         const string BootstrapZipUrl = "https://raw.githubusercontent.com/yelli77/slipstream/main/bootstrap/bepinex-bootstrap.zip";
         const string ConfigFileName = "updater-config.txt";
         const string LocalVersionFileName = "installed-build.txt";
+        const string LogFileName = "slipstream-log.txt";
 
+        static string logPath = "";
+
+        [STAThread]
         static int Main(string[] args)
         {
-            Console.WriteLine("=== StarTruckMP Updater ===");
-            Console.WriteLine();
-
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            logPath = Path.Combine(exeDir, LogFileName);
             string configPath = Path.Combine(exeDir, ConfigFileName);
             string localVersionPath = Path.Combine(exeDir, LocalVersionFileName);
+
+            Log("=== Slipstream Start ===");
 
             // 1. Find or ask for the Star Trucker install path (based on the game executable, NOT BepInEx,
             //    since BepInEx might not be installed yet on a fresh setup)
@@ -32,21 +37,24 @@ namespace StarTruckMPUpdater
             }
             while (gamePath == null || !IsValidGameFolder(gamePath))
             {
-                Console.WriteLine("Star Trucker Installationsordner nicht gefunden.");
-                Console.Write("Bitte Pfad zum Star Trucker Ordner eingeben (z.B. C:\\Program Files (x86)\\Steam\\steamapps\\common\\Star Trucker): ");
-                gamePath = Console.ReadLine();
-                if (gamePath != null)
+                gamePath = Microsoft.VisualBasic.Interaction.InputBox(
+                    "Star Trucker Installationsordner nicht gefunden.\n\nBitte Pfad zum Star Trucker Ordner eingeben:",
+                    "Slipstream",
+                    @"C:\Program Files (x86)\Steam\steamapps\common\Star Trucker");
+
+                if (string.IsNullOrWhiteSpace(gamePath))
                 {
-                    gamePath = gamePath.Trim().Trim('"');
+                    Log("Kein Spielordner angegeben, Abbruch.");
+                    return 1;
                 }
+                gamePath = gamePath.Trim().Trim('"');
             }
             File.WriteAllText(configPath, gamePath);
 
             string pluginsDir = Path.Combine(gamePath, "BepInEx", "plugins");
             string dllPath = Path.Combine(pluginsDir, "StarTruckMP.dll");
 
-            Console.WriteLine($"Spielordner: {gamePath}");
-            Console.WriteLine();
+            Log($"Spielordner: {gamePath}");
 
             // 2. Make sure BepInEx + RiptideNetworking (Abhaengigkeit) installiert sind. Falls nicht: Bootstrap-Paket
             //    herunterladen und ins Spielverzeichnis entpacken.
@@ -57,14 +65,24 @@ namespace StarTruckMPUpdater
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Fehler beim Installieren von BepInEx: {ex.Message}");
-                Pause();
+                Log($"Fehler beim Installieren von BepInEx: {ex.Message}");
+                ShowError($"Fehler beim Installieren von BepInEx:\n{ex.Message}");
                 return 1;
+            }
+
+            // BepInEx-Konsolenfenster fuer alle Installationen (auch bereits bestehende) deaktivieren.
+            try
+            {
+                EnsureBepInExConsoleDisabled(gamePath);
+            }
+            catch (Exception ex)
+            {
+                Log($"Konnte BepInEx-Konsole nicht deaktivieren: {ex.Message}");
             }
 
             // 3. Read locally installed build number
             string localBuild = File.Exists(localVersionPath) ? File.ReadAllText(localVersionPath).Trim() : "(unbekannt)";
-            Console.WriteLine($"Aktuell installiert: {localBuild}");
+            Log($"Aktuell installiert: {localBuild}");
 
             // 4. Fetch remote version info
             VersionInfo? remote;
@@ -74,74 +92,71 @@ namespace StarTruckMPUpdater
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Fehler beim Abrufen der Versionsinfo: {ex.Message}");
-                Pause();
+                Log($"Fehler beim Abrufen der Versionsinfo: {ex.Message}");
+                ShowError($"Fehler beim Abrufen der Versionsinfo:\n{ex.Message}");
                 return 1;
             }
 
             if (remote == null)
             {
-                Console.WriteLine("Konnte keine Versionsinfo laden.");
-                Pause();
+                Log("Konnte keine Versionsinfo laden.");
+                ShowError("Konnte keine Versionsinfo laden.");
                 return 1;
             }
 
-            Console.WriteLine($"Neueste Version:      {remote.build}");
-            Console.WriteLine();
+            Log($"Neueste Version: {remote.build}");
 
             if (remote.build == localBuild && File.Exists(dllPath) && !freshBepInExInstall)
             {
-                Console.WriteLine("Du hast bereits die neueste Version.");
+                Log("Bereits aktuell.");
                 LaunchGame(gamePath);
-                Pause();
                 return 0;
             }
 
             // 5. Make sure the game isn't running (file lock)
-            if (IsGameRunning())
+            while (IsGameRunning())
             {
-                Console.WriteLine("Star Trucker läuft gerade. Bitte das Spiel schließen und Enter drücken, um fortzufahren...");
-                Console.ReadLine();
-                while (IsGameRunning())
+                var result = MessageBox.Show(
+                    "Star Trucker läuft gerade und muss für das Update geschlossen werden.\n\nBitte das Spiel schließen und dann OK klicken.",
+                    "Slipstream",
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Cancel)
                 {
-                    Console.WriteLine("Spiel läuft noch. Bitte schließen und Enter drücken...");
-                    Console.ReadLine();
+                    Log("Abgebrochen, weil Spiel noch laeuft.");
+                    return 1;
                 }
             }
 
             // 6. Download + install StarTruckMP.dll
             try
             {
-                Console.WriteLine($"Lade {remote.build} herunter...");
+                Log($"Lade {remote.build} herunter...");
                 byte[] gz = DownloadBytes(remote.url);
 
-                Console.WriteLine("Entpacke...");
+                Log("Entpacke...");
                 byte[] dll = GunzipBytes(gz);
 
                 Directory.CreateDirectory(pluginsDir);
                 File.WriteAllBytes(dllPath, dll);
                 File.WriteAllText(localVersionPath, remote.build);
 
-                Console.WriteLine();
-                Console.WriteLine($"Erfolgreich installiert: {remote.build}");
-                Console.WriteLine($"Datei: {dllPath}");
+                Log($"Erfolgreich installiert: {remote.build} ({dllPath})");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Fehler beim Installieren: {ex.Message}");
-                Pause();
+                Log($"Fehler beim Installieren: {ex.Message}");
+                ShowError($"Fehler beim Installieren:\n{ex.Message}");
                 return 1;
             }
 
             if (freshBepInExInstall)
             {
-                Console.WriteLine();
-                Console.WriteLine("BepInEx wurde gerade neu installiert. Star Trucker wird jetzt gestartet,");
-                Console.WriteLine("damit BepInEx die noetigen Interop-Dateien generieren kann.");
+                Log("BepInEx wurde gerade neu installiert. Star Trucker wird jetzt gestartet, damit BepInEx die Interop-Dateien generieren kann.");
             }
 
             LaunchGame(gamePath);
-            Pause();
             return 0;
         }
 
@@ -152,8 +167,7 @@ namespace StarTruckMPUpdater
                 string appIdFile = Path.Combine(gamePath, "steam_appid.txt");
                 if (File.Exists(appIdFile) && int.TryParse(File.ReadAllText(appIdFile).Trim(), out int appId))
                 {
-                    Console.WriteLine();
-                    Console.WriteLine($"Starte Star Trucker ueber Steam (App {appId})...");
+                    Log($"Starte Star Trucker ueber Steam (App {appId})...");
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = $"steam://run/{appId}",
@@ -165,8 +179,7 @@ namespace StarTruckMPUpdater
                 string exePath = Path.Combine(gamePath, "Star Trucker.exe");
                 if (File.Exists(exePath))
                 {
-                    Console.WriteLine();
-                    Console.WriteLine("Starte Star Trucker...");
+                    Log("Starte Star Trucker...");
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = exePath,
@@ -176,12 +189,13 @@ namespace StarTruckMPUpdater
                     return;
                 }
 
-                Console.WriteLine("Konnte Star Trucker.exe nicht finden, bitte manuell starten.");
+                Log("Konnte Star Trucker.exe nicht finden.");
+                ShowError("Konnte Star Trucker.exe nicht finden. Bitte manuell starten.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Star Trucker konnte nicht automatisch gestartet werden: {ex.Message}");
-                Console.WriteLine("Bitte manuell ueber Steam starten.");
+                Log($"Star Trucker konnte nicht automatisch gestartet werden: {ex.Message}");
+                ShowError($"Star Trucker konnte nicht automatisch gestartet werden:\n{ex.Message}\n\nBitte manuell ueber Steam starten.");
             }
         }
 
@@ -242,14 +256,13 @@ namespace StarTruckMPUpdater
                 return false;
             }
 
-            Console.WriteLine("BepInEx bzw. eine benoetigte Abhaengigkeit (RiptideNetworking.dll) fehlt.");
-            Console.WriteLine("Lade BepInEx-Grundinstallation herunter...");
+            Log("BepInEx bzw. eine benoetigte Abhaengigkeit (RiptideNetworking.dll) fehlt. Lade BepInEx-Grundinstallation herunter...");
 
             byte[] zipBytes = DownloadBytes(BootstrapZipUrl);
             string tmpZip = Path.Combine(Path.GetTempPath(), "starttruckmp-bepinex-bootstrap.zip");
             File.WriteAllBytes(tmpZip, zipBytes);
 
-            Console.WriteLine("Installiere BepInEx...");
+            Log("Installiere BepInEx...");
             using (var archive = ZipFile.OpenRead(tmpZip))
             {
                 foreach (var entry in archive.Entries)
@@ -271,8 +284,79 @@ namespace StarTruckMPUpdater
 
             try { File.Delete(tmpZip); } catch { /* egal */ }
 
-            Console.WriteLine("BepInEx-Grundinstallation abgeschlossen.");
+            Log("BepInEx-Grundinstallation abgeschlossen.");
             return true;
+        }
+
+        /// <summary>
+        /// Stellt sicher, dass BepInEx/config/BepInEx.cfg unter [Logging.Console] Enabled = false hat,
+        /// damit kein Konsolenfenster beim Spielstart aufpoppt. Patcht auch bereits bestehende Installationen,
+        /// nicht nur Frisch-Installationen ueber das Bootstrap-Paket.
+        /// </summary>
+        static void EnsureBepInExConsoleDisabled(string gamePath)
+        {
+            string cfgPath = Path.Combine(gamePath, "BepInEx", "config", "BepInEx.cfg");
+
+            if (!File.Exists(cfgPath))
+            {
+                var dir = Path.GetDirectoryName(cfgPath);
+                if (dir != null) Directory.CreateDirectory(dir);
+                File.WriteAllText(cfgPath, "[Logging.Console]\n\nEnabled = false\n");
+                Log("BepInEx.cfg neu angelegt mit deaktivierter Konsole.");
+                return;
+            }
+
+            var lines = File.ReadAllLines(cfgPath);
+            bool inConsoleSection = false;
+            bool foundEnabledLine = false;
+            bool changed = false;
+            int consoleSectionIndex = -1;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var trimmed = lines[i].Trim();
+
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    inConsoleSection = trimmed.Equals("[Logging.Console]", StringComparison.OrdinalIgnoreCase);
+                    if (inConsoleSection) consoleSectionIndex = i;
+                    continue;
+                }
+
+                if (inConsoleSection && trimmed.StartsWith("Enabled", StringComparison.OrdinalIgnoreCase) && trimmed.Contains("="))
+                {
+                    foundEnabledLine = true;
+                    if (!trimmed.Equals("Enabled = false", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lines[i] = "Enabled = false";
+                        changed = true;
+                    }
+                }
+            }
+
+            var linesList = new System.Collections.Generic.List<string>(lines);
+
+            if (consoleSectionIndex == -1)
+            {
+                // Section existiert noch gar nicht -> anhaengen
+                linesList.Add("");
+                linesList.Add("[Logging.Console]");
+                linesList.Add("");
+                linesList.Add("Enabled = false");
+                changed = true;
+            }
+            else if (!foundEnabledLine)
+            {
+                // Section existiert, aber kein Enabled-Key -> direkt danach einfuegen
+                linesList.Insert(consoleSectionIndex + 1, "Enabled = false");
+                changed = true;
+            }
+
+            if (changed)
+            {
+                File.WriteAllLines(cfgPath, linesList);
+                Log("BepInEx.cfg gepatcht: Konsole deaktiviert.");
+            }
         }
 
         static bool IsGameRunning()
@@ -299,7 +383,7 @@ namespace StarTruckMPUpdater
             var apiJson = http.GetStringAsync(VersionJsonUrl).GetAwaiter().GetResult();
             using var doc = System.Text.Json.JsonDocument.Parse(apiJson);
             var content = doc.RootElement.GetProperty("content").GetString();
-            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(content));
+            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(content ?? ""));
             return JsonSerializer.Deserialize<VersionInfo>(decoded, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
@@ -320,11 +404,18 @@ namespace StarTruckMPUpdater
             return output.ToArray();
         }
 
-        static void Pause()
+        static void Log(string message)
         {
-            Console.WriteLine();
-            Console.WriteLine("Enter drücken zum Beenden...");
-            Console.ReadLine();
+            try
+            {
+                File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}\n");
+            }
+            catch { /* egal, Logging darf nie den Ablauf stoppen */ }
+        }
+
+        static void ShowError(string message)
+        {
+            MessageBox.Show(message, "Slipstream - Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

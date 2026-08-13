@@ -31,7 +31,7 @@ SetCompressor /SOLID lzma
 
 Section "Install"
     SetOutPath "$INSTDIR"
-    File /r "..\bin\Release\net6.0\win-x64\publish\*.*"
+    File /r "..\bin\Release\net6.0-windows\win-x64\publish\*.*"
 
     CreateDirectory "$SMPROGRAMS\Slipstream"
     CreateShortcut "$SMPROGRAMS\Slipstream\Slipstream.lnk" "$INSTDIR\Slipstream.exe"
