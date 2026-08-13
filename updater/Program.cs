@@ -9,8 +9,8 @@ namespace StarTruckMPUpdater
 {
     class Program
     {
-        const string VersionJsonUrl = "https://api.github.com/repos/yelli77/StarTruckMP-builds/contents/version.json";
-        const string BootstrapZipUrl = "https://raw.githubusercontent.com/yelli77/StarTruckMP-builds/main/bootstrap/bepinex-bootstrap.zip";
+        const string VersionJsonUrl = "https://api.github.com/repos/yelli77/slipstream/contents/version.json";
+        const string BootstrapZipUrl = "https://raw.githubusercontent.com/yelli77/slipstream/main/bootstrap/bepinex-bootstrap.zip";
         const string ConfigFileName = "updater-config.txt";
         const string LocalVersionFileName = "installed-build.txt";
 
