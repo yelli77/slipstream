@@ -189,6 +189,11 @@ namespace StarTruckMP.StarTruckClient
             {
                 statusOverlay.SetActive(false);
             }
+
+            // Ohne dieses Reset zaehlt die Kartenanzeige den lokalen Spieler weiterhin im zuletzt
+            // bekannten Sektor mit (SpawnMapIndicators/UpdateMapIndicators pruefen currentSector
+            // unabhaengig vom tatsaechlichen Verbindungsstatus).
+            currentSector = "none";
         }
 
         private static void Client_ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
