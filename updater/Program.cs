@@ -561,6 +561,14 @@ namespace StarTruckMPUpdater
     /// </summary>
     class ProgressForm : Form
     {
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_RESTORE = 9;
+
         private readonly Label statusLabel;
         private readonly ProgressBar progressBar;
 
@@ -575,6 +583,17 @@ namespace StarTruckMPUpdater
             MinimizeBox = false;
             ControlBox = false;
             TopMost = true;
+            ShowInTaskbar = true;
+
+            // TopMost allein reicht oft nicht - Windows blockiert das aktive
+            // Vordergrund-Holen fuer Prozesse ohne direkte Nutzerinteraktion.
+            // Deshalb zusaetzlich per WinAPI erzwingen, sobald das Fenster erscheint.
+            Shown += (s, e) =>
+            {
+                ShowWindow(Handle, SW_RESTORE);
+                Activate();
+                SetForegroundWindow(Handle);
+            };
 
             statusLabel = new Label
             {
