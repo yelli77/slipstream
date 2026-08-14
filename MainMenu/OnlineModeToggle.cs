@@ -9,10 +9,10 @@ using TMPro;
 namespace StarTruckMP.MainMenu
 {
     /// <summary>
-    /// Fuegt dem Hauptmenue einen Online/Offline-Umschalter hinzu (Klon des Optionen-Buttons,
-    /// direkt danach eingefuegt). Der Zustand wird in einer eigenen, kleinen Textdatei neben der
-    /// Mod-DLL gespeichert - bewusst NICHT ueber BepInEx.Configuration, damit es keine automatisch
-    /// generierte/erweiterbare Config-Datei mit allen moeglichen Eintraegen gibt.
+    /// Fuegt dem Hauptmenue einen Online/Offline-Umschalter hinzu (visueller Klon des Optionen-
+    /// Buttons, direkt danach eingefuegt). Der Zustand wird in einer eigenen, kleinen Textdatei
+    /// neben der Mod-DLL gespeichert - bewusst NICHT ueber BepInEx.Configuration, damit es keine
+    /// automatisch generierte/erweiterbare Config-Datei mit allen moeglichen Eintraegen gibt.
     /// </summary>
     public static class OnlineModeToggle
     {
@@ -22,7 +22,7 @@ namespace StarTruckMP.MainMenu
 
         public static bool OnlineModeEnabled { get; private set; } = LoadMode();
 
-        private static MenuButton toggleButtonInstance;
+        private static Button toggleButtonInstance;
         private static TMP_Text toggleLabel;
 
         private static bool LoadMode()
@@ -52,8 +52,13 @@ namespace StarTruckMP.MainMenu
         }
 
         /// <summary>
-        /// Klont den Optionen-Button im Hauptmenue, haengt ihn direkt danach ein und verdrahtet
-        /// einen eigenen Klick-Handler, der zwischen Online/Offline umschaltet.
+        /// Klont den Optionen-Button im Hauptmenue (nur fuer die Optik - Hintergrund, Text-Stil,
+        /// Layout-Position) und haengt ihn direkt danach ein. Das geklonte MenuButton-Skript wird
+        /// entfernt und durch einen ganz frischen UnityEngine.UI.Button ersetzt: MenuButton traegt
+        /// eine im Editor fest verdrahtete ("persistente") Navigation zum Optionen-Screen, die sich
+        /// zur Laufzeit NICHT per onClick.RemoveAllListeners() entfernen laesst (das entfernt nur
+        /// zur Laufzeit hinzugefuegte Listener, keine im Editor konfigurierten). Ein frischer Button
+        /// hat gar keine alte Verdrahtung im Gepaeck.
         /// </summary>
         public static void CreateToggleButton(MainMenuScreen menu)
         {
@@ -72,23 +77,27 @@ namespace StarTruckMP.MainMenu
                 return;
             }
 
+            // Farben/Uebergangsverhalten vom Original uebernehmen, bevor das Original-Skript weg ist.
+            var colors = template.colors;
+            var transition = template.transition;
+
             var clone = UnityEngine.Object.Instantiate(template.gameObject, template.transform.parent);
             clone.name = "SlipstreamModeButton";
             clone.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
 
-            var menuButton = clone.GetComponent<MenuButton>();
-            if (menuButton != null)
+            var oldMenuButton = clone.GetComponent<MenuButton>();
+            if (oldMenuButton != null)
             {
-                var onClick = menuButton.m_OnClick;
-                if (onClick != null)
-                {
-                    onClick.RemoveAllListeners();
-                    onClick.AddListener((UnityAction)OnToggleClicked);
-                }
+                UnityEngine.Object.Destroy(oldMenuButton);
             }
 
+            var newButton = clone.AddComponent<Button>();
+            newButton.colors = colors;
+            newButton.transition = transition;
+            newButton.onClick.AddListener((UnityAction)OnToggleClicked);
+
             toggleLabel = clone.GetComponentInChildren<TMP_Text>();
-            toggleButtonInstance = menuButton;
+            toggleButtonInstance = newButton;
             UpdateLabel();
 
             StarTruckMP.Log.LogInfo("OnlineModeToggle: Button im Hauptmenue erstellt.");
