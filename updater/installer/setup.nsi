@@ -46,6 +46,25 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
+    ; Gespeicherten Spielpfad aus updater-config.txt lesen (von Slipstream.exe geschrieben),
+    ; um auch die dort installierten BepInEx/Doorstop-Dateien mit aufzuraeumen. Ohne das blieben
+    ; BepInEx-Ordner, dotnet-Ordner, winhttp.dll etc. dauerhaft im Spielordner liegen.
+    ClearErrors
+    FileOpen $0 "$INSTDIR\updater-config.txt" r
+    IfErrors skip_game_cleanup
+    FileRead $0 $1
+    FileClose $0
+    ; Nur loeschen, wenn der Pfad plausibel noch das Spiel enthaelt (Sicherheitscheck gegen
+    ; eine leere/kaputte config-Datei, die sonst versehentlich woanders aufraeumen wuerde).
+    IfFileExists "$1\Star Trucker.exe" 0 skip_game_cleanup
+        RMDir /r "$1\BepInEx"
+        RMDir /r "$1\dotnet"
+        Delete "$1\winhttp.dll"
+        Delete "$1\doorstop_config.ini"
+        Delete "$1\.doorstop_version"
+        Delete "$1\changelog.txt"
+    skip_game_cleanup:
+
     RMDir /r "$INSTDIR"
     RMDir /r "$SMPROGRAMS\Slipstream"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\SlipstreamUpdater"
