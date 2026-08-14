@@ -58,6 +58,21 @@ namespace StarTruckMP.StarTruckClient
         private static float nextLinkStatusPollTime = 0f;
         private const float LinkStatusPollIntervalSeconds = 8f;
 
+        // Retry sending our sector shortly after connect, in case [Sector] wasn't
+        // ready yet at the moment OnArrivedAtSector() was first called.
+        private static bool pendingSectorRetry = false;
+        private static float nextSectorRetryTime = 0f;
+        private static float sectorRetryDeadline = 0f;
+        private const float SectorRetryIntervalSeconds = 1f;
+        private const float SectorRetryTimeoutSeconds = 15f;
+
+        private static void RetrySendSectorAfterConnect()
+        {
+            pendingSectorRetry = true;
+            nextSectorRetryTime = Time.realtimeSinceStartup + SectorRetryIntervalSeconds;
+            sectorRetryDeadline = Time.realtimeSinceStartup + SectorRetryTimeoutSeconds;
+        }
+
         public static void FixedUpdate()
         {
             client.Update();
@@ -66,6 +81,27 @@ namespace StarTruckMP.StarTruckClient
             SmoothTruckMovement();
             BillboardNameLabels();
             UpdateMapIndicators();
+
+            if (pendingSectorRetry && client.IsConnected && Time.realtimeSinceStartup >= nextSectorRetryTime)
+            {
+                try
+                {
+                    OnArrivedAtSector();
+                    pendingSectorRetry = false;
+                }
+                catch (System.Exception exSectorRetry)
+                {
+                    if (Time.realtimeSinceStartup >= sectorRetryDeadline)
+                    {
+                        pendingSectorRetry = false;
+                        StarTruckMP.Log.LogWarning($"Giving up sending initial sector after retries: {exSectorRetry.Message}");
+                    }
+                    else
+                    {
+                        nextSectorRetryTime = Time.realtimeSinceStartup + SectorRetryIntervalSeconds;
+                    }
+                }
+            }
 
             if (client.IsConnected && Time.realtimeSinceStartup >= nextPositionLogTime)
             {
@@ -288,7 +324,12 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"Failed to send player name: {ex.Message}");
             }
-            OnArrivedAtSector();
+            try { OnArrivedAtSector(); }
+            catch (System.Exception exSector)
+            {
+                StarTruckMP.Log.LogWarning($"OnArrivedAtSector at connect failed, will retry: {exSector.Message}");
+                RetrySendSectorAfterConnect();
+            }
         }
 
         private static void Client_ClientConnected(object sender, ClientConnectedEventArgs e)
@@ -363,10 +404,12 @@ namespace StarTruckMP.StarTruckClient
             {
                 ushort id = e.Message.GetUShort();
                 string remoteName = e.Message.GetString();
+                string remoteSector = "none";
+                try { remoteSector = e.Message.GetString(); } catch { }
                 if (!playerList.ContainsKey(id))
                 {
                     playerInfo newPlayer = new playerInfo();
-                    newPlayer.sector = "none";
+                    newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
                     newPlayer.Name = remoteName;
                     playerList.Add(id, newPlayer);
                 }

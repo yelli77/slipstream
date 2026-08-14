@@ -138,6 +138,7 @@ public class DedicatedServer
         var bc = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.PlayerConnected);
         bc.AddUShort(e.Client.Id);
         bc.AddString(p.Name ?? "");
+        bc.AddString(p.Sector ?? "none");
         _server.SendToAll(bc, e.Client.Id);
     }
 
