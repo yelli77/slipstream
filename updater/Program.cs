@@ -212,7 +212,7 @@ namespace StarTruckMPUpdater
             {
                 try
                 {
-                    form.UpdateStatus("Wird fuer das Spiel vorbereitet...");
+                    form.UpdateStatus("Spiel wird vorbereitet, kann bis zu zwei Minuten dauern...");
                     Log("Fresh-Install: Start...");
                     LaunchGame(gamePath);
 
@@ -559,6 +559,54 @@ namespace StarTruckMPUpdater
     /// (der Prozess soll nicht abgebrochen werden koennen), Statustext per Invoke von einem
     /// Hintergrund-Thread aus aktualisierbar, schliesst sich selbst per CloseSafely().
     /// </summary>
+    /// <summary>
+    /// Selbst gezeichneter, rotierender Punkt-Spinner (Windows-Forms hat keinen eingebauten
+    /// Spinner-Control) - 8 Punkte im Kreis mit abnehmender Deckkraft, per Timer alle 60ms
+    /// um einen Schritt weitergedreht.
+    /// </summary>
+    class SpinnerControl : Control
+    {
+        private int angle = 0;
+        private readonly System.Windows.Forms.Timer timer;
+
+        public SpinnerControl()
+        {
+            DoubleBuffered = true;
+            Size = new Size(40, 40);
+            timer = new System.Windows.Forms.Timer { Interval = 60 };
+            timer.Tick += (s, e) => { angle = (angle + 30) % 360; Invalidate(); };
+            timer.Start();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            const int numDots = 8;
+            float radius = Math.Min(Width, Height) / 2f - 5f;
+            var center = new PointF(Width / 2f, Height / 2f);
+
+            for (int i = 0; i < numDots; i++)
+            {
+                double theta = (angle + i * (360.0 / numDots)) * Math.PI / 180.0;
+                float x = center.X + (float)(radius * Math.Cos(theta));
+                float y = center.Y + (float)(radius * Math.Sin(theta));
+                int alpha = 60 + (255 - 60) * (numDots - i) / numDots;
+                using var brush = new SolidBrush(Color.FromArgb(alpha, Color.DodgerBlue));
+                const float dotSize = 7f;
+                g.FillEllipse(brush, x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) timer.Dispose();
+            base.Dispose(disposing);
+        }
+    }
+
     class ProgressForm : Form
     {
         [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -567,16 +615,28 @@ namespace StarTruckMPUpdater
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr processId);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
         private const int SW_RESTORE = 9;
 
         private readonly Label statusLabel;
-        private readonly ProgressBar progressBar;
+        private readonly SpinnerControl spinner;
 
         public ProgressForm()
         {
             Text = "Slipstream";
             Width = 480;
-            Height = 180;
+            Height = 200;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
@@ -585,35 +645,65 @@ namespace StarTruckMPUpdater
             TopMost = true;
             ShowInTaskbar = true;
 
-            // TopMost allein reicht oft nicht - Windows blockiert das aktive
-            // Vordergrund-Holen fuer Prozesse ohne direkte Nutzerinteraktion.
-            // Deshalb zusaetzlich per WinAPI erzwingen, sobald das Fenster erscheint.
-            Shown += (s, e) =>
+            Shown += (s, e) => ForceForeground();
+
+            spinner = new SpinnerControl
             {
-                ShowWindow(Handle, SW_RESTORE);
-                Activate();
-                SetForegroundWindow(Handle);
+                Anchor = AnchorStyles.None
             };
 
             statusLabel = new Label
             {
                 Text = "Wird vorbereitet...",
                 AutoSize = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                Padding = new Padding(20)
-            };
-
-            progressBar = new ProgressBar
-            {
-                Style = ProgressBarStyle.Marquee,
-                MarqueeAnimationSpeed = 30,
+                TextAlign = ContentAlignment.TopCenter,
                 Dock = DockStyle.Bottom,
-                Height = 22
+                Height = 70,
+                Padding = new Padding(20, 0, 20, 10)
             };
 
             Controls.Add(statusLabel);
-            Controls.Add(progressBar);
+            Controls.Add(spinner);
+
+            // Spinner in der verbleibenden Flaeche oberhalb des Labels zentrieren.
+            Layout += (s, e) =>
+            {
+                spinner.Location = new Point(
+                    (ClientSize.Width - spinner.Width) / 2,
+                    (ClientSize.Height - statusLabel.Height - spinner.Height) / 2);
+            };
+        }
+
+        /// <summary>
+        /// TopMost allein reicht oft nicht, um ein Fenster wirklich in den Vordergrund zu holen -
+        /// Windows blockiert das fuer Prozesse ohne unmittelbar vorausgegangene Nutzerinteraktion
+        /// (Fokus-Diebstahl-Schutz). AttachThreadInput mit dem aktuell fokussierten Fenster ist der
+        /// Standard-Workaround dafuer.
+        /// </summary>
+        private void ForceForeground()
+        {
+            try
+            {
+                ShowWindow(Handle, SW_RESTORE);
+
+                IntPtr foreground = GetForegroundWindow();
+                uint foregroundThreadId = GetWindowThreadProcessId(foreground, IntPtr.Zero);
+                uint currentThreadId = GetCurrentThreadId();
+
+                if (foregroundThreadId != currentThreadId)
+                {
+                    AttachThreadInput(currentThreadId, foregroundThreadId, true);
+                    SetForegroundWindow(Handle);
+                    Activate();
+                    AttachThreadInput(currentThreadId, foregroundThreadId, false);
+                }
+                else
+                {
+                    SetForegroundWindow(Handle);
+                    Activate();
+                }
+            }
+            catch { /* wenn's nicht klappt, bleibt's halt in der Taskleiste - kein Absturzgrund */ }
         }
 
         public void UpdateStatus(string text)
