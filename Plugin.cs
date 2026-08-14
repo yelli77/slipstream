@@ -7,6 +7,7 @@ using System.Reflection;
 using System;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.UnityEngine;
+using StarTruckMP.MainMenu;
 
 namespace StarTruckMP;
 
@@ -60,6 +61,13 @@ public class StarTruckMP : BasePlugin
         public static void OnArrivedAtSector(Object sender, EventArgs eventArgs)
         {
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
+        }
+
+        [HarmonyPatch(typeof(MainMenuScreen), nameof(MainMenuScreen.Start))]
+        [HarmonyPostfix]
+        public static void MainMenuScreen_Start(MainMenuScreen __instance)
+        {
+            try { OnlineModeToggle.CreateToggleButton(__instance); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle-Button konnte nicht erstellt werden: {ex.Message}"); }
         }
 
     }

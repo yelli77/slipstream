@@ -4,6 +4,7 @@ using System;
 using UnityEngine;
 using StarTruckMP.Utilities;
 using StarTruckMP.Encoding;
+using StarTruckMP.MainMenu;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -89,8 +90,9 @@ namespace StarTruckMP.StarTruckClient
             // Direkter Online-Modus: kein manueller Verbindungsaufbau mehr noetig. Sobald die
             // fuer den Verbindungsaufbau benoetigten Spielobjekte existieren (Spieler ist im Truck
             // geladen), wird automatisch verbunden. Bei Verbindungsabbruch/-fehler wird nach kurzer
-            // Verzoegerung automatisch erneut versucht.
-            if (!client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
+            // Verzoegerung automatisch erneut versucht. Nur wenn der Online/Offline-Umschalter im
+            // Hauptmenue auf Online steht.
+            if (OnlineModeToggle.OnlineModeEnabled && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
             {
                 if (GameObject.FindGameObjectWithTag("Player") != null && GameObject.Find("StarTruck(Clone)") != null)
                 {
