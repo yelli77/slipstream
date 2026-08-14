@@ -178,15 +178,30 @@ namespace StarTruckMP.MainMenu
                 le.minHeight = templateLayoutElement.minHeight;
             }
 
-            // Text-Kindobjekt, ueber das ganze Root gespannt.
+            // Text-Kindobjekt: Anker/Offsets 1:1 vom Original uebernehmen (nicht einfach voll
+            // ausspannen) - das Original hat einen definierten linken Einzug fuer den Text, den wir
+            // sonst verlieren und alles faelschlich buendig am linken Rand landet.
+            var templateTextRect = templateText != null ? templateText.GetComponent<RectTransform>() : null;
+
             var textGO = new GameObject("Label");
             textGO.AddComponent<RectTransform>();
             textGO.transform.SetParent(go.transform, false);
             var textRect = textGO.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
+            if (templateTextRect != null)
+            {
+                textRect.anchorMin = templateTextRect.anchorMin;
+                textRect.anchorMax = templateTextRect.anchorMax;
+                textRect.offsetMin = templateTextRect.offsetMin;
+                textRect.offsetMax = templateTextRect.offsetMax;
+                textRect.pivot = templateTextRect.pivot;
+            }
+            else
+            {
+                textRect.anchorMin = Vector2.zero;
+                textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = Vector2.zero;
+                textRect.offsetMax = Vector2.zero;
+            }
 
             var text = textGO.AddComponent<TextMeshProUGUI>();
             if (templateText != null)
@@ -201,10 +216,23 @@ namespace StarTruckMP.MainMenu
             var button = go.GetComponent<Button>();
             button.targetGraphic = image;
             button.transition = Selectable.Transition.ColorTint;
-            if (template.TryGetComponent<Selectable>(out var templateSelectable))
-            {
-                button.colors = templateSelectable.colors;
-            }
+
+            // Farben bewusst fest verdrahtet statt vom Original kopiert: MenuButton steuert seinen
+            // Hover-/Auswahl-Balken vermutlich per Animator (isHoverHighlighted/isSelected Parameter,
+            // siehe UpdateAnimatorParams), nicht per einfachem Selectable-Farbwechsel - ein Kopieren
+            // von templateSelectable.colors haette also vermutlich nur unkonfigurierte
+            // Standard-Unity-Farben ergeben, kein sichtbarer Balken. Diese Werte sind an das
+            // sichtbare Gold/Amber-Design der Auswahlleiste angelehnt.
+            var colors = button.colors;
+            colors.normalColor = new Color(0f, 0f, 0f, 0f);
+            colors.highlightedColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
+            colors.pressedColor = new Color32(0xC9, 0x8F, 0x20, 0xFF);
+            colors.selectedColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
+            colors.disabledColor = new Color(0f, 0f, 0f, 0f);
+            colors.colorMultiplier = 1f;
+            colors.fadeDuration = 0.1f;
+            button.colors = colors;
+
             button.onClick.AddListener((UnityAction)OnToggleClicked);
 
             toggleLabel = text;
