@@ -59,20 +59,44 @@ namespace StarTruckMP.MainMenu
             }
         }
 
-        public static void CreateToggleButton(MainMenuScreen menu)
+        /// <summary>
+        /// Sucht unter dem gegebenen Screen (Hauptmenue, Pause-Menue, ...) per Text "Optionen"
+        /// nach einem MenuButton, der als optischer Templatespender dient. Generisch gehalten, weil
+        /// nicht jeder Screen (z.B. PauseScreen) eine oeffentliche optionsButton-Objektreferenz hat
+        /// wie MainMenuScreen - hier wird stattdessen zur Laufzeit die komplette Button-Liste des
+        /// Screens durchsucht.
+        /// </summary>
+        private static MenuButton FindOptionsButtonTemplate(Component screen)
+        {
+            var allButtons = screen.GetComponentsInChildren<MenuButton>(true);
+            foreach (var b in allButtons)
+            {
+                var t = b.GetComponentInChildren<TMP_Text>(true);
+                if (t != null && !string.IsNullOrEmpty(t.text) && t.text.Trim().Equals("Optionen", StringComparison.OrdinalIgnoreCase))
+                {
+                    return b;
+                }
+            }
+            // Notloesung: irgendeinen Button als Templatespender nehmen, falls "Optionen" mal
+            // anders heisst oder nicht gefunden wird - besser ein optisch nicht 100% passender
+            // Button als gar keiner.
+            return allButtons.Length > 0 ? allButtons[0] : null;
+        }
+
+        public static void CreateToggleButton(Component screen)
         {
             // Unity's == ueberladen erkennt auch "wurde inzwischen zerstoert" korrekt (nicht nur
-            // C#-null) - falls das Hauptmenue-Objekt neu erstellt wurde, wird hier neu angelegt.
+            // C#-null) - falls der Screen neu erstellt wurde, wird hier neu angelegt.
             if (toggleButtonInstance != null)
             {
                 UpdateLabel();
                 return;
             }
 
-            var template = menu.optionsButton;
+            var template = FindOptionsButtonTemplate(screen);
             if (template == null)
             {
-                StarTruckMP.Log.LogWarning("OnlineModeToggle: optionsButton nicht gefunden, Button wird nicht erstellt.");
+                StarTruckMP.Log.LogWarning("OnlineModeToggle: kein passender Template-Button gefunden, Button wird nicht erstellt.");
                 return;
             }
 

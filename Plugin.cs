@@ -63,18 +63,26 @@ public class StarTruckMP : BasePlugin
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
         }
 
-        [HarmonyPatch(typeof(MainMenuScreen), nameof(MainMenuScreen.Start))]
+        // Online/Offline-Umschalter sitzt im Pause-Menue (nicht im Hauptmenue) - da ist der
+        // Verbindungsstatus tatsaechlich relevant, weil man da schon in einer Spielsession ist.
+        [HarmonyPatch(typeof(PauseScreen), nameof(PauseScreen.Awake))]
         [HarmonyPostfix]
-        public static void MainMenuScreen_Start(MainMenuScreen __instance)
+        public static void PauseScreen_Awake(PauseScreen __instance)
         {
             try { OnlineModeToggle.CreateToggleButton(__instance); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle-Button konnte nicht erstellt werden: {ex.Message}"); }
         }
 
-        [HarmonyPatch(typeof(MainMenuScreen), nameof(MainMenuScreen.Update))]
+        // ScreenController.Activate() wird von JEDEM Screen beim Anzeigen aufgerufen - deshalb
+        // hier auf PauseScreen filtern, sonst wuerde das Label bei jedem beliebigen Screen-Wechsel
+        // (unnoetig, aber harmlos) mit aktualisiert.
+        [HarmonyPatch(typeof(com.monsterandmonster.Menu.ScreenController), nameof(com.monsterandmonster.Menu.ScreenController.Activate))]
         [HarmonyPostfix]
-        public static void MainMenuScreen_Update()
+        public static void ScreenController_Activate(com.monsterandmonster.Menu.ScreenController __instance)
         {
-            try { OnlineModeToggle.UpdateLabel(); } catch { /* Label-Refresh darf nie den Rest stoppen */ }
+            if (__instance is PauseScreen)
+            {
+                try { OnlineModeToggle.UpdateLabel(); } catch { /* Label-Refresh darf nie den Rest stoppen */ }
+            }
         }
 
     }
