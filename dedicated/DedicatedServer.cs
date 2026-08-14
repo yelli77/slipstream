@@ -13,19 +13,69 @@ public class DedicatedServer
     private readonly Dictionary<ushort, PlayerState> _players = new();
     private readonly int _maxClients;
     private readonly string _serverName;
+    private readonly int _minClientBuild;
     private readonly MessageHandler _handler;
     private DateTime _startTime;
 
-    public DedicatedServer(int port, int maxClients, string serverName)
+    // Versionscheck: jeder frisch verbundene Client hat ein paar Sekunden Zeit, seine
+    // ClientVersion-Nachricht zu schicken. Wer das nicht tut (z.B. eine alte Mod-Version, die
+    // dieses Feature noch gar nicht kennt) wird beim Ablauf des Zeitfensters gekickt - genau wie
+    // ein Client, der sich meldet, aber eine zu alte Build-Nummer hat.
+    private readonly Dictionary<ushort, DateTime> _pendingVersionCheck = new();
+    private readonly HashSet<ushort> _versionVerified = new();
+    private static readonly TimeSpan VersionCheckTimeout = TimeSpan.FromSeconds(6);
+
+    public DedicatedServer(int port, int maxClients, string serverName, int minClientBuild)
     {
         _maxClients = maxClients;
         _serverName = serverName;
-        _handler = new MessageHandler(_players);
+        _minClientBuild = minClientBuild;
+        _handler = new MessageHandler(_players, minClientBuild, OnClientVersionVerified, OnClientVersionRejected);
         _server = new Riptide.Server();
         _server.ClientConnected += OnClientConnected;
         _server.ClientDisconnected += OnClientDisconnected;
         _server.MessageReceived += OnMessageReceived;
         _server.Start((ushort)port, (ushort)maxClients);
+    }
+
+    private void OnClientVersionVerified(ushort clientId)
+    {
+        _pendingVersionCheck.Remove(clientId);
+        _versionVerified.Add(clientId);
+    }
+
+    private void OnClientVersionRejected(ushort clientId, int clientBuild)
+    {
+        _pendingVersionCheck.Remove(clientId);
+        string reason = $"Deine Slipstream-Version ist veraltet (Build {clientBuild}). Bitte aktualisiere auf mindestens Build {_minClientBuild}.";
+        Log($"Rejecting client {clientId}: build {clientBuild} < required {_minClientBuild}");
+        var msg = Message.Create();
+        msg.AddString(reason);
+        _server.DisconnectClient(clientId, msg);
+    }
+
+    private void CheckVersionTimeouts()
+    {
+        if (_pendingVersionCheck.Count == 0) return;
+        var now = DateTime.UtcNow;
+        List<ushort> expired = null;
+        foreach (var kv in _pendingVersionCheck)
+        {
+            if (now - kv.Value > VersionCheckTimeout)
+            {
+                (expired ??= new List<ushort>()).Add(kv.Key);
+            }
+        }
+        if (expired == null) return;
+        foreach (var id in expired)
+        {
+            _pendingVersionCheck.Remove(id);
+            Log($"Rejecting client {id}: no version reported within {VersionCheckTimeout.TotalSeconds:F0}s (outdated client?)");
+            string reason = $"Deine Slipstream-Version ist zu alt und wird nicht mehr unterstuetzt. Bitte aktualisiere Slipstream.";
+            var msg = Message.Create();
+            msg.AddString(reason);
+            _server.DisconnectClient(id, msg);
+        }
     }
 
     public void Run()
@@ -43,6 +93,7 @@ public class DedicatedServer
             sw.Restart();
             acc += elapsed;
             while (acc >= 1.0/60.0) { _server.Update(); acc -= 1.0/60.0; }
+            CheckVersionTimeouts();
             if ((DateTime.UtcNow - lastStatus).TotalSeconds >= 60)
             {
                 lastStatus = DateTime.UtcNow;
@@ -58,6 +109,7 @@ public class DedicatedServer
     private void OnClientConnected(object sender, ServerConnectedEventArgs e)
     {
         Log($"Client connected: {e.Client.Id}");
+        _pendingVersionCheck[e.Client.Id] = DateTime.UtcNow;
         var p = new PlayerState { Id = e.Client.Id, Sector = "none" };
         var joinMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.ClientJoin);
         joinMsg.AddUShorts(_players.Keys.ToArray());
@@ -92,6 +144,8 @@ public class DedicatedServer
     private void OnClientDisconnected(object sender, ServerDisconnectedEventArgs e)
     {
         Log($"Client disconnected: {e.Client.Id} ({e.Reason})");
+        _pendingVersionCheck.Remove(e.Client.Id);
+        _versionVerified.Remove(e.Client.Id);
         if (_players.TryGetValue(e.Client.Id, out var disconnectedPlayer))
         {
             _handler.NotifyPlayerDisconnected(disconnectedPlayer.SteamId);

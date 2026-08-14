@@ -17,7 +17,11 @@ public class StarTruckMP : BasePlugin
     public const string pluginGuid = "StarTruckMP";
     public const string pluginName = "Star Trucker MP";
     public const string pluginVersion = "0.1";
-    public const string customBuildNumber = "custom-build-137";
+    // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
+    // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
+    // gegen den Server verwendete Zahl.
+    public const string customBuildNumber = "custom-build-151";
+    public const int protocolBuildNumber = 151;
     internal static new ManualLogSource Log;
 
     // Feste Werte, keine Konfigurationsdatei mehr noetig: Server-Adresse ist der einzige

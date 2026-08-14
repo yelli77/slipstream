@@ -428,6 +428,14 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
+        public static Message createClientVersionMessage(ushort playerId, int buildNumber)
+        {
+            Message message = Message.Create(MessageSendMode.Reliable, (ushort)messageType.clientVersion);
+            message.AddUShort(playerId);
+            message.AddInt(buildNumber);
+            return message;
+        }
+
         private static Transform FindPath(Transform root, string path)
         {
             var current = root;

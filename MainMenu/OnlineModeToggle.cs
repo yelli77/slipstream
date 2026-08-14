@@ -221,6 +221,12 @@ namespace StarTruckMP.MainMenu
 
         private static void OnToggleClicked()
         {
+            if (SC.versionRejected)
+            {
+                StarTruckMP.Log.LogInfo("OnlineModeToggle: Klick ignoriert (Version vom Server abgelehnt, Slipstream muss aktualisiert werden).");
+                return;
+            }
+
             float now = Time.realtimeSinceStartup;
             if (now - lastToggleTime < ToggleCooldownSeconds)
             {
@@ -257,6 +263,12 @@ namespace StarTruckMP.MainMenu
         public static void UpdateLabel()
         {
             if (toggleLabel == null) return;
+
+            if (SC.versionRejected)
+            {
+                toggleLabel.text = "<color=#E53935>Update required</color>";
+                return;
+            }
 
             if (!OnlineModeEnabled)
             {

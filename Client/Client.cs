@@ -82,6 +82,12 @@ namespace StarTruckMP.StarTruckClient
         }
 
         private static bool isConnecting = false;
+
+        // Wird gesetzt, wenn der Server die Verbindung wegen veralteter Mod-Version abgelehnt hat.
+        // Blockiert weitere automatische Reconnect-Versuche - erneutes Verbinden waere ohnehin
+        // sinnlos, ohne dass der Spieler zuerst Slipstream aktualisiert.
+        public static bool versionRejected = false;
+        public static string versionRejectedReason = "";
         private static float nextConnectAttemptTime = 0f;
         private const float ConnectRetryDelaySeconds = 5f;
 
@@ -92,7 +98,7 @@ namespace StarTruckMP.StarTruckClient
             // geladen), wird automatisch verbunden. Bei Verbindungsabbruch/-fehler wird nach kurzer
             // Verzoegerung automatisch erneut versucht. Nur wenn der Online/Offline-Umschalter im
             // Hauptmenue auf Online steht.
-            if (OnlineModeToggle.OnlineModeEnabled && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
+            if (OnlineModeToggle.OnlineModeEnabled && !versionRejected && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
             {
                 if (GameObject.FindGameObjectWithTag("Player") != null && GameObject.Find("StarTruck(Clone)") != null)
                 {
@@ -175,6 +181,18 @@ namespace StarTruckMP.StarTruckClient
             isConnecting = false;
             nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
 
+            if (e.Reason == DisconnectReason.Kicked)
+            {
+                string reason = "";
+                try { if (e.Message != null) reason = e.Message.GetString(); } catch { }
+                if (!string.IsNullOrEmpty(reason))
+                {
+                    versionRejected = true;
+                    versionRejectedReason = reason;
+                    StarTruckMP.Log.LogWarning($"Verbindung vom Server abgelehnt: {reason}");
+                }
+            }
+
             foreach (var player in playerList.Values)
             {
                 GameObject.Destroy(player.Player);
@@ -212,6 +230,10 @@ namespace StarTruckMP.StarTruckClient
                 isLinked = false;
                 client.Send(Messages.createPlayerNameMessage(client.Id, myName));
                 StarTruckMP.Log.LogInfo($"Sent player name: '{myName}'");
+
+                client.Send(Messages.createClientVersionMessage(client.Id, StarTruckMP.protocolBuildNumber));
+                StarTruckMP.Log.LogInfo($"Sent client version: {StarTruckMP.protocolBuildNumber}");
+
                 UpdateStatusOverlay();
 
                 // Send SteamID to server (fire-and-forget, non-critical)

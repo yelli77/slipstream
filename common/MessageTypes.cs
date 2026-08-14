@@ -14,5 +14,6 @@ public enum MessageType : ushort
     UpdateTrailerModel = 9,
     SetPlayerSteamId = 10,
     RequestLinkStatus = 11,
-    LinkStatus = 12
+    LinkStatus = 12,
+    ClientVersion = 13
 }

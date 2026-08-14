@@ -16,7 +16,17 @@ public class MessageHandler
     private static float _lastBridgeWarnTime = 0f;
     private static float _lastLinkWarnTime = 0f;
     private readonly Dictionary<ushort, PlayerState> _players;
-    public MessageHandler(Dictionary<ushort, PlayerState> players) { _players = players; }
+    private readonly int _minClientBuild;
+    private readonly Action<ushort> _onVersionVerified;
+    private readonly Action<ushort, int> _onVersionRejected;
+
+    public MessageHandler(Dictionary<ushort, PlayerState> players, int minClientBuild, Action<ushort> onVersionVerified, Action<ushort, int> onVersionRejected)
+    {
+        _players = players;
+        _minClientBuild = minClientBuild;
+        _onVersionVerified = onVersionVerified;
+        _onVersionRejected = onVersionRejected;
+    }
 
     public void Handle(MessageReceivedEventArgs e, Riptide.Server server)
     {
@@ -33,11 +43,27 @@ public class MessageHandler
             case MessageType.SetPlayerSteamId: HandleSteamId(e, server); break;
             case MessageType.ChatMessage: HandleChatMessage(e, server); break;
             case MessageType.RequestLinkStatus: HandleRequestLinkStatus(e, server); break;
+            case MessageType.ClientVersion: HandleClientVersion(e, server); break;
         }
         }
         catch (System.Exception ex)
         {
             Console.WriteLine($"[WARN] MessageHandler error: {ex.Message}");
+        }
+    }
+
+    private void HandleClientVersion(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        e.Message.GetUShort();
+        int clientBuild = e.Message.GetInt();
+        Console.WriteLine($"[INFO] Client {e.FromConnection.Id} reports build {clientBuild}");
+        if (clientBuild < _minClientBuild)
+        {
+            _onVersionRejected(e.FromConnection.Id, clientBuild);
+        }
+        else
+        {
+            _onVersionVerified(e.FromConnection.Id);
         }
     }
 
