@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Drawing;
 
 namespace StarTruckMPUpdater
 {
@@ -167,48 +168,11 @@ namespace StarTruckMPUpdater
             {
                 // Bei einer Frisch-Installation muss BepInEx/IL2CppInterop beim allerersten Start
                 // erst die Interop-Assemblies generieren - der Mod ist in diesem ersten Lauf noch
-                // nicht wirklich aktiv nutzbar. Deshalb: einmal starten, warten bis das Spiel wieder
-                // geschlossen wird, dann automatisch ein zweites Mal starten (das ist der Lauf, in
-                // dem der Mod dann tatsaechlich funktioniert). Vorher kurz informieren, damit der
-                // Spieler nicht denkt, das Spiel waere abgestuerzt, wenn es sich (normal) schliesst.
-                MessageBox.Show(
-                    "Slipstream wurde gerade frisch installiert.\n\n" +
-                    "Star Trucker startet jetzt zum ersten Mal - dabei generiert BepInEx einmalig " +
-                    "benoetigte Dateien. Das kann etwas dauern. Bitte das Spiel danach normal " +
-                    "schliessen, es startet dann automatisch ein zweites Mal - erst dann ist der " +
-                    "Mod aktiv.",
-                    "Slipstream - Erstinstallation",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-
-                Log("Fresh-Install: erster Start (Interop-Generierung)...");
-                LaunchGame(gamePath);
-
-                bool gameAppeared = WaitForGameState(running: true, timeoutSeconds: 180);
-                if (gameAppeared)
-                {
-                    Log("Spiel laeuft, warte auf Beenden...");
-                    WaitForGameState(running: false, timeoutSeconds: 900);
-                }
-                else
-                {
-                    Log("Spielprozess wurde nach dem ersten Start nicht erkannt (Timeout).");
-                }
-
-                // BepInEx.cfg existiert jetzt (wurde durch den ersten Start gerade generiert) -
-                // erst JETZT kann die Konsole tatsaechlich deaktiviert werden, bevor der zweite,
-                // eigentliche Lauf startet.
-                try
-                {
-                    EnsureBepInExConsoleDisabled(gamePath);
-                }
-                catch (Exception ex)
-                {
-                    Log($"Konnte BepInEx-Konsole vor dem zweiten Start nicht deaktivieren: {ex.Message}");
-                }
-
-                Log("Fresh-Install: zweiter Start (Mod jetzt aktiv)...");
-                LaunchGame(gamePath);
+                // nicht wirklich aktiv nutzbar. Das kann mehrere Minuten dauern, deshalb zeigen wir
+                // ein Fortschrittsfenster statt eines blockierenden Dialogs, damit klar ist, dass
+                // im Hintergrund etwas passiert. Schliesst sich automatisch, sobald der zweite
+                // (eigentliche) Spielstart losgeht.
+                RunFreshInstallFlow(gamePath);
                 return 0;
             }
 
@@ -238,6 +202,68 @@ namespace StarTruckMPUpdater
         // direkte .exe-Start ohne Steam-Initialisierung sofort abstuerzte (kurzes schwarzes Fenster,
         // dann nichts mehr, weil SteamAPI_Init() fehlschlaegt).
         const int SteamAppId = 2380050;
+
+        /// <summary>
+        /// Fuehrt den Frisch-Install-Doppelstart (Interop-Generierung + eigentlicher Start) mit
+        /// einem sichtbaren Fortschrittsfenster statt einem blockierenden Dialog durch. Laeuft in
+        /// einem Hintergrund-Thread, waehrend das Fenster auf dem UI-Thread lebt; schliesst sich
+        /// selbst, sobald der zweite Spielstart ausgeloest wurde.
+        /// </summary>
+        static void RunFreshInstallFlow(string gamePath)
+        {
+            var form = new ProgressForm();
+
+            var worker = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    form.UpdateStatus("Star Trucker startet zum ersten Mal.\nBepInEx generiert einmalig benoetigte Dateien - das kann etwas dauern...");
+                    Log("Fresh-Install: erster Start (Interop-Generierung)...");
+                    LaunchGame(gamePath);
+
+                    bool gameAppeared = WaitForGameState(running: true, timeoutSeconds: 180);
+                    if (gameAppeared)
+                    {
+                        form.UpdateStatus("Spiel laeuft und generiert Dateien.\nBitte danach normal schliessen, es geht dann automatisch weiter...");
+                        Log("Spiel laeuft, warte auf Beenden...");
+                        WaitForGameState(running: false, timeoutSeconds: 900);
+                    }
+                    else
+                    {
+                        Log("Spielprozess wurde nach dem ersten Start nicht erkannt (Timeout).");
+                    }
+
+                    form.UpdateStatus("Fertig! Star Trucker wird jetzt mit aktivem Mod gestartet...");
+
+                    // BepInEx.cfg existiert jetzt (wurde durch den ersten Start gerade generiert) -
+                    // erst JETZT kann die Konsole tatsaechlich deaktiviert werden, bevor der zweite,
+                    // eigentliche Lauf startet.
+                    try
+                    {
+                        EnsureBepInExConsoleDisabled(gamePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"Konnte BepInEx-Konsole vor dem zweiten Start nicht deaktivieren: {ex.Message}");
+                    }
+
+                    Log("Fresh-Install: zweiter Start (Mod jetzt aktiv)...");
+                    LaunchGame(gamePath);
+                }
+                catch (Exception ex)
+                {
+                    Log($"Fehler im Fresh-Install-Ablauf: {ex.Message}");
+                }
+                finally
+                {
+                    form.CloseSafely();
+                }
+            });
+            worker.IsBackground = true;
+            worker.Start();
+
+            Application.Run(form);
+        }
 
         static void LaunchGame(string gamePath)
         {
@@ -516,6 +542,78 @@ namespace StarTruckMPUpdater
         static void ShowError(string message)
         {
             MessageBox.Show(message, "Slipstream - Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    /// <summary>
+    /// Schlichtes Fortschrittsfenster fuer den Frisch-Install-Ablauf. Kein Schliessen-Button
+    /// (der Prozess soll nicht abgebrochen werden koennen), Statustext per Invoke von einem
+    /// Hintergrund-Thread aus aktualisierbar, schliesst sich selbst per CloseSafely().
+    /// </summary>
+    class ProgressForm : Form
+    {
+        private readonly Label statusLabel;
+        private readonly ProgressBar progressBar;
+
+        public ProgressForm()
+        {
+            Text = "Slipstream";
+            Width = 480;
+            Height = 180;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            StartPosition = FormStartPosition.CenterScreen;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ControlBox = false;
+            TopMost = true;
+
+            statusLabel = new Label
+            {
+                Text = "Wird vorbereitet...",
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Fill,
+                Padding = new Padding(20)
+            };
+
+            progressBar = new ProgressBar
+            {
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 30,
+                Dock = DockStyle.Bottom,
+                Height = 22
+            };
+
+            Controls.Add(statusLabel);
+            Controls.Add(progressBar);
+        }
+
+        public void UpdateStatus(string text)
+        {
+            if (IsDisposed) return;
+            try
+            {
+                if (InvokeRequired)
+                    Invoke(new Action(() => { if (!IsDisposed) statusLabel.Text = text; }));
+                else
+                    statusLabel.Text = text;
+            }
+            catch (ObjectDisposedException) { /* Fenster wurde inzwischen geschlossen, egal */ }
+            catch (InvalidOperationException) { /* Handle nicht (mehr) vorhanden, egal */ }
+        }
+
+        public void CloseSafely()
+        {
+            if (IsDisposed) return;
+            try
+            {
+                if (InvokeRequired)
+                    Invoke(new Action(Close));
+                else
+                    Close();
+            }
+            catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) { }
         }
     }
 
