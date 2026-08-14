@@ -211,44 +211,27 @@ namespace StarTruckMPUpdater
         /// </summary>
         static void RunFreshInstallFlow(string gamePath)
         {
+            // Kein Doppelstart mehr noetig: BepInEx generiert die Interop-Dateien beim ersten
+            // Start selbst und der Mod ist bereits in diesem einen Lauf aktiv (bestaetigt durch
+            // Testing). Das Bootstrap-Paket liefert ausserdem schon die fertige BepInEx.cfg mit
+            // deaktivierter Konsole mit, ein nachtraeglicher Patch ist also auch nicht mehr noetig.
+            // Das Fenster ist nur noch eine kurze "wird vorbereitet"-Anzeige, bis der Spielprozess
+            // sichtbar laeuft.
             var form = new ProgressForm();
 
             var worker = new System.Threading.Thread(() =>
             {
                 try
                 {
-                    form.UpdateStatus("Star Trucker startet zum ersten Mal.\nBepInEx generiert einmalig benoetigte Dateien - das kann etwas dauern...");
-                    Log("Fresh-Install: erster Start (Interop-Generierung)...");
+                    form.UpdateStatus("Wird fuer das Spiel vorbereitet...");
+                    Log("Fresh-Install: Start...");
                     LaunchGame(gamePath);
 
                     bool gameAppeared = WaitForGameState(running: true, timeoutSeconds: 180);
-                    if (gameAppeared)
+                    if (!gameAppeared)
                     {
-                        form.UpdateStatus("Spiel laeuft und generiert Dateien.\nBitte danach normal schliessen, es geht dann automatisch weiter...");
-                        Log("Spiel laeuft, warte auf Beenden...");
-                        WaitForGameState(running: false, timeoutSeconds: 900);
+                        Log("Spielprozess wurde nach dem Start nicht erkannt (Timeout).");
                     }
-                    else
-                    {
-                        Log("Spielprozess wurde nach dem ersten Start nicht erkannt (Timeout).");
-                    }
-
-                    form.UpdateStatus("Fertig! Star Trucker wird jetzt mit aktivem Mod gestartet...");
-
-                    // BepInEx.cfg existiert jetzt (wurde durch den ersten Start gerade generiert) -
-                    // erst JETZT kann die Konsole tatsaechlich deaktiviert werden, bevor der zweite,
-                    // eigentliche Lauf startet.
-                    try
-                    {
-                        EnsureBepInExConsoleDisabled(gamePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log($"Konnte BepInEx-Konsole vor dem zweiten Start nicht deaktivieren: {ex.Message}");
-                    }
-
-                    Log("Fresh-Install: zweiter Start (Mod jetzt aktiv)...");
-                    LaunchGame(gamePath);
                 }
                 catch (Exception ex)
                 {
