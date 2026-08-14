@@ -178,30 +178,20 @@ namespace StarTruckMP.MainMenu
                 le.minHeight = templateLayoutElement.minHeight;
             }
 
-            // Text-Kindobjekt: Anker/Offsets 1:1 vom Original uebernehmen (nicht einfach voll
-            // ausspannen) - das Original hat einen definierten linken Einzug fuer den Text, den wir
-            // sonst verlieren und alles faelschlich buendig am linken Rand landet.
-            var templateTextRect = templateText != null ? templateText.GetComponent<RectTransform>() : null;
-
+            // Text-Kindobjekt: voll ausgespannt (zuverlaessig), mit festem linken Einzug fuer
+            // die Optik. WICHTIG: die rohen Anker/Offset-Werte vom Original-Textfeld 1:1 zu
+            // kopieren hat NICHT funktioniert (Ergebnis: eine winzige, quasi nullbreite Box, Text
+            // ist buchstabenweise umgebrochen) - vermutlich waren diese Werte nur im Kontext eines
+            // dortigen Layout-Systems (Content Size Fitter o.ae.) sinnvoll, das wir hier nicht
+            // nachbilden. Fester Einzug ist weniger "originalgetreu", aber garantiert stabil.
             var textGO = new GameObject("Label");
             textGO.AddComponent<RectTransform>();
             textGO.transform.SetParent(go.transform, false);
             var textRect = textGO.GetComponent<RectTransform>();
-            if (templateTextRect != null)
-            {
-                textRect.anchorMin = templateTextRect.anchorMin;
-                textRect.anchorMax = templateTextRect.anchorMax;
-                textRect.offsetMin = templateTextRect.offsetMin;
-                textRect.offsetMax = templateTextRect.offsetMax;
-                textRect.pivot = templateTextRect.pivot;
-            }
-            else
-            {
-                textRect.anchorMin = Vector2.zero;
-                textRect.anchorMax = Vector2.one;
-                textRect.offsetMin = Vector2.zero;
-                textRect.offsetMax = Vector2.zero;
-            }
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(24f, 0f);
+            textRect.offsetMax = Vector2.zero;
 
             var text = textGO.AddComponent<TextMeshProUGUI>();
             if (templateText != null)
