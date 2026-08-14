@@ -9,10 +9,17 @@ using TMPro;
 namespace StarTruckMP.MainMenu
 {
     /// <summary>
-    /// Fuegt dem Hauptmenue einen Online/Offline-Umschalter hinzu (visueller Klon des Optionen-
-    /// Buttons, direkt danach eingefuegt). Der Zustand wird in einer eigenen, kleinen Textdatei
-    /// neben der Mod-DLL gespeichert - bewusst NICHT ueber BepInEx.Configuration, damit es keine
-    /// automatisch generierte/erweiterbare Config-Datei mit allen moeglichen Eintraegen gibt.
+    /// Fuegt dem Hauptmenue einen Online/Offline-Umschalter hinzu. Wird bewusst als komplett
+    /// NEUES, eigenes UI-Element gebaut (nicht als Klon des Optionen-Buttons mit anschliessendem
+    /// Ausschlachten) - ein Klon des MenuButton-Skripts bringt eine im Editor fest verdrahtete
+    /// ("persistente") Navigation zum Optionen-Screen mit, die sich zur Laufzeit nicht sauber
+    /// entfernen laesst, und das nachtraegliche Entfernen/Ersetzen der Komponenten hat auch die
+    /// Klickbarkeit (Raycast-Ziel) kaputtgemacht. Optik (Hintergrund-Sprite, Schriftart etc.) wird
+    /// vom Optionen-Button uebernommen, aber alle Komponenten sind frisch und ohne Altlasten.
+    ///
+    /// Der Zustand wird in einer eigenen, kleinen Textdatei neben der Mod-DLL gespeichert -
+    /// bewusst NICHT ueber BepInEx.Configuration, damit es keine automatisch generierte/
+    /// erweiterbare Config-Datei mit allen moeglichen Eintraegen gibt.
     /// </summary>
     public static class OnlineModeToggle
     {
@@ -51,15 +58,6 @@ namespace StarTruckMP.MainMenu
             }
         }
 
-        /// <summary>
-        /// Klont den Optionen-Button im Hauptmenue (nur fuer die Optik - Hintergrund, Text-Stil,
-        /// Layout-Position) und haengt ihn direkt danach ein. Das geklonte MenuButton-Skript wird
-        /// entfernt und durch einen ganz frischen UnityEngine.UI.Button ersetzt: MenuButton traegt
-        /// eine im Editor fest verdrahtete ("persistente") Navigation zum Optionen-Screen, die sich
-        /// zur Laufzeit NICHT per onClick.RemoveAllListeners() entfernen laesst (das entfernt nur
-        /// zur Laufzeit hinzugefuegte Listener, keine im Editor konfigurierten). Ein frischer Button
-        /// hat gar keine alte Verdrahtung im Gepaeck.
-        /// </summary>
         public static void CreateToggleButton(MainMenuScreen menu)
         {
             // Unity's == ueberladen erkennt auch "wurde inzwischen zerstoert" korrekt (nicht nur
@@ -77,27 +75,80 @@ namespace StarTruckMP.MainMenu
                 return;
             }
 
-            // Farben/Uebergangsverhalten vom Original uebernehmen, bevor das Original-Skript weg ist.
-            var colors = template.colors;
-            var transition = template.transition;
+            var templateGO = template.gameObject;
+            var templateRect = templateGO.GetComponent<RectTransform>();
+            var templateImage = templateGO.GetComponent<Image>();
+            var templateText = templateGO.GetComponentInChildren<TMP_Text>();
+            var templateLayoutElement = templateGO.GetComponent<LayoutElement>();
 
-            var clone = UnityEngine.Object.Instantiate(template.gameObject, template.transform.parent);
-            clone.name = "SlipstreamModeButton";
-            clone.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
+            // Root-Objekt: RectTransform + Image + Button in einem Rutsch anlegen.
+            var go = new GameObject("SlipstreamModeButton");
+            go.AddComponent<RectTransform>();
+            go.AddComponent<Image>();
+            go.AddComponent<Button>();
+            go.transform.SetParent(template.transform.parent, false);
+            go.transform.SetSiblingIndex(template.transform.GetSiblingIndex() + 1);
 
-            var oldMenuButton = clone.GetComponent<MenuButton>();
-            if (oldMenuButton != null)
+            var rect = go.GetComponent<RectTransform>();
+            if (templateRect != null)
             {
-                UnityEngine.Object.Destroy(oldMenuButton);
+                rect.anchorMin = templateRect.anchorMin;
+                rect.anchorMax = templateRect.anchorMax;
+                rect.pivot = templateRect.pivot;
+                rect.sizeDelta = templateRect.sizeDelta;
+                rect.localScale = templateRect.localScale;
             }
 
-            var newButton = clone.AddComponent<Button>();
-            newButton.colors = colors;
-            newButton.transition = transition;
-            newButton.onClick.AddListener((UnityAction)OnToggleClicked);
+            var image = go.GetComponent<Image>();
+            if (templateImage != null)
+            {
+                image.sprite = templateImage.sprite;
+                image.color = templateImage.color;
+                image.type = templateImage.type;
+                image.material = templateImage.material;
+                image.raycastTarget = true;
+            }
 
-            toggleLabel = clone.GetComponentInChildren<TMP_Text>();
-            toggleButtonInstance = newButton;
+            if (templateLayoutElement != null)
+            {
+                var le = go.AddComponent<LayoutElement>();
+                le.preferredWidth = templateLayoutElement.preferredWidth;
+                le.preferredHeight = templateLayoutElement.preferredHeight;
+                le.minWidth = templateLayoutElement.minWidth;
+                le.minHeight = templateLayoutElement.minHeight;
+            }
+
+            // Text-Kindobjekt, ueber das ganze Root gespannt.
+            var textGO = new GameObject("Label");
+            textGO.AddComponent<RectTransform>();
+            textGO.transform.SetParent(go.transform, false);
+            var textRect = textGO.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
+            var text = textGO.AddComponent<TextMeshProUGUI>();
+            if (templateText != null)
+            {
+                text.font = templateText.font;
+                text.fontSize = templateText.fontSize;
+                text.color = templateText.color;
+                text.alignment = templateText.alignment;
+                text.fontStyle = templateText.fontStyle;
+            }
+
+            var button = go.GetComponent<Button>();
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.ColorTint;
+            if (template.TryGetComponent<Selectable>(out var templateSelectable))
+            {
+                button.colors = templateSelectable.colors;
+            }
+            button.onClick.AddListener((UnityAction)OnToggleClicked);
+
+            toggleLabel = text;
+            toggleButtonInstance = button;
             UpdateLabel();
 
             StarTruckMP.Log.LogInfo("OnlineModeToggle: Button im Hauptmenue erstellt.");
