@@ -137,7 +137,6 @@ namespace StarTruckMP.MainMenu
 
             var templateGO = template.gameObject;
             var templateRect = templateGO.GetComponent<RectTransform>();
-            var templateImage = templateGO.GetComponent<Image>();
             var templateText = templateGO.GetComponentInChildren<TMP_Text>();
             var templateLayoutElement = templateGO.GetComponent<LayoutElement>();
 
@@ -159,15 +158,15 @@ namespace StarTruckMP.MainMenu
                 rect.localScale = templateRect.localScale;
             }
 
+            // Bewusst KEIN Sprite/Material vom Original-Button uebernehmen: dessen Shader/Material
+            // scheint einfaches Farb-Tinting per Selectable.colors nicht zu unterstuetzen (der
+            // Hover-Balken blieb unsichtbar, obwohl der Farbwechsel technisch stattfand). Stattdessen
+            // Unity's Default-UI-Rechteck (kein Sprite = einfache, garantiert tintbare weisse Flaeche).
             var image = go.GetComponent<Image>();
-            if (templateImage != null)
-            {
-                image.sprite = templateImage.sprite;
-                image.color = templateImage.color;
-                image.type = templateImage.type;
-                image.material = templateImage.material;
-                image.raycastTarget = true;
-            }
+            image.sprite = null;
+            image.type = Image.Type.Simple;
+            image.color = new Color(0f, 0f, 0f, 0f);
+            image.raycastTarget = true;
 
             if (templateLayoutElement != null)
             {
