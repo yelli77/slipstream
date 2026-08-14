@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
+using UnityEngine.EventSystems;
 using SC = StarTruckMP.StarTruckClient.StarTruckClient;
 
 namespace StarTruckMP.MainMenu
@@ -204,23 +205,25 @@ namespace StarTruckMP.MainMenu
 
             var button = go.GetComponent<Button>();
             button.targetGraphic = image;
-            button.transition = Selectable.Transition.ColorTint;
+            // Selectable/Button-eigener ColorTint-Uebergang zeigte trotz mehrerer Versuche (Original-
+            // Sprite kopiert, dann Standard-Rechteck) keinerlei sichtbaren Effekt - aus welchem Grund
+            // auch immer greift er hier nicht. Stattdessen den Hover-Farbwechsel manuell per
+            // EventTrigger direkt auf die Image-Farbe setzen, komplett unabhaengig vom Selectable-
+            // Transition-System.
+            button.transition = Selectable.Transition.None;
 
-            // Farben bewusst fest verdrahtet statt vom Original kopiert: MenuButton steuert seinen
-            // Hover-/Auswahl-Balken vermutlich per Animator (isHoverHighlighted/isSelected Parameter,
-            // siehe UpdateAnimatorParams), nicht per einfachem Selectable-Farbwechsel - ein Kopieren
-            // von templateSelectable.colors haette also vermutlich nur unkonfigurierte
-            // Standard-Unity-Farben ergeben, kein sichtbarer Balken. Diese Werte sind an das
-            // sichtbare Gold/Amber-Design der Auswahlleiste angelehnt.
-            var colors = button.colors;
-            colors.normalColor = new Color(0f, 0f, 0f, 0f);
-            colors.highlightedColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
-            colors.pressedColor = new Color32(0xC9, 0x8F, 0x20, 0xFF);
-            colors.selectedColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
-            colors.disabledColor = new Color(0f, 0f, 0f, 0f);
-            colors.colorMultiplier = 1f;
-            colors.fadeDuration = 0.1f;
-            button.colors = colors;
+            Color idleColor = new Color(0f, 0f, 0f, 0f);
+            Color hoverColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
+
+            var trigger = go.AddComponent<EventTrigger>();
+
+            var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enterEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; }));
+            trigger.triggers.Add(enterEntry);
+
+            var exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+            exitEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; }));
+            trigger.triggers.Add(exitEntry);
 
             button.onClick.AddListener((UnityAction)OnToggleClicked);
 
