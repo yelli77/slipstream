@@ -69,18 +69,53 @@ namespace StarTruckMP.MainMenu
         private static MenuButton FindOptionsButtonTemplate(Component screen)
         {
             var allButtons = screen.GetComponentsInChildren<MenuButton>(true);
+
+            // "Optionen" kommt offenbar mehrfach vor (z.B. auch als kleiner Icon-Button in einer
+            // unteren Leiste). RectTransform.rect.width waere zum Zeitpunkt von Awake() evtl. noch
+            // nicht vom Unity-Layout-System berechnet (unzuverlaessiges Timing) - deshalb stattdessen
+            // ueber die Geschwisteranzahl im selben Elternobjekt entscheiden: die echte, vertikale
+            // Menueliste hat mehrere Eintraege (Optionen, Spiel laden, Spiel speichern, ...), eine
+            // kleine Symbolleiste wie unten (Fortsetzen/Fotomodus) hat nur 1-2. Das ist unabhaengig
+            // vom Layout-Timing sofort verlaesslich verfuegbar.
+            MenuButton best = null;
+            int bestSiblingButtonCount = -1;
+
             foreach (var b in allButtons)
             {
                 var t = b.GetComponentInChildren<TMP_Text>(true);
-                if (t != null && !string.IsNullOrEmpty(t.text) && t.text.Trim().Equals("Optionen", StringComparison.OrdinalIgnoreCase))
+                if (t == null || string.IsNullOrEmpty(t.text) || !t.text.Trim().Equals("Optionen", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var parent = b.transform.parent;
+                int siblingButtonCount = parent != null ? parent.GetComponentsInChildren<MenuButton>(true).Length : 1;
+                if (siblingButtonCount > bestSiblingButtonCount)
                 {
-                    return b;
+                    bestSiblingButtonCount = siblingButtonCount;
+                    best = b;
                 }
             }
-            // Notloesung: irgendeinen Button als Templatespender nehmen, falls "Optionen" mal
-            // anders heisst oder nicht gefunden wird - besser ein optisch nicht 100% passender
-            // Button als gar keiner.
-            return allButtons.Length > 0 ? allButtons[0] : null;
+
+            if (best != null)
+            {
+                StarTruckMP.Log.LogInfo($"OnlineModeToggle: Template-Button 'Optionen' gefunden (Geschwister-Buttons im Elternobjekt={bestSiblingButtonCount}).");
+                return best;
+            }
+
+            // Notloesung: den Button mit den meisten Geschwister-Buttons insgesamt nehmen (= mit
+            // hoher Wahrscheinlichkeit die echte Liste, nicht eine kleine Symbolleiste).
+            MenuButton fallback = null;
+            int fallbackSiblingCount = -1;
+            foreach (var b in allButtons)
+            {
+                var parent = b.transform.parent;
+                int siblingButtonCount = parent != null ? parent.GetComponentsInChildren<MenuButton>(true).Length : 1;
+                if (siblingButtonCount > fallbackSiblingCount)
+                {
+                    fallbackSiblingCount = siblingButtonCount;
+                    fallback = b;
+                }
+            }
+            return fallback;
         }
 
         public static void CreateToggleButton(Component screen)
