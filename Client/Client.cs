@@ -184,6 +184,11 @@ namespace StarTruckMP.StarTruckClient
             }
             ushort[] keys = playerList.Keys.ToArray<ushort>();
             foreach (var pId in keys) { playerList.Remove(pId); }
+
+            if (statusOverlay != null)
+            {
+                statusOverlay.SetActive(false);
+            }
         }
 
         private static void Client_ClientDisconnected(object sender, ClientDisconnectedEventArgs e)
@@ -1425,6 +1430,10 @@ namespace StarTruckMP.StarTruckClient
                 if (statusOverlayText != null)
                 {
                     statusOverlayText.text = text;
+                    if (statusOverlay != null && !statusOverlay.activeSelf)
+                    {
+                        statusOverlay.SetActive(true);
+                    }
                     return;
                 }
 

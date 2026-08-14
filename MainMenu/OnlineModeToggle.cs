@@ -247,7 +247,7 @@ namespace StarTruckMP.MainMenu
 
             if (!OnlineModeEnabled)
             {
-                toggleLabel.text = "Connect to Slipstream";
+                toggleLabel.text = "Click to join Slipstream";
                 return;
             }
 
