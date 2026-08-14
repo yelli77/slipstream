@@ -659,5 +659,93 @@ namespace StarTruckMP.Encoding
                 return null;
             }
         }
+
     }
+    /// <summary>
+    /// MonoBehaviour attached to RemoteTruck GameObjects.
+    /// After 120s spawn grace period, re-enables colliders and detectCollisions
+    /// so Unity physics push trucks apart instead of ghosting through each other.
+    /// Also detects collisions via OnCollisionEnter/Exit to set isColliding flag,
+    /// which SmoothTruckMovement uses to reduce spring correction during contact.
+    /// </summary>
+    public class RemoteTruckCollisionHelper : MonoBehaviour
+    {
+        private ushort playerId;
+        private bool collisionActivated = false;
+        private const float SpawnGracePeriod = 120f;
+
+        public void Init(ushort id)
+        {
+            playerId = id;
+            collisionActivated = false;
+        }
+
+        private void Update()
+        {
+            if (collisionActivated) return;
+
+            // Look up our playerInfo to read spawnTime
+            var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
+            if (!playerList.ContainsKey(playerId)) return;
+            var rp = playerList[playerId];
+            if (rp.Truck == null) return;
+
+            if (UnityEngine.Time.time - rp.spawnTime > SpawnGracePeriod)
+            {
+                // Enable all colliders on children of this truck GO
+                foreach (var col in GetComponentsInChildren<UnityEngine.Collider>())
+                {
+                    col.enabled = true;
+                }
+
+                // Re-enable Rigidbody collision detection
+                var rb = gameObject.GetComponent<UnityEngine.Rigidbody>();
+                if (rb != null) rb.detectCollisions = true;
+
+                collisionActivated = true;
+                StarTruckMP.Log.LogInfo($"CollisionHelper[{playerId}]: 120s grace expired, collisions ENABLED");
+            }
+        }
+
+        private static bool IsPlayerTruck(UnityEngine.GameObject go)
+        {
+            // True if the object is a remote truck (has our helper) OR the local player truck
+            if (go.GetComponent<RemoteTruckCollisionHelper>() != null) return true;
+            if (go == global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck) return true;
+            return false;
+        }
+
+        private void OnCollisionEnter(UnityEngine.Collision collision)
+        {
+            // Set isColliding when this remote truck touches any player truck
+            // (another remote truck or the local player's truck).
+            // Environment geometry (docks, asteroids, etc.) is ignored.
+            if (!IsPlayerTruck(collision.gameObject)) return;
+
+            var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
+            if (!playerList.ContainsKey(playerId)) return;
+            var rp = playerList[playerId];
+            if (!rp.isColliding)
+            {
+                rp.isColliding = true;
+                playerList[playerId] = rp;
+            }
+        }
+
+        private void OnCollisionExit(UnityEngine.Collision collision)
+        {
+            // Clear isColliding when leaving contact with any player truck
+            if (!IsPlayerTruck(collision.gameObject)) return;
+
+            var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
+            if (!playerList.ContainsKey(playerId)) return;
+            var rp = playerList[playerId];
+            if (rp.isColliding)
+            {
+                rp.isColliding = false;
+                playerList[playerId] = rp;
+            }
+        }
+    }
+
 }

@@ -899,11 +899,19 @@ namespace StarTruckMP.StarTruckClient
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
                 clientInfo.NameLabel = player.NameLabel;
+                clientInfo.spawnTime = UnityEngine.Time.time;
+                clientInfo.isColliding = false;
                 // Hide spacesuit by default — only show when player is outside truck (EVA)
                 if (clientInfo.Player != null)
                 {
                     var suitRenderer = clientInfo.Player.GetComponentInChildren<MeshRenderer>();
                     if (suitRenderer != null) suitRenderer.enabled = false;
+                }
+                // Attach collision helper for 120s grace period + collision detection
+                if (clientInfo.Truck != null)
+                {
+                    var helper = clientInfo.Truck.AddComponent<RemoteTruckCollisionHelper>();
+                    if (helper != null) helper.Init(clientId);
                 }
                 playerList[clientId] = clientInfo;
                 StarTruckMP.Log.LogInfo($"Spawn result for player {clientId}: truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}");
@@ -995,7 +1003,9 @@ namespace StarTruckMP.StarTruckClient
                     error = error.normalized * TruckMaxCorrection;
 
                 // Apply correction as velocity addition — works WITH physics, not against it
-                rb.velocity = rp.truckTrans.Vel + error * TruckCorrectionK;
+                // During active collision, reduce correction to let physics push-back work
+                float effectiveCorrectionK = rp.isColliding ? TruckCorrectionK * 0.1f : TruckCorrectionK;
+                rb.velocity = rp.truckTrans.Vel + error * effectiveCorrectionK;
 
                 // Rotation: angular velocity correction
                 Quaternion targetQuat = Quaternion.Euler(rp.truckTargetRot);
@@ -1004,7 +1014,8 @@ namespace StarTruckMP.StarTruckClient
                 if (Mathf.Abs(angle) > 0.01f)
                 {
                     if (angle > 180f) angle -= 360f;
-                    rb.angularVelocity = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * TruckRotCorrectionK;
+                    float effectiveRotK = rp.isColliding ? TruckRotCorrectionK * 0.1f : TruckRotCorrectionK;
+                    rb.angularVelocity = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * effectiveRotK;
                 }
                 else
                 {
