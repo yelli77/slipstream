@@ -185,17 +185,6 @@ namespace StarTruckMPUpdater
         /// (running=true: warten bis er startet; running=false: warten bis er beendet wird).
         /// Gibt false zurueck, wenn der Zustand innerhalb des Timeouts nicht erreicht wurde.
         /// </summary>
-        static bool WaitForGameState(bool running, int timeoutSeconds)
-        {
-            var deadline = DateTime.Now.AddSeconds(timeoutSeconds);
-            while (DateTime.Now < deadline)
-            {
-                if (IsGameRunning() == running) return true;
-                System.Threading.Thread.Sleep(1000);
-            }
-            return IsGameRunning() == running;
-        }
-
         // Feste Steam App-ID von Star Trucker (store.steampowered.com/app/2380050).
         // Fertige Steam-Builds liefern normalerweise KEINE steam_appid.txt mit (die ist nur fuer
         // Dev-Testing ohne Steam-Client gedacht) - sich darauf zu verlassen fuehrte dazu, dass der
@@ -227,7 +216,7 @@ namespace StarTruckMPUpdater
                     Log("Fresh-Install: Start...");
                     LaunchGame(gamePath);
 
-                    bool gameAppeared = WaitForGameState(running: true, timeoutSeconds: 180);
+                    bool gameAppeared = WaitForGameWindowVisible(timeoutSeconds: 180);
                     if (!gameAppeared)
                     {
                         Log("Spielprozess wurde nach dem Start nicht erkannt (Timeout).");
@@ -483,6 +472,43 @@ namespace StarTruckMPUpdater
             }
             catch { }
             return false;
+        }
+
+        /// <summary>
+        /// Prueft ob das Spielfenster tatsaechlich sichtbar ist (nicht nur der Prozess existiert).
+        /// Der Prozess startet fast sofort, aber bei Star Trucker vergeht bis zu einer Minute
+        /// (Cpp2IL/Interop-Generierung, Unity-Init), bevor ueberhaupt ein Fenster gerendert wird -
+        /// reines Process.Exists waere also viel zu frueh fuer "das Spiel ist jetzt sichtbar".
+        /// </summary>
+        static bool IsGameWindowVisible()
+        {
+            try
+            {
+                foreach (var name in new[] { "Star Trucker", "StarTrucker" })
+                {
+                    foreach (var p in Process.GetProcessesByName(name))
+                    {
+                        try
+                        {
+                            if (p.MainWindowHandle != IntPtr.Zero) return true;
+                        }
+                        catch { /* Prozess evtl. gerade beendet, egal */ }
+                    }
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        static bool WaitForGameWindowVisible(int timeoutSeconds)
+        {
+            var deadline = DateTime.Now.AddSeconds(timeoutSeconds);
+            while (DateTime.Now < deadline)
+            {
+                if (IsGameWindowVisible()) return true;
+                System.Threading.Thread.Sleep(1000);
+            }
+            return IsGameWindowVisible();
         }
 
         static VersionInfo? FetchVersionInfo()
