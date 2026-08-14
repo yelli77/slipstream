@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using TMPro;
+using SC = StarTruckMP.StarTruckClient.StarTruckClient;
 
 namespace StarTruckMP.MainMenu
 {
@@ -162,11 +163,34 @@ namespace StarTruckMP.MainMenu
             StarTruckMP.Log.LogInfo($"Modus umgeschaltet: {(OnlineModeEnabled ? "Online" : "Offline")}");
         }
 
-        private static void UpdateLabel()
+        public static void UpdateLabel()
         {
-            if (toggleLabel != null)
+            if (toggleLabel == null) return;
+
+            if (!OnlineModeEnabled)
             {
-                toggleLabel.text = OnlineModeEnabled ? "Online" : "Offline";
+                toggleLabel.text = "Offline";
+                return;
+            }
+
+            // Solange online, aber noch nicht (oder nicht mehr) tatsaechlich verbunden, nur "Online"
+            // zeigen. Sobald eine echte Verbindung besteht, den Spielernamen mit anzeigen.
+            bool isConnected = false;
+            string playerName = "";
+            try
+            {
+                isConnected = SC.client != null && SC.client.IsConnected;
+                playerName = SC.myPlayerName;
+            }
+            catch { /* Client evtl. noch nicht initialisiert, einfach "Online" zeigen */ }
+
+            if (isConnected && !string.IsNullOrEmpty(playerName))
+            {
+                toggleLabel.text = $"Online - connected as {playerName} at Slipstream";
+            }
+            else
+            {
+                toggleLabel.text = "Online";
             }
         }
     }

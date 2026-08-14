@@ -70,6 +70,13 @@ public class StarTruckMP : BasePlugin
             try { OnlineModeToggle.CreateToggleButton(__instance); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle-Button konnte nicht erstellt werden: {ex.Message}"); }
         }
 
+        [HarmonyPatch(typeof(MainMenuScreen), nameof(MainMenuScreen.Update))]
+        [HarmonyPostfix]
+        public static void MainMenuScreen_Update()
+        {
+            try { OnlineModeToggle.UpdateLabel(); } catch { /* Label-Refresh darf nie den Rest stoppen */ }
+        }
+
     }
 
 }

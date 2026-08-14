@@ -1396,7 +1396,7 @@ namespace StarTruckMP.StarTruckClient
 
         private static GameObject statusOverlay;
         private static TMPro.TextMeshProUGUI statusOverlayText;
-        private static string myPlayerName = "";
+        public static string myPlayerName = "";
         private static string myLinkCode = "";
 
         /// <summary>
