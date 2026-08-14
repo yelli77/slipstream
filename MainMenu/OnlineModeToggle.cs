@@ -40,11 +40,11 @@ namespace StarTruckMP.MainMenu
                 if (File.Exists(StateFilePath))
                 {
                     var content = File.ReadAllText(StateFilePath).Trim();
-                    return !content.Equals("offline", StringComparison.OrdinalIgnoreCase);
+                    return content.Equals("online", StringComparison.OrdinalIgnoreCase);
                 }
             }
-            catch { /* Default (online) bei jeglichem Lesefehler */ }
-            return true;
+            catch { /* Default (offline) bei jeglichem Lesefehler */ }
+            return false;
         }
 
         private static void SaveMode()
@@ -218,6 +218,25 @@ namespace StarTruckMP.MainMenu
         {
             OnlineModeEnabled = !OnlineModeEnabled;
             SaveMode();
+
+            // Beim Umschalten auf Offline eine bestehende Verbindung auch aktiv trennen - vorher
+            // wurde nur das Starten NEUER Verbindungen unterbunden, eine bereits laufende blieb
+            // munter bestehen.
+            if (!OnlineModeEnabled)
+            {
+                try
+                {
+                    if (SC.client != null && SC.client.IsConnected)
+                    {
+                        SC.client.Disconnect();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"Konnte beim Umschalten auf Offline nicht trennen: {ex.Message}");
+                }
+            }
+
             UpdateLabel();
             StarTruckMP.Log.LogInfo($"Modus umgeschaltet: {(OnlineModeEnabled ? "Online" : "Offline")}");
         }
@@ -228,29 +247,21 @@ namespace StarTruckMP.MainMenu
 
             if (!OnlineModeEnabled)
             {
-                toggleLabel.text = "Offline";
+                toggleLabel.text = "Connect to Slipstream";
                 return;
             }
 
-            // Solange online, aber noch nicht (oder nicht mehr) tatsaechlich verbunden, nur "Online"
-            // zeigen. Sobald eine echte Verbindung besteht, den Spielernamen mit anzeigen.
             bool isConnected = false;
-            string playerName = "";
             try
             {
                 isConnected = SC.client != null && SC.client.IsConnected;
-                playerName = SC.myPlayerName;
             }
-            catch { /* Client evtl. noch nicht initialisiert, einfach "Online" zeigen */ }
+            catch { /* Client evtl. noch nicht initialisiert, Punkt bleibt grau */ }
 
-            if (isConnected && !string.IsNullOrEmpty(playerName))
-            {
-                toggleLabel.text = $"Online - connected as {playerName} at Slipstream";
-            }
-            else
-            {
-                toggleLabel.text = "Online";
-            }
+            // Gruener Punkt = tatsaechlich verbunden, grauer Punkt = online-Modus an, aber (noch)
+            // keine aktive Verbindung. Kein Spielername mehr im Text, damit es in eine Zeile passt.
+            string dotColor = isConnected ? "#4CAF50" : "#888888";
+            toggleLabel.text = $"Online @ Slipstream <color={dotColor}>●</color>";
         }
     }
 }
