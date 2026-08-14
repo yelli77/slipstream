@@ -214,8 +214,21 @@ namespace StarTruckMP.MainMenu
             StarTruckMP.Log.LogInfo("OnlineModeToggle: Button im Hauptmenue erstellt.");
         }
 
+        // Verhindert Connect/Disconnect-Spam durch schnelles Mehrfachklicken - Klicks innerhalb
+        // der Cooldown-Zeit nach dem letzten tatsaechlichen Umschalten werden ignoriert.
+        private const float ToggleCooldownSeconds = 3f;
+        private static float lastToggleTime = -999f;
+
         private static void OnToggleClicked()
         {
+            float now = Time.realtimeSinceStartup;
+            if (now - lastToggleTime < ToggleCooldownSeconds)
+            {
+                StarTruckMP.Log.LogInfo("OnlineModeToggle: Klick ignoriert (Cooldown aktiv).");
+                return;
+            }
+            lastToggleTime = now;
+
             OnlineModeEnabled = !OnlineModeEnabled;
             SaveMode();
 
