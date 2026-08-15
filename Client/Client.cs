@@ -1031,15 +1031,31 @@ namespace StarTruckMP.StarTruckClient
                     rb.velocity = newVelocity;
                 }
 
-                // Rotation: angular velocity correction
+                // Rotation: angular velocity correction via numerically stable small-angle
+                // approximation (avoids Quaternion.ToAngleAxis, which divides by sin(angle/2)
+                // internally and produces NaN when the rotation error is small - which is the
+                // NORMAL case once a truck has converged close to its target rotation).
                 Quaternion targetQuat = Quaternion.Euler(rp.truckTargetRot);
                 Quaternion rotError = targetQuat * Quaternion.Inverse(rb.rotation);
-                rotError.ToAngleAxis(out float angle, out Vector3 axis);
-                if (Mathf.Abs(angle) > 0.01f)
+                // Ensure shortest-path rotation (quaternion double-cover: q and -q represent
+                // the same rotation, but we want the one with smallest angle).
+                if (rotError.w < 0f)
                 {
-                    if (angle > 180f) angle -= 360f;
+                    rotError.x = -rotError.x;
+                    rotError.y = -rotError.y;
+                    rotError.z = -rotError.z;
+                    rotError.w = -rotError.w;
+                }
+                // For a unit quaternion (x,y,z,w) representing a small-to-moderate rotation,
+                // axis*angle (in radians) is well approximated by 2*(x,y,z) - this is exact in
+                // the limit of small angles and reasonably accurate up to large angles too,
+                // with NO division and therefore NO possibility of NaN from this step.
+                Vector3 axisAngle = new Vector3(rotError.x, rotError.y, rotError.z) * 2f;
+
+                if (axisAngle.sqrMagnitude > 0.0001f) // ~ (0.01 rad)^2, mirrors old 0.01f angle threshold
+                {
                     float effectiveRotK = rp.isColliding ? TruckRotCorrectionK * 0.1f : TruckRotCorrectionK;
-                    Vector3 newAngVel = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * effectiveRotK;
+                    Vector3 newAngVel = rp.truckTrans.AngVel + axisAngle * effectiveRotK;
                     if (float.IsNaN(newAngVel.x) || float.IsNaN(newAngVel.y) || float.IsNaN(newAngVel.z) ||
                         float.IsInfinity(newAngVel.x) || float.IsInfinity(newAngVel.y) || float.IsInfinity(newAngVel.z))
                     {
