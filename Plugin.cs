@@ -1,4 +1,5 @@
 using BepInEx.Unity.IL2CPP;
+using Il2CppInterop.Runtime.Injection;
 using BepInEx;
 using Object = UnityEngine.Object;
 using UnityEngine;
@@ -36,6 +37,8 @@ public class StarTruckMP : BasePlugin
     {
         Log = base.Log;
         Log.LogInfo($"Plugin {pluginGuid} is loaded! [{customBuildNumber}]");
+        ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
+
         Harmony.CreateAndPatchAll(typeof(TruckClient));
 
     }
