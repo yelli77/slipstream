@@ -984,6 +984,9 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float TruckCorrectionK = 5.0f;      // spring constant for position
         private static readonly float TruckRotCorrectionK = 8.0f;   // spring constant for rotation
         private static readonly float TruckMaxCorrection = 10f;      // max correction distance (meters)
+        private static readonly float MaxVelocity = 40f;              // hard clamp: max linear velocity (m/s)
+        private static readonly float MaxAngularVelocity = 10f;       // hard clamp: max angular velocity (rad/s)
+        private static readonly float ReadyCorrectionK = 2.5f;        // moderate K after grace period (before first contact)
 
         public static void SmoothTruckMovement()
         {
@@ -1003,9 +1006,30 @@ namespace StarTruckMP.StarTruckClient
                     error = error.normalized * TruckMaxCorrection;
 
                 // Apply correction as velocity addition — works WITH physics, not against it
-                // During active collision, reduce correction to let physics push-back work
-                float effectiveCorrectionK = rp.isColliding ? TruckCorrectionK * 0.1f : TruckCorrectionK;
-                rb.velocity = rp.truckTrans.Vel + error * effectiveCorrectionK;
+                // Three tiers: full K normally, moderate K after grace period (before first contact),
+                // minimal K during active collision — prevents crash on first-contact frame.
+                float effectiveCorrectionK;
+                if (rp.isColliding)
+                    effectiveCorrectionK = TruckCorrectionK * 0.1f;
+                else if (rp.collisionReady)
+                    effectiveCorrectionK = ReadyCorrectionK;
+                else
+                    effectiveCorrectionK = TruckCorrectionK;
+                Vector3 newVelocity = rp.truckTrans.Vel + error * effectiveCorrectionK;
+                // NaN/Infinity guard — prevent PhysX native crash
+                if (float.IsNaN(newVelocity.x) || float.IsNaN(newVelocity.y) || float.IsNaN(newVelocity.z) ||
+                    float.IsInfinity(newVelocity.x) || float.IsInfinity(newVelocity.y) || float.IsInfinity(newVelocity.z))
+                {
+                    global::StarTruckMP.StarTruckMP.Log.LogWarning($"SmoothTruckMovement[{kv.Key}]: NaN/Infinity velocity detected, skipping set");
+                }
+                else
+                {
+                    // Hard clamp to absolute maximum
+                    float spd = newVelocity.magnitude;
+                    if (spd > MaxVelocity)
+                        newVelocity = newVelocity.normalized * MaxVelocity;
+                    rb.velocity = newVelocity;
+                }
 
                 // Rotation: angular velocity correction
                 Quaternion targetQuat = Quaternion.Euler(rp.truckTargetRot);
@@ -1015,11 +1039,32 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (angle > 180f) angle -= 360f;
                     float effectiveRotK = rp.isColliding ? TruckRotCorrectionK * 0.1f : TruckRotCorrectionK;
-                    rb.angularVelocity = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * effectiveRotK;
+                    Vector3 newAngVel = rp.truckTrans.AngVel + axis * (angle * Mathf.Deg2Rad) * effectiveRotK;
+                    if (float.IsNaN(newAngVel.x) || float.IsNaN(newAngVel.y) || float.IsNaN(newAngVel.z) ||
+                        float.IsInfinity(newAngVel.x) || float.IsInfinity(newAngVel.y) || float.IsInfinity(newAngVel.z))
+                    {
+                        global::StarTruckMP.StarTruckMP.Log.LogWarning($"SmoothTruckMovement[{kv.Key}]: NaN/Infinity angularVelocity detected, skipping set");
+                    }
+                    else
+                    {
+                        float angSpd = newAngVel.magnitude;
+                        if (angSpd > MaxAngularVelocity)
+                            newAngVel = newAngVel.normalized * MaxAngularVelocity;
+                        rb.angularVelocity = newAngVel;
+                    }
                 }
                 else
                 {
-                    rb.angularVelocity = rp.truckTrans.AngVel;
+                    Vector3 newAngVel = rp.truckTrans.AngVel;
+                    if (float.IsNaN(newAngVel.x) || float.IsNaN(newAngVel.y) || float.IsNaN(newAngVel.z) ||
+                        float.IsInfinity(newAngVel.x) || float.IsInfinity(newAngVel.y) || float.IsInfinity(newAngVel.z))
+                    {
+                        global::StarTruckMP.StarTruckMP.Log.LogWarning($"SmoothTruckMovement[{kv.Key}]: NaN/Infinity angularVelocity (else branch) detected, skipping set");
+                    }
+                    else
+                    {
+                        rb.angularVelocity = newAngVel;
+                    }
                 }
 
                 playerList[kv.Key] = rp;

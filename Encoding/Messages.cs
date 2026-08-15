@@ -41,6 +41,8 @@ namespace StarTruckMP.Encoding
                 newRigid.maxDepenetrationVelocity = myRigid.maxDepenetrationVelocity;
                 newRigid.inertiaTensor = myRigid.inertiaTensor;
                 newRigid.inertiaTensorRotation = myRigid.inertiaTensorRotation;
+                newRigid.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                newRigid.interpolation = RigidbodyInterpolation.Interpolate;
                 StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 2: truck rigidbody copied");
 
                 GameObject exteriorObj = GameObject.Find("Exterior");
@@ -754,6 +756,13 @@ namespace StarTruckMP.Encoding
                 if (rb != null) rb.detectCollisions = true;
 
                 collisionActivated = true;
+                // Signal SmoothTruckMovement that grace period is over
+                // (for moderate K reduction even before first contact)
+                var rpState = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList.ContainsKey(playerId)
+                    ? global::StarTruckMP.StarTruckClient.StarTruckClient.playerList[playerId]
+                    : rp;
+                rpState.collisionReady = true;
+                global::StarTruckMP.StarTruckClient.StarTruckClient.playerList[playerId] = rpState;
                 StarTruckMP.Log.LogInfo($"CollisionHelper[{playerId}]: 120s grace expired, collisions ENABLED");
             }
         }

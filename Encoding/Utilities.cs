@@ -42,6 +42,7 @@ namespace StarTruckMP.Utilities
         public Vector3 truckTargetRot;
         public float spawnTime;
         public bool isColliding;
+        public bool collisionReady;
     }
 
     public struct movementTrans
