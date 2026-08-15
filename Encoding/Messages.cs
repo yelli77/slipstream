@@ -19,6 +19,16 @@ namespace StarTruckMP.Encoding
                 GameObject newTruck = new GameObject("RemoteTruck" + playerId);
                 SceneManager.MoveGameObjectToScene(newTruck, sectorGO.scene);
                 newTruck.transform.SetParent(null);
+
+                // --- Layer-Fix: remote truck must share the local truck's
+                // physics layer so the game's collision matrix picks it up.
+                // Without this, newTruck lands on Layer 0 (Default) and the
+                // BoxCollider we add later never collides with anything.
+                int truckLayer = StarTruckClient.StarTruckClient.myTruck.layer;
+                newTruck.layer = truckLayer;
+                string layerName = UnityEngine.LayerMask.LayerToName(truckLayer);
+                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: remote truck layer = '{layerName}' ({truckLayer}) — copied from myTruck");
+
                 var newRigid = newTruck.AddComponent<Rigidbody>();
                 newRigid.useGravity = myRigid.useGravity;
                 newRigid.drag = myRigid.drag;
@@ -42,6 +52,10 @@ namespace StarTruckMP.Encoding
                 {
                     GameObject newExterior = GameObject.Instantiate(exteriorObj, Vector3.zero, Quaternion.Euler(Vector3.zero), newTruck.transform);
                     newExterior.name = "ClientExterior" + playerId;
+                    // Diagnostic: does the instantiated exterior inherit
+                    // the parent's layer or keep the prefab's layer?
+                    string extLayerName = UnityEngine.LayerMask.LayerToName(newExterior.layer);
+                    StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: newExterior layer = '{extLayerName}' ({newExterior.layer}) — truckLayer={truckLayer}");
                     StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 3: exterior instantiated");
 
                     TryDisable(newExterior.transform, "StarTruck_Hatch/Marker", playerId);
