@@ -69,6 +69,32 @@ namespace StarTruckMP.Encoding
                         item.enabled = false;
                     }
                     StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 4: exterior cosmetics done");
+
+                    // --- Collision fix: single convex BoxCollider on truck root ---
+                    // Original mesh colliders on exterior stay disabled (unusable for
+                    // truck-vs-truck collision — PhysX crashes on non-convex meshes).
+                    // We compute a tight bounding box from all exterior renderers and
+                    // place ONE convex BoxCollider on the root. Active after 120s grace.
+                    var allRenderers = newExterior.GetComponentsInChildren<Renderer>();
+                    if (allRenderers.Length > 0)
+                    {
+                        Bounds combinedBounds = allRenderers[0].bounds;
+                        for (int ri = 1; ri < allRenderers.Length; ri++)
+                            combinedBounds.Encapsulate(allRenderers[ri].bounds);
+                        var boxCol = newTruck.AddComponent<BoxCollider>();
+                        boxCol.center = combinedBounds.center - newTruck.transform.position;
+                        boxCol.size = combinedBounds.size;
+                        boxCol.enabled = false;
+                        StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: BoxCollider center={boxCol.center}, size={boxCol.size} (from {allRenderers.Length} renderers)");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: no Renderers found on exterior, adding default BoxCollider");
+                        var boxCol = newTruck.AddComponent<BoxCollider>();
+                        boxCol.center = Vector3.zero;
+                        boxCol.size = new Vector3(8f, 4f, 12f);
+                        boxCol.enabled = false;
+                    }
                 }
 
                 //Spawn new Player GameObject
@@ -692,10 +718,21 @@ namespace StarTruckMP.Encoding
 
             if (UnityEngine.Time.time - rp.spawnTime > SpawnGracePeriod)
             {
-                // Enable all colliders on children of this truck GO
-                foreach (var col in GetComponentsInChildren<UnityEngine.Collider>())
+                // Enable the dedicated convex BoxCollider on truck root only.
+                // Original mesh colliders on the exterior stay disabled —
+                // PhysX crashes on two non-convex mesh colliders touching.
+                var boxCol = gameObject.GetComponent<BoxCollider>();
+                if (boxCol != null)
                 {
-                    col.enabled = true;
+                    boxCol.enabled = true;
+                }
+                else
+                {
+                    StarTruckMP.Log.LogWarning($"CollisionHelper[{playerId}]: no BoxCollider found, falling back to child colliders");
+                    foreach (var col in GetComponentsInChildren<UnityEngine.Collider>())
+                    {
+                        col.enabled = true;
+                    }
                 }
 
                 // Re-enable Rigidbody collision detection
@@ -717,33 +754,47 @@ namespace StarTruckMP.Encoding
 
         private void OnCollisionEnter(UnityEngine.Collision collision)
         {
-            // Set isColliding when this remote truck touches any player truck
-            // (another remote truck or the local player's truck).
-            // Environment geometry (docks, asteroids, etc.) is ignored.
-            if (!IsPlayerTruck(collision.gameObject)) return;
-
-            var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
-            if (!playerList.ContainsKey(playerId)) return;
-            var rp = playerList[playerId];
-            if (!rp.isColliding)
+            try
             {
-                rp.isColliding = true;
-                playerList[playerId] = rp;
+                // Set isColliding when this remote truck touches any player truck
+                // (another remote truck or the local player's truck).
+                // Environment geometry (docks, asteroids, etc.) is ignored.
+                if (!IsPlayerTruck(collision.gameObject)) return;
+
+                var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
+                if (!playerList.ContainsKey(playerId)) return;
+                var rp = playerList[playerId];
+                if (!rp.isColliding)
+                {
+                    rp.isColliding = true;
+                    playerList[playerId] = rp;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                global::StarTruckMP.StarTruckMP.Log.LogWarning($"OnCollisionEnter[{playerId}] error: {ex}");
             }
         }
 
         private void OnCollisionExit(UnityEngine.Collision collision)
         {
-            // Clear isColliding when leaving contact with any player truck
-            if (!IsPlayerTruck(collision.gameObject)) return;
-
-            var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
-            if (!playerList.ContainsKey(playerId)) return;
-            var rp = playerList[playerId];
-            if (rp.isColliding)
+            try
             {
-                rp.isColliding = false;
-                playerList[playerId] = rp;
+                // Clear isColliding when leaving contact with any player truck
+                if (!IsPlayerTruck(collision.gameObject)) return;
+
+                var playerList = global::StarTruckMP.StarTruckClient.StarTruckClient.playerList;
+                if (!playerList.ContainsKey(playerId)) return;
+                var rp = playerList[playerId];
+                if (rp.isColliding)
+                {
+                    rp.isColliding = false;
+                    playerList[playerId] = rp;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                global::StarTruckMP.StarTruckMP.Log.LogWarning($"OnCollisionExit[{playerId}] error: {ex}");
             }
         }
     }
