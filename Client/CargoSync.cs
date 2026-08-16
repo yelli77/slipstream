@@ -89,13 +89,50 @@ namespace StarTruckMP.StarTruckClient
                 if (sector != StarTruckClient.currentSector) return;
                 if (JobBoardSync.IsAuthorityForCurrentSector()) return;
 
-                var containers = DeserializeContainers(blob);
+                var incoming = DeserializeContainers(blob);
+
+                // MERGE statt Ersetzen: lokale Container, die NICHT in der eingehenden Liste
+                // stehen (z.B. der eigene gehitchte Trailer aus einer schon vorher angenommenen
+                // Mission), bleiben erhalten. Fuer trackingIds, die in beiden Listen vorkommen,
+                // gewinnt die eingehende (Host-)Version. Ein harter Ersatz wuerde sonst Cargo
+                // verwaisen, die zu einer eigenen bereits aktiven Mission gehoert.
+                var tracker = CargoTracker.Get();
+                Il2CppSystem.Collections.Generic.IList<CargoContainerSaveData> localContainers = null;
+                if (tracker != null)
+                {
+                    Il2CppSystem.Nullable<SystemSaveData> emptyCurrent = default;
+                    var localOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
+                    if (localOpt != null && localOpt.HasValue)
+                    {
+                        localContainers = localOpt.Value.CargoSaveData?.containers;
+                    }
+                }
+
+                var incomingIds = new System.Collections.Generic.HashSet<long>();
+                for (int i = 0; i < incoming.Count; i++) incomingIds.Add(incoming[i].trackingId);
+
+                var merged = new Il2CppSystem.Collections.Generic.List<CargoContainerSaveData>();
+                int keptLocal = 0;
+                if (localContainers != null)
+                {
+                    int localCount = Il2CppCount(localContainers);
+                    for (int i = 0; i < localCount; i++)
+                    {
+                        var lc = localContainers[i];
+                        if (!incomingIds.Contains(lc.trackingId))
+                        {
+                            merged.Add(lc);
+                            keptLocal++;
+                        }
+                    }
+                }
+                for (int i = 0; i < incoming.Count; i++) merged.Add(incoming[i]);
 
                 var cargoSave = new CargoSaveData();
-                cargoSave.containers = containers.Cast<Il2CppSystem.Collections.Generic.IList<CargoContainerSaveData>>();
+                cargoSave.containers = merged.Cast<Il2CppSystem.Collections.Generic.IList<CargoContainerSaveData>>();
 
                 CargoTracker.Get()?.SetData(new Il2CppSystem.Nullable<SystemSaveData>(new SystemSaveData(cargoSave)));
-                StarTruckMP.Log.LogInfo($"CargoSync: Container fuer Sektor '{sector}' uebernommen ({containers.Count}).");
+                StarTruckMP.Log.LogInfo($"CargoSync: Container fuer Sektor '{sector}' uebernommen ({incoming.Count} vom Host, {keptLocal} eigene behalten).");
             }
             catch (Exception ex)
             {
