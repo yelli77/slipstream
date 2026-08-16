@@ -44,6 +44,8 @@ public class MessageHandler
             case MessageType.ChatMessage: HandleChatMessage(e, server); break;
             case MessageType.RequestLinkStatus: HandleRequestLinkStatus(e, server); break;
             case MessageType.ClientVersion: HandleClientVersion(e, server); break;
+            case MessageType.JobBoardSync: HandleJobBoardSync(e, server); break;
+            case MessageType.CargoSync: HandleCargoSync(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -65,6 +67,36 @@ public class MessageHandler
         {
             _onVersionVerified(e.FromConnection.Id);
         }
+    }
+
+    // Reiner Relay: der dedizierte Server fuehrt keine Unity/Job-Logik aus und kann das
+    // Jobboard-Payload inhaltlich nicht validieren/verstehen. Er liest nur den Sektornamen
+    // (fuers Server-Log) und reicht den Job-Blob unveraendert als Bytes weiter (Sender
+    // ausgeschlossen, der hat seinen eigenen Stand schon lokal). Reliable, weil ein verlorenes
+    // Jobboard-Update zu dauerhaft widerspruechlichen Missionslisten fuehren wuerde.
+    private void HandleJobBoardSync(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        string sector = e.Message.GetString();
+        byte[] jobBlob = e.Message.GetBytes();
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardSync);
+        msg.AddString(sector);
+        msg.AddBytes(jobBlob);
+        server.SendToAll(msg, e.FromConnection.Id);
+    }
+
+    // Gleiches Prinzip wie HandleJobBoardSync: reiner Relay, Inhalt ist reine Client-Sache.
+    // Muss VOR den zugehoerigen JobBoardSync-Nachrichten beim Empfaenger ankommen, damit die
+    // dort referenzierten Cargo-TrackingIds beim Anwenden des Jobboards bereits existieren -
+    // das ist ueber die Sendereihenfolge auf Client-Seite sichergestellt (Cargo wird vor den
+    // Jobs generiert), Riptide liefert Reliable-Nachrichten in Sendereihenfolge aus.
+    private void HandleCargoSync(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        string sector = e.Message.GetString();
+        byte[] cargoBlob = e.Message.GetBytes();
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.CargoSync);
+        msg.AddString(sector);
+        msg.AddBytes(cargoBlob);
+        server.SendToAll(msg, e.FromConnection.Id);
     }
 
     private void HandleMovement(MessageReceivedEventArgs e, Riptide.Server server)

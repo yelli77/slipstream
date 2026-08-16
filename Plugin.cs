@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-165";
+    public const string customBuildNumber = "custom-build-166";
     public const int protocolBuildNumber = 151;
     internal static new ManualLogSource Log;
 
@@ -40,6 +40,8 @@ public class StarTruckMP : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
 
         Harmony.CreateAndPatchAll(typeof(TruckClient));
+        Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
+        Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
 
     }
 

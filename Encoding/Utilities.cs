@@ -17,7 +17,9 @@ namespace StarTruckMP.Utilities
         setPlayerSteamId,
         requestLinkStatus,
         linkStatus,
-        clientVersion
+        clientVersion,
+        jobBoardSync,
+        cargoSync
     }
 
     public struct playerInfo

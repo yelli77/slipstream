@@ -706,6 +706,16 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"linkStatus error: {ex.Message}");
                 }
             }
+
+            if (e.MessageId == (ushort)messageType.jobBoardSync)
+            {
+                JobBoardSync.HandleIncoming(e);
+            }
+
+            if (e.MessageId == (ushort)messageType.cargoSync)
+            {
+                CargoSync.HandleIncoming(e);
+            }
         }
 
             }

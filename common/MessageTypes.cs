@@ -15,5 +15,7 @@ public enum MessageType : ushort
     SetPlayerSteamId = 10,
     RequestLinkStatus = 11,
     LinkStatus = 12,
-    ClientVersion = 13
+    ClientVersion = 13,
+    JobBoardSync = 14,
+    CargoSync = 15
 }
