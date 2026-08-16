@@ -287,7 +287,7 @@ namespace StarTruckMP.MainMenu
 
             if (!OnlineModeEnabled)
             {
-                toggleLabel.text = "Click to join Slipstream";
+                toggleLabel.text = "Play online @Slipstream";
                 return;
             }
 
@@ -299,9 +299,9 @@ namespace StarTruckMP.MainMenu
             catch { /* Client evtl. noch nicht initialisiert, Punkt bleibt grau */ }
 
             // Gruener Punkt = tatsaechlich verbunden, grauer Punkt = online-Modus an, aber (noch)
-            // keine aktive Verbindung. Kein Spielername mehr im Text, damit es in eine Zeile passt.
+            // keine aktive Verbindung.
             string dotColor = isConnected ? "#4CAF50" : "#888888";
-            toggleLabel.text = $"Online @ Slipstream <color={dotColor}>●</color>";
+            toggleLabel.text = $"Disconnect from Slipstream <color={dotColor}>●</color>";
         }
     }
 }
