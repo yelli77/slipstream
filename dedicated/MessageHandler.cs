@@ -184,6 +184,33 @@ public class MessageHandler
         if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
         e.Message.GetUShort();
         ulong steamId = e.Message.GetULong();
+
+        // Reconnect-Ghost-Fix: wenn dieselbe SteamID schon unter einer ANDEREN Verbindungs-Id
+        // aktiv ist, ist das eine veraltete Verbindung derselben Person (z.B. schneller
+        // Reconnect, bevor Riptide den Timeout der alten Verbindung erkannt hat). Ohne diesen
+        // Check bleibt die alte Verbindung als "Geist" sichtbar - falscher Spielerzaehler auf
+        // der Karte, Name fehlt teils beim neuen Client, Position drieftet zur alten (toten)
+        // Position und "springt" erst zurueck, wenn der Timeout die alte Verbindung irgendwann
+        // doch noch abraeumt. Fix: alte Verbindung sofort hart trennen - OnClientDisconnected
+        // uebernimmt danach ganz normal das Aufraeumen (Broadcast an alle, _players.Remove).
+        if (steamId != 0)
+        {
+            ushort? staleId = null;
+            foreach (var kv in _players)
+            {
+                if (kv.Key != e.FromConnection.Id && kv.Value.SteamId == steamId)
+                {
+                    staleId = kv.Key;
+                    break;
+                }
+            }
+            if (staleId.HasValue)
+            {
+                Console.WriteLine($"[INFO] SteamID {steamId} bereits unter Verbindung {staleId.Value} aktiv - trenne veraltete Verbindung (Reconnect von Player {e.FromConnection.Id}).");
+                server.DisconnectClient(staleId.Value);
+            }
+        }
+
         p.SteamId = steamId;
         _players[e.FromConnection.Id] = p;
         Console.WriteLine($"[INFO] Player {e.FromConnection.Id} SteamID set to {steamId}");
