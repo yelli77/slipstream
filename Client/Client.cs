@@ -1553,25 +1553,17 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         private static string BuildColorfulSlipstreamText()
         {
-            string word = "Slipstream";
-            // Space/neon rainbow: pink→coral→orange→yellow→lime→cyan→sky→blue→indigo→violet
-            string[] colors = {
-                "#FF69B4",  // S - hot pink
-                "#FF7F50",  // l - coral
-                "#FFA500",  // i - orange
-                "#FFD700",  // p - gold
-                "#ADFF2F",  // s - lime green
-                "#00CED1",  // t - dark turquoise/cyan
-                "#87CEEB",  // r - sky blue
-                "#4169E1",  // e - royal blue
-                "#7B68EE",  // a - medium slate blue/indigo
-                "#DA70D6"   // m - orchid/violet
-            };
+            // "Slip" in blue/steel gradient, "Stream" in gold/orange gradient,
+            // matching the Slipstream logo reference image.
+            string[] slipColors = { "#B8D4E8", "#8FB8DC", "#5A8FC0", "#3A6EA5" };   // S-l-i-p
+            string[] streamColors = { "#FFD700", "#FFC42E", "#F2A93C", "#E8933A", "#DC7E30", "#D97B29" }; // S-t-r-e-a-m
+            string slip = "Slip";
+            string stream = "Stream";
             var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < word.Length && i < colors.Length; i++)
-            {
-                sb.Append($"<color={colors[i]}>{word[i]}</color>");
-            }
+            for (int i = 0; i < slip.Length; i++)
+                sb.Append($"<color={slipColors[i]}>{slip[i]}</color>");
+            for (int i = 0; i < stream.Length; i++)
+                sb.Append($"<color={streamColors[i]}>{stream[i]}</color>");
             return sb.ToString();
         }
 
