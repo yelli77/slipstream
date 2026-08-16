@@ -34,17 +34,12 @@ namespace StarTruckMP.MainMenu
         private static Button toggleButtonInstance;
         private static TMP_Text toggleLabel;
 
+        // Bewusst KEIN Laden eines gespeicherten "online"-Zustands: das Spiel soll bei jedem
+        // Start immer offline sein, komplett unabhaengig davon, in welchem Modus die letzte
+        // Sitzung beendet wurde. Der Toggle-Button wirkt weiterhin normal innerhalb einer
+        // laufenden Sitzung, aber ein neuer Spielstart faengt immer bei offline an.
         private static bool LoadMode()
         {
-            try
-            {
-                if (File.Exists(StateFilePath))
-                {
-                    var content = File.ReadAllText(StateFilePath).Trim();
-                    return content.Equals("online", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            catch { /* Default (offline) bei jeglichem Lesefehler */ }
             return false;
         }
 
