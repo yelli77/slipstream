@@ -222,11 +222,70 @@ namespace StarTruckMP.MainMenu
 
             button.onClick.AddListener((UnityAction)OnToggleClicked);
 
+            // Controller/Gamepad-Navigation: MenuButton implementiert Unitys Standard-
+            // Selectable-Interfaces (OnSelect/OnSubmit), Navigation zwischen Menuepunkten laeuft
+            // also ueber Selectable.navigation (i.d.R. Explicit fest verdrahtet: jeder Button
+            // kennt exakt seinen Nachbarn oben/unten). Unser frisch erzeugter Button haengt NICHT
+            // in dieser Kette - der Controller "ueberspringt" ihn, weil weder er die Nachbarn
+            // kennt noch die Nachbarn ihn. Fix: explizit einhaengen (uns selbst UND die
+            // ehemaligen direkten Nachbarn des Templates umbiegen).
+            WireUpNavigation(template, button);
+
             toggleLabel = text;
             toggleButtonInstance = button;
             UpdateLabel();
 
             StarTruckMP.Log.LogInfo("OnlineModeToggle: Button im Hauptmenue erstellt.");
+        }
+
+        /// <summary>
+        /// Haengt den neuen Button per Explicit-Navigation zwischen das Template (z.B.
+        /// "Optionen") und dessen bisherigen Unten-Nachbarn ein, und biegt beide Seiten um -
+        /// so kann man mit dem Controller/D-Pad normal durch die Liste inklusive unserem neuen
+        /// Eintrag navigieren, egal ob die Original-Buttons Explicit- oder Automatic-Navigation
+        /// nutzen (wird hier fuer alle Beteiligten hart auf Explicit gesetzt).
+        /// </summary>
+        private static void WireUpNavigation(MenuButton template, Button ourButton)
+        {
+            try
+            {
+                var templateSelectable = template.GetComponent<Selectable>();
+                if (templateSelectable == null)
+                {
+                    StarTruckMP.Log.LogWarning("OnlineModeToggle: Template hat keine Selectable-Komponente, Controller-Navigation nicht verdrahtet.");
+                    return;
+                }
+
+                var oldNav = templateSelectable.navigation;
+                var oldBelow = oldNav.selectOnDown;
+
+                // Uns selbst: oben -> Template, unten -> was vorher unter dem Template war.
+                var ourNav = ourButton.navigation;
+                ourNav.mode = Navigation.Mode.Explicit;
+                ourNav.selectOnUp = templateSelectable;
+                ourNav.selectOnDown = oldBelow;
+                ourButton.navigation = ourNav;
+
+                // Template: unten zeigt jetzt auf uns statt auf den alten Nachbarn.
+                oldNav.mode = Navigation.Mode.Explicit;
+                oldNav.selectOnDown = ourButton;
+                templateSelectable.navigation = oldNav;
+
+                // Alter unterer Nachbar: oben zeigt jetzt auf uns statt auf das Template.
+                if (oldBelow != null)
+                {
+                    var belowNav = oldBelow.navigation;
+                    belowNav.mode = Navigation.Mode.Explicit;
+                    belowNav.selectOnUp = ourButton;
+                    oldBelow.navigation = belowNav;
+                }
+
+                StarTruckMP.Log.LogInfo($"OnlineModeToggle: Controller-Navigation verdrahtet (unterer Nachbar vorhanden: {oldBelow != null}).");
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"OnlineModeToggle: Navigation-Verdrahtung fehlgeschlagen: {ex.Message}");
+            }
         }
 
         // Verhindert Connect/Disconnect-Spam durch schnelles Mehrfachklicken - Klicks innerhalb
