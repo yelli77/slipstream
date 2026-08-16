@@ -99,7 +99,7 @@ namespace StarTruckMP.Encoding
                             combinedBounds.Encapsulate(allRenderers[ri].bounds);
                         var boxCol = newTruck.AddComponent<BoxCollider>();
                         boxCol.center = combinedBounds.center - newTruck.transform.position;
-                        boxCol.size = combinedBounds.size;
+                        boxCol.size = combinedBounds.size * 0.9f;
                         boxCol.enabled = false;
                         StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: BoxCollider center={boxCol.center}, size={boxCol.size} (from {allRenderers.Length} renderers)");
                     }
@@ -108,7 +108,7 @@ namespace StarTruckMP.Encoding
                         StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: no Renderers found on exterior, adding default BoxCollider");
                         var boxCol = newTruck.AddComponent<BoxCollider>();
                         boxCol.center = Vector3.zero;
-                        boxCol.size = new Vector3(8f, 4f, 12f);
+                        boxCol.size = new Vector3(8f, 4f, 12f) * 0.9f;
                         boxCol.enabled = false;
                     }
                 }
@@ -182,6 +182,8 @@ namespace StarTruckMP.Encoding
                 currentPlayer.sector = sector;
                 currentPlayer.truckTrans.Pos = position;
                 currentPlayer.truckTrans.Rot = rotation;
+                currentPlayer.truckTargetPos = position;
+                currentPlayer.truckTargetRot = rotation;
                 currentPlayer.playerTrans.Pos = position;
                 currentPlayer.playerTrans.Rot = rotation;
 
