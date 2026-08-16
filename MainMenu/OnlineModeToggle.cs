@@ -209,15 +209,20 @@ namespace StarTruckMP.MainMenu
 
             Color idleColor = new Color(0f, 0f, 0f, 0f);
             Color hoverColor = new Color32(0xE6, 0xA9, 0x2D, 0xFF);
+            // Textfarbe folgt dem gleichen Muster wie bei den anderen Menuepunkten: normal die
+            // vom Template uebernommene (helle) Farbe, auf gelbem Hintergrund (Hover/Select)
+            // schwarz, damit der Text lesbar bleibt.
+            Color idleTextColor = text.color;
+            Color highlightTextColor = Color.black;
 
             var trigger = go.AddComponent<EventTrigger>();
 
             var enterEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enterEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; }));
+            enterEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; text.color = highlightTextColor; }));
             trigger.triggers.Add(enterEntry);
 
             var exitEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exitEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; }));
+            exitEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; text.color = idleTextColor; }));
             trigger.triggers.Add(exitEntry);
 
             // Select/Deselect zusaetzlich zu PointerEnter/PointerExit: bei Controller-Navigation
@@ -226,11 +231,11 @@ namespace StarTruckMP.MainMenu
             // diese beiden Eintraege bleibt die gelbe Hervorhebung bei Controller-Steuerung aus,
             // obwohl die Navigation selbst funktioniert.
             var selectEntry = new EventTrigger.Entry { eventID = EventTriggerType.Select };
-            selectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; }));
+            selectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; text.color = highlightTextColor; }));
             trigger.triggers.Add(selectEntry);
 
             var deselectEntry = new EventTrigger.Entry { eventID = EventTriggerType.Deselect };
-            deselectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; }));
+            deselectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; text.color = idleTextColor; }));
             trigger.triggers.Add(deselectEntry);
 
             button.onClick.AddListener((UnityAction)OnToggleClicked);
