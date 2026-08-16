@@ -43,6 +43,12 @@ namespace StarTruckMP.StarTruckClient
                 if (client == null || !client.IsConnected) return;
                 if (!JobBoardSync.IsAuthorityForCurrentSector()) return;
 
+                if (!CargoTracker.ready)
+                {
+                    StarTruckMP.Log.LogInfo("CargoSync: CargoTracker noch nicht ready, ueberspringe (naechster Trigger holt es nach).");
+                    return;
+                }
+
                 var tracker = CargoTracker.Get();
                 if (tracker == null) return;
 
@@ -68,7 +74,7 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"CargoSync.OnLocalCargoSpawned fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"CargoSync.OnLocalCargoSpawned fehlgeschlagen: {ex}");
             }
         }
 
@@ -92,7 +98,7 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"CargoSync.HandleIncoming fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"CargoSync.HandleIncoming fehlgeschlagen: {ex}");
             }
         }
 

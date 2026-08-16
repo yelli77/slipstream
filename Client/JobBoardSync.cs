@@ -64,6 +64,12 @@ namespace StarTruckMP.StarTruckClient
                 if (client == null || !client.IsConnected) return;
                 if (!IsAuthorityForCurrentSector()) return;
 
+                if (!QuestTracker.ready)
+                {
+                    StarTruckMP.Log.LogInfo("JobBoardSync: QuestTracker noch nicht ready, ueberspringe (naechster Trigger holt es nach).");
+                    return;
+                }
+
                 var tracker = QuestTracker.Get();
                 if (tracker == null) return;
 
@@ -92,7 +98,7 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated fehlgeschlagen: {ex}");
             }
         }
 
@@ -122,7 +128,7 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming fehlgeschlagen: {ex}");
             }
         }
 
