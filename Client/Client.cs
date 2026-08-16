@@ -1547,6 +1547,35 @@ namespace StarTruckMP.StarTruckClient
         private static string myLinkCode = "";
 
         /// <summary>
+        /// Returns "Slipstream" as a rainbow-colored rich-text string.
+        /// Each letter gets its own color for a vibrant space/neon look.
+        /// Palette: hot pink → coral → orange → yellow → lime → cyan → sky → blue → indigo → violet.
+        /// </summary>
+        private static string BuildColorfulSlipstreamText()
+        {
+            string word = "Slipstream";
+            // Space/neon rainbow: pink→coral→orange→yellow→lime→cyan→sky→blue→indigo→violet
+            string[] colors = {
+                "#FF69B4",  // S - hot pink
+                "#FF7F50",  // l - coral
+                "#FFA500",  // i - orange
+                "#FFD700",  // p - gold
+                "#ADFF2F",  // s - lime green
+                "#00CED1",  // t - dark turquoise/cyan
+                "#87CEEB",  // r - sky blue
+                "#4169E1",  // e - royal blue
+                "#7B68EE",  // a - medium slate blue/indigo
+                "#DA70D6"   // m - orchid/violet
+            };
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < word.Length && i < colors.Length; i++)
+            {
+                sb.Append($"<color={colors[i]}>{word[i]}</color>");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// Small persistent top-left HUD overlay: player name, current sector,
         /// and (until linked) the Discord link code. Stays visible for the
         /// whole session — harmless to leave the code line up after linking,
@@ -1566,7 +1595,7 @@ namespace StarTruckMP.StarTruckClient
                 }
                 else
                 {
-                    text += "\nSlipstream";
+                    text += "\n" + BuildColorfulSlipstreamText() + " " + StarTruckMP.customBuildNumber;
                 }
 
                 if (statusOverlayText != null)
@@ -1625,6 +1654,7 @@ namespace StarTruckMP.StarTruckClient
                     statusOverlayText.color = Color.yellow;
                     statusOverlayText.alignment = TMPro.TextAlignmentOptions.TopLeft;
                     statusOverlayText.raycastTarget = false;
+                    statusOverlayText.richText = true;
                 }
                 statusOverlay = canvasObj;
                 StarTruckMP.Log.LogInfo($"UpdateStatusOverlay: displaying '{text.Replace("\n", " | ")}'");
