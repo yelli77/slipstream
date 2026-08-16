@@ -73,7 +73,7 @@ namespace StarTruckMP.StarTruckClient
                 var tracker = QuestTracker.Get();
                 if (tracker == null) return;
 
-                Il2CppSystem.Nullable<SystemSaveData> emptyCurrent = default;
+                var emptyCurrent = new Il2CppSystem.Nullable<SystemSaveData>();
                 var saveDataOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
                 if (saveDataOpt == null || !saveDataOpt.HasValue)
                 {
