@@ -274,35 +274,62 @@ namespace StarTruckMP.MainMenu
                     return;
                 }
 
-                var oldNav = templateSelectable.navigation;
-                var oldBelow = oldNav.selectOnDown;
+                // Kompletten Original-Zustand VOR jeder Aenderung einsammeln, statt Structs
+                // schrittweise zu lesen/mutieren/zurueckzuschreiben - falls beim Il2Cpp-Interop
+                // ein Struct-Roundtrip Referenzfelder verliert (aehnliches Problem hatten wir
+                // schon bei Nullable<T>/default), soll das hier keine Rolle spielen: jedes Feld
+                // wird explizit aus einer einmal gelesenen Kopie in ein frisches Navigation-
+                // Objekt uebertragen.
+                var oldTemplateNav = templateSelectable.navigation;
+                var oldBelow = oldTemplateNav.selectOnDown;
+                Selectable oldBelowsDown = null, oldBelowsLeft = null, oldBelowsRight = null;
+                if (oldBelow != null)
+                {
+                    var oldBelowNav = oldBelow.navigation;
+                    oldBelowsDown = oldBelowNav.selectOnDown;
+                    oldBelowsLeft = oldBelowNav.selectOnLeft;
+                    oldBelowsRight = oldBelowNav.selectOnRight;
+                }
 
-                // Uns selbst: oben -> Template, unten -> was vorher unter dem Template war.
-                var ourNav = ourButton.navigation;
+                // Uns selbst: oben -> Template, unten -> was vorher direkt unter dem Template war.
+                var ourNav = new Navigation();
                 ourNav.mode = Navigation.Mode.Explicit;
                 ourNav.selectOnUp = templateSelectable;
                 ourNav.selectOnDown = oldBelow;
+                ourNav.selectOnLeft = oldTemplateNav.selectOnLeft;
+                ourNav.selectOnRight = oldTemplateNav.selectOnRight;
                 ourButton.navigation = ourNav;
 
-                // Template: unten zeigt jetzt auf uns statt auf den alten Nachbarn.
-                oldNav.mode = Navigation.Mode.Explicit;
-                oldNav.selectOnDown = ourButton;
-                templateSelectable.navigation = oldNav;
+                // Template: alles wie vorher, NUR unten zeigt jetzt auf uns statt auf den alten
+                // Nachbarn.
+                var newTemplateNav = new Navigation();
+                newTemplateNav.mode = Navigation.Mode.Explicit;
+                newTemplateNav.selectOnUp = oldTemplateNav.selectOnUp;
+                newTemplateNav.selectOnDown = ourButton;
+                newTemplateNav.selectOnLeft = oldTemplateNav.selectOnLeft;
+                newTemplateNav.selectOnRight = oldTemplateNav.selectOnRight;
+                templateSelectable.navigation = newTemplateNav;
 
-                // Alter unterer Nachbar: oben zeigt jetzt auf uns statt auf das Template.
+                // Alter unterer Nachbar (z.B. "Spiel laden"): alles wie vorher (inkl. seiner
+                // EIGENEN Verbindung nach unten zu "Spiel speichern" etc.), NUR oben zeigt jetzt
+                // auf uns statt auf das Template.
                 if (oldBelow != null)
                 {
-                    var belowNav = oldBelow.navigation;
-                    belowNav.mode = Navigation.Mode.Explicit;
-                    belowNav.selectOnUp = ourButton;
-                    oldBelow.navigation = belowNav;
+                    var newBelowNav = new Navigation();
+                    newBelowNav.mode = Navigation.Mode.Explicit;
+                    newBelowNav.selectOnUp = ourButton;
+                    newBelowNav.selectOnDown = oldBelowsDown;
+                    newBelowNav.selectOnLeft = oldBelowsLeft;
+                    newBelowNav.selectOnRight = oldBelowsRight;
+                    oldBelow.navigation = newBelowNav;
                 }
 
-                StarTruckMP.Log.LogInfo($"OnlineModeToggle: Controller-Navigation verdrahtet (unterer Nachbar vorhanden: {oldBelow != null}).");
+                string BelowName(Selectable s) => s != null ? s.gameObject.name : "(null)";
+                StarTruckMP.Log.LogInfo($"OnlineModeToggle: Navigation verdrahtet. Template->unten={BelowName(templateSelectable.navigation.selectOnDown)}, wir->unten={BelowName(ourButton.navigation.selectOnDown)}, {(oldBelow != null ? $"'{oldBelow.gameObject.name}'->unten={BelowName(oldBelow.navigation.selectOnDown)}" : "kein unterer Nachbar")}.");
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"OnlineModeToggle: Navigation-Verdrahtung fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"OnlineModeToggle: Navigation-Verdrahtung fehlgeschlagen: {ex}");
             }
         }
 
