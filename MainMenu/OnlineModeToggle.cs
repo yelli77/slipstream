@@ -220,6 +220,19 @@ namespace StarTruckMP.MainMenu
             exitEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; }));
             trigger.triggers.Add(exitEntry);
 
+            // Select/Deselect zusaetzlich zu PointerEnter/PointerExit: bei Controller-Navigation
+            // feuert nie PointerEnter (das ist ein reines Maus-Event) - der Button wird stattdessen
+            // per Select/Deselect (ISelectHandler, ausgeloest durch die Navigation) markiert. Ohne
+            // diese beiden Eintraege bleibt die gelbe Hervorhebung bei Controller-Steuerung aus,
+            // obwohl die Navigation selbst funktioniert.
+            var selectEntry = new EventTrigger.Entry { eventID = EventTriggerType.Select };
+            selectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = hoverColor; }));
+            trigger.triggers.Add(selectEntry);
+
+            var deselectEntry = new EventTrigger.Entry { eventID = EventTriggerType.Deselect };
+            deselectEntry.callback.AddListener((UnityAction<BaseEventData>)((data) => { image.color = idleColor; }));
+            trigger.triggers.Add(deselectEntry);
+
             button.onClick.AddListener((UnityAction)OnToggleClicked);
 
             // Controller/Gamepad-Navigation: MenuButton implementiert Unitys Standard-
