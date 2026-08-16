@@ -52,7 +52,8 @@ namespace StarTruckMP.StarTruckClient
                 var tracker = CargoTracker.Get();
                 if (tracker == null) return;
 
-                var saveDataOpt = tracker.GetData(null, SaveState.GetDataContext.SaveGame);
+                Il2CppSystem.Nullable<SystemSaveData> emptyCurrent = default;
+                var saveDataOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
                 if (saveDataOpt == null || !saveDataOpt.HasValue)
                 {
                     StarTruckMP.Log.LogWarning("CargoSync: CargoTracker.GetData() lieferte keinen Wert.");
