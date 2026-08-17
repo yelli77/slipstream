@@ -239,6 +239,13 @@ namespace StarTruckMPUpdater
 
         static void LaunchGame(string gamePath)
         {
+            // Marker VOR dem eigentlichen Start hinterlegen (nicht erst nach Erfolg) - so ist er
+            // in jedem Fall vorhanden, bevor der Spielprozess (und damit unser Mod) ueberhaupt
+            // hochfaehrt, egal ob per Steam oder als Direkt-Fallback gestartet wird. Ohne Marker
+            // (z.B. Start direkt aus der Steam-Bibliothek, ohne Slipstream) bleibt die
+            // Online-Funktion im Mod deaktiviert.
+            StarTruckMP.Common.LaunchMarker.Write();
+
             try
             {
                 // Primaer: immer ueber Steam starten (steam:// startet noetigenfalls auch den

@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-185";
+    public const string customBuildNumber = "custom-build-186";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -32,10 +32,22 @@ public class StarTruckMP : BasePlugin
     public const int MovementUpdateMs = 100;
     public static readonly UnityEngine.KeyCode HonkKey = UnityEngine.KeyCode.H;
 
+    // Nur true, wenn das Spiel gerade ueber den Slipstream-Launcher gestartet wurde (per
+    // Consume-once-Marker erkannt, siehe StarTruckMP.Common.LaunchMarker). Bei einem Start direkt
+    // aus der Steam-Bibliothek (ohne Launcher) bleibt das false - dann wird weder der
+    // Online/Offline-Umschalter im Pause-Menue angezeigt noch jemals automatisch verbunden.
+    public static bool LaunchedViaSlipstream = false;
+
 
     public override void Load()
     {
         Log = base.Log;
+
+        LaunchedViaSlipstream = global::StarTruckMP.Common.LaunchMarker.ConsumeIfFresh();
+        Log.LogInfo(LaunchedViaSlipstream
+            ? "Ueber Slipstream gestartet - Online-Funktion aktiv."
+            : "Nicht ueber Slipstream gestartet (z.B. direkt via Steam) - Online-Funktion bleibt deaktiviert.");
+
         Log.LogInfo($"Plugin {pluginGuid} is loaded! [{customBuildNumber}]");
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
 

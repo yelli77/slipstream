@@ -117,6 +117,14 @@ namespace StarTruckMP.MainMenu
 
         public static void CreateToggleButton(Component screen)
         {
+            // Ohne Slipstream-Launcher (z.B. Spiel direkt aus der Steam-Bibliothek gestartet)
+            // gibt es gar keine Online-Funktion - dann wird der Button erst gar nicht erzeugt,
+            // damit im Pause-Menue auch nichts angezeigt wird, das sowieso nicht nutzbar waere.
+            if (!StarTruckMP.LaunchedViaSlipstream)
+            {
+                return;
+            }
+
             // Unity's == ueberladen erkennt auch "wurde inzwischen zerstoert" korrekt (nicht nur
             // C#-null) - falls der Screen neu erstellt wurde, wird hier neu angelegt.
             if (toggleButtonInstance != null)

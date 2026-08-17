@@ -14,4 +14,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Geteilte Consume-once-Marker-Logik mit dem Mod (siehe StarTruckMP.Common.LaunchMarker) -
+         bewusst als einzelne Datei eingebunden statt per ProjectReference auf das ganze
+         common-Projekt, um keine ungenutzten Typen/Abhaengigkeiten mitzuziehen. -->
+    <Compile Include="../common/LaunchMarker.cs" Link="LaunchMarker.cs" />
+  </ItemGroup>
+
 </Project>

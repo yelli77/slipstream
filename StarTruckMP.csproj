@@ -25,6 +25,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Geteilte Consume-once-Marker-Logik mit dem Launcher (siehe StarTruckMP.Common.LaunchMarker)
+         - bewusst als einzelne Datei zurueckgeholt statt das komplette common/**-Remove oben
+         aufzuweichen. -->
+    <Compile Include="common/LaunchMarker.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="RiptideNetworking.Riptide" Version="2.2.0" />
   </ItemGroup>
 

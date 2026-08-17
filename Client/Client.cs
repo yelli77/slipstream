@@ -148,7 +148,13 @@ namespace StarTruckMP.StarTruckClient
             // geladen), wird automatisch verbunden. Bei Verbindungsabbruch/-fehler wird nach kurzer
             // Verzoegerung automatisch erneut versucht. Nur wenn der Online/Offline-Umschalter im
             // Hauptmenue auf Online steht.
-            if (OnlineModeToggle.OnlineModeEnabled && !versionRejected && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
+            // StarTruckMP.LaunchedViaSlipstream als zusaetzliche, explizite Absicherung (defense
+            // in depth): OnlineModeEnabled kann eigentlich ohnehin nie true werden, wenn der
+            // Launcher-Marker fehlt, weil dann schon gar kein Umschalter-Button erzeugt wird (siehe
+            // OnlineModeToggle.CreateToggleButton) - trotzdem hier nochmal hart geprueft, damit ein
+            // automatischer Verbindungsversuch bei einem Nicht-Slipstream-Start unter keinen
+            // Umstaenden stattfinden kann.
+            if (StarTruckMP.LaunchedViaSlipstream && OnlineModeToggle.OnlineModeEnabled && !versionRejected && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
             {
                 if (GameObject.FindGameObjectWithTag("Player") != null && GameObject.Find("StarTruck(Clone)") != null)
                 {
