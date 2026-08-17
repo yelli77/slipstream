@@ -276,6 +276,17 @@ namespace StarTruckMP.MainMenu
                     return;
                 }
 
+                // WICHTIG: idempotent bleiben! RefreshNavigation() ruft das hier jetzt bei JEDEM
+                // Oeffnen des Pause-Menues erneut auf. Beim zweiten Durchlauf zeigt Templates
+                // "unten" bereits auf UNSEREN Button (vom ersten Durchlauf) - wuerde man das dann
+                // wieder als "alten Nachbarn" behandeln, verdrahtet man den eigenen Button
+                // versehentlich mit sich selbst (genau das ist vorher passiert: unser Button
+                // hatte am Ende up=sich selbst). Deshalb: schon fertig verdrahtet -> nichts tun.
+                if (templateSelectable.navigation.selectOnDown == (Selectable)ourButton)
+                {
+                    return;
+                }
+
                 // Kompletten Original-Zustand VOR jeder Aenderung einsammeln, statt Structs
                 // schrittweise zu lesen/mutieren/zurueckzuschreiben - falls beim Il2Cpp-Interop
                 // ein Struct-Roundtrip Referenzfelder verliert (aehnliches Problem hatten wir
