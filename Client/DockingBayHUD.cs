@@ -207,8 +207,8 @@ namespace StarTruckMP.StarTruckClient
                     // so search the Station type for it. Fall back to bayType if Station not found.
                     var stationType = TryFindType("Station");
                     fi_dockingBayGroups = stationType != null
-                        ? FindMember(stationType, "DockingBayGroups")
-                        : FindMember(bayType, "DockingBayGroups");
+                        ? FindMember(stationType, "m_dockingBayGroups")
+                        : FindMember(bayType, "m_dockingBayGroups");
                     // DockingBayGroup is nested in Station. Find Station, then its nested type.
                     var groupType = stationType != null
                         ? stationType.GetNestedType("DockingBayGroup", BindingFlags.Public | BindingFlags.NonPublic)
@@ -433,13 +433,8 @@ namespace StarTruckMP.StarTruckClient
                     if (bay == null || bay.gameObject == null) continue;
                     try
                     {
-                        // Only show the Auftragsboerse (JobsBoard) bays — other docking bays
-                        // (BodyShop, Repairs, ParkingBay, ...) are not relevant for job pickup.
-                        if (!IsJobsBoard(bay))
-                        {
-                            StarTruckMP.Log.LogInfo($"DockingBayHUD: skipping non-JobsBoard bay '{bay.gameObject.name}'");
-                            continue;
-                        }
+                        // TODO: re-enable JobsBoard filter once IL2CPP reflection is sorted
+                        // if (!IsJobsBoard(bay)) continue;
                         CreateMarker(bay, sourceTMP);
                         jobsBoardCount++;
                     }
