@@ -95,16 +95,71 @@ namespace StarTruckMP.StarTruckClient
             return null;
         }
         // Reads an Il2Cpp value robustly. Tries, in order:
-        //   1. Property getter — Il2CppInterop generates clean proxies; this is the
-        //      official, cleanest path (e.g. Station.get_DockingBayGroups → List<DockingBayGroup>).
-        //   2. Native field read via il2cpp_field_get_value + NativeFieldInfoPtr_<name>
-        //      (fallback for private backing fields when property getter is unavailable).
+        //   1. Native field read via il2cpp_field_get_value + NativeFieldInfoPtr_<name>
+        //      (works at C++ level regardless of .NET proxy type hierarchy).
+        //   2. Property getter — use Il2CppObjectBase ptr to avoid target-type mismatch
+        //      when property is declared on a base class (e.g. Station.get_DockingBayGroups
+        //      called on a DockingBay proxy).
         //   3. Reflection GetValue (last resort — may fail if declaring type != runtime type).
         private static unsafe object ReadIl2CppField(MemberInfo member, object target)
         {
             string memberName = member?.Name ?? "?";
+            var il2cppObj = target as Il2CppObjectBase;
 
-            // ── Path 1: Property getter (preferred) ──
+            // ── Path 1: Native field read via il2cpp_field_get_value ──
+            var fi = member as FieldInfo;
+            if (fi != null && il2cppObj != null)
+            {
+                var declType = fi.DeclaringType;
+                var nativeField = declType?.GetField("NativeFieldInfoPtr_" + fi.Name,
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                if (nativeField != null)
+                {
+                    try
+                    {
+                        var nativeFieldPtr = (System.IntPtr)nativeField.GetValue(null);
+                        var objPtr = IL2CPP.Il2CppObjectBaseToPtr(il2cppObj);
+                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read objPtr={objPtr!=System.IntPtr.Zero} nativePtr={nativeFieldPtr!=System.IntPtr.Zero}");
+                        if (objPtr != System.IntPtr.Zero && nativeFieldPtr != System.IntPtr.Zero)
+                        {
+                            int ptrSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(System.IntPtr));
+                            var buf = System.Runtime.InteropServices.Marshal.AllocHGlobal(ptrSize);
+                            try
+                            {
+                                unsafe
+                                {
+                                    IL2CPP.il2cpp_field_get_value(objPtr, nativeFieldPtr, (void*)buf);
+                                }
+                                var fieldValPtr = System.Runtime.InteropServices.Marshal.ReadIntPtr(buf);
+                                StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': fieldValPtr={fieldValPtr!=System.IntPtr.Zero}");
+                                if (fieldValPtr != System.IntPtr.Zero)
+                                {
+                                    return System.Activator.CreateInstance(fi.FieldType, new object[] { fieldValPtr });
+                                }
+                            }
+                            finally
+                            {
+                                System.Runtime.InteropServices.Marshal.FreeHGlobal(buf);
+                            }
+                        }
+                    }
+                    catch (Exception nex)
+                    {
+                        StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read failed: {nex.Message}");
+                    }
+                }
+                else
+                {
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': no NativeFieldInfoPtr_ on {declType?.FullName}");
+                }
+            }
+
+            // ── Path 2: Property getter via Il2CppObjectBase ptr ──
+            // When the property is declared on a base class (e.g. Station) but the target
+            // is a derived proxy (e.g. DockingBay), getter.Invoke(target) fails with
+            // "Object does not match target type." Workaround: pass the Il2CppObjectBase
+            // itself — Il2CppInterop's generated getter accepts it because it only needs
+            // the native ptr, not the .NET wrapper type.
             if (member is PropertyInfo pi && pi.CanRead)
             {
                 try
@@ -112,7 +167,9 @@ namespace StarTruckMP.StarTruckClient
                     var getter = pi.GetGetMethod(true);
                     if (getter != null)
                     {
-                        var result = getter.Invoke(target, null);
+                        // Prefer Il2CppObjectBase as target to avoid type mismatch
+                        object invokeTarget = il2cppObj != null ? il2cppObj : target;
+                        var result = getter.Invoke(invokeTarget, null);
                         StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': Property-Getter OK, result={result!=null} type={result?.GetType()?.FullName}");
                         return result;
                     }
@@ -120,58 +177,6 @@ namespace StarTruckMP.StarTruckClient
                 catch (Exception pex)
                 {
                     StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': Property-Getter failed: {pex.InnerException?.Message ?? pex.Message}");
-                }
-            }
-
-            // ── Path 2: Native field read via il2cpp_field_get_value ──
-            var fi = member as FieldInfo;
-            if (fi != null)
-            {
-                var il2cppObj = target as Il2CppObjectBase;
-                if (il2cppObj != null)
-                {
-                    var declType = fi.DeclaringType;
-                    var nativeField = declType?.GetField("NativeFieldInfoPtr_" + fi.Name,
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-                    if (nativeField != null)
-                    {
-                        try
-                        {
-                            var nativeFieldPtr = (System.IntPtr)nativeField.GetValue(null);
-                            var objPtr = IL2CPP.Il2CppObjectBaseToPtr(il2cppObj);
-                            StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read objPtr={objPtr!=System.IntPtr.Zero} nativePtr={nativeFieldPtr!=System.IntPtr.Zero}");
-                            if (objPtr != System.IntPtr.Zero && nativeFieldPtr != System.IntPtr.Zero)
-                            {
-                                int ptrSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(System.IntPtr));
-                                var buf = System.Runtime.InteropServices.Marshal.AllocHGlobal(ptrSize);
-                                try
-                                {
-                                    unsafe
-                                    {
-                                        IL2CPP.il2cpp_field_get_value(objPtr, nativeFieldPtr, (void*)buf);
-                                    }
-                                    var fieldValPtr = System.Runtime.InteropServices.Marshal.ReadIntPtr(buf);
-                                    StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': fieldValPtr={fieldValPtr!=System.IntPtr.Zero}");
-                                    if (fieldValPtr != System.IntPtr.Zero)
-                                    {
-                                        return System.Activator.CreateInstance(fi.FieldType, new object[] { fieldValPtr });
-                                    }
-                                }
-                                finally
-                                {
-                                    System.Runtime.InteropServices.Marshal.FreeHGlobal(buf);
-                                }
-                            }
-                        }
-                        catch (Exception nex)
-                        {
-                            StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read failed: {nex.Message}");
-                        }
-                    }
-                    else
-                    {
-                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': no NativeFieldInfoPtr_ on {declType?.FullName}");
-                    }
                 }
             }
 
