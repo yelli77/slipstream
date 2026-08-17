@@ -274,14 +274,51 @@ namespace StarTruckMP.StarTruckClient
             return null;
         }
 
+        // Reflection caches for bay name properties
+        private static FieldInfo fi_displayName = null;
+        private static FieldInfo fi_bayName = null;
+        private static FieldInfo fi_m_displayName = null;
+        private static bool displayNameReflectionDone = false;
+
         private static string GetBayName(DockingBay bay)
         {
             // Return a clean display name for the bay.
-            // Game object names look like: "Docking_Bay_02 [ 006 ]" or "Docking_Bay_01 [ Shop ]"
-            // We extract the part in brackets (the bay ID) and clean it up.
-            string raw = bay?.gameObject?.name ?? "???";
+            // Game object names look like: "Docking_Bay_01 ( Job )" or "Docking_Bay_02 [ 006 ]"
+            string raw = bay?.gameObject?.name ?? "???" ;
 
-            // Try m_dockingBayId via reflection first
+            // 1. Try reflection for displayName / bayName / m_displayName
+            if (!displayNameReflectionDone && bay != null)
+            {
+                displayNameReflectionDone = true;
+                var bt = bay.GetType();
+                fi_displayName = bt.GetField("displayName",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                fi_bayName = bt.GetField("bayName",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                fi_m_displayName = bt.GetField("m_displayName",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            }
+            try
+            {
+                if (fi_displayName != null)
+                {
+                    var val = fi_displayName.GetValue(bay) as string;
+                    if (!string.IsNullOrEmpty(val)) return val.Trim();
+                }
+                if (fi_bayName != null)
+                {
+                    var val = fi_bayName.GetValue(bay) as string;
+                    if (!string.IsNullOrEmpty(val)) return val.Trim();
+                }
+                if (fi_m_displayName != null)
+                {
+                    var val = fi_m_displayName.GetValue(bay) as string;
+                    if (!string.IsNullOrEmpty(val)) return val.Trim();
+                }
+            }
+            catch { }
+
+            // 2. Try m_dockingBayId via reflection
             try
             {
                 if (!reflectionSearched)
@@ -298,7 +335,23 @@ namespace StarTruckMP.StarTruckClient
             }
             catch { }
 
-            // Extract content from square brackets: "Docking_Bay_02 [ 006 ]" -> "006"
+            // 3. Extract from parentheses: "Docking_Bay_01 ( Job )" -> "Job"
+            int parenStart = raw.IndexOf("(");
+            int parenEnd = raw.IndexOf(")");
+            if (parenStart >= 0 && parenEnd > parenStart)
+            {
+                string inside = raw.Substring(parenStart + 1, parenEnd - parenStart - 1).Trim();
+                if (!string.IsNullOrEmpty(inside))
+                {
+                    // Try to get bay number from underscore name
+                    string bayNum = ParseBayNumber(raw);
+                    if (!string.IsNullOrEmpty(bayNum))
+                        return inside + " " + bayNum;
+                    return inside;
+                }
+            }
+
+            // 4. Extract from square brackets: "Docking_Bay_02 [ 006 ]" -> "006"
             int bracketStart = raw.IndexOf("[");
             int bracketEnd = raw.IndexOf("]");
             if (bracketStart >= 0 && bracketEnd > bracketStart)
@@ -307,9 +360,34 @@ namespace StarTruckMP.StarTruckClient
                 if (!string.IsNullOrEmpty(inside)) return inside;
             }
 
+            // 5. Parse underscore name: "Docking_Bay_01" -> "Bay 01"
+            string parsed = ParseBayNumber(raw);
+            if (!string.IsNullOrEmpty(parsed)) return parsed;
+
             // Fallback: just the raw name
             return raw;
         }
+
+        /// <summary>
+        /// Parse bay number from underscore name like "Docking_Bay_01" -> "Bay 01".
+        /// </summary>
+        private static string ParseBayNumber(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return null;
+            // Find last underscore-separated token that looks like a number
+            int lastUnderscore = raw.LastIndexOf('_');
+            if (lastUnderscore >= 0 && lastUnderscore < raw.Length - 1)
+            {
+                string tail = raw.Substring(lastUnderscore + 1).Trim();
+                // Remove trailing brackets/parens content
+                int bracketIdx = tail.IndexOfAny(new char[] { '[', '(' });
+                if (bracketIdx >= 0) tail = tail.Substring(0, bracketIdx).Trim();
+                if (!string.IsNullOrEmpty(tail))
+                    return "Bay " + tail;
+            }
+            return null;
+        }
+
 
         private static Sprite cachedCircleSprite = null;
         private static Sprite GetCircleSprite()
@@ -530,18 +608,18 @@ namespace StarTruckMP.StarTruckClient
         {
             diagCounter++;
             if (markers.Count == 0) {
-                if (diagCounter % 120 == 1)
+                if (diagCounter % 600 == 1)
                     StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: markers.Count=0, skipping");
                 return;
             }
             if (gameCam == null || gameCam == null)
                 gameCam = StarTruckClient.playerCam?.GetComponent<Camera>();
             if (gameCam == null) {
-                if (diagCounter % 120 == 1)
+                if (diagCounter % 600 == 1)
                     StarTruckMP.Log.LogWarning("DockingBayHUD.UpdatePos: gameCam=null");
                 return;
             }
-            if (diagCounter % 120 == 1)
+            if (diagCounter % 600 == 1)
                 StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: {markers.Count} markers, cam={gameCam.name}, camPos=({gameCam.transform.position.x:F0},{gameCam.transform.position.y:F0},{gameCam.transform.position.z:F0})");
             
 
@@ -569,15 +647,16 @@ namespace StarTruckMP.StarTruckClient
                         bayWorldPos = bayRenderer.bounds.center;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
-                    if (diagCounter % 120 == 1)
+                    if (diagCounter % 600 == 1)
                     {
                         Vector3 sp = gameCam.WorldToScreenPoint(bayWorldPos);
                         StarTruckMP.Log.LogInfo($"  DockBay [{m.bayName}]: world=({bayWorldPos.x:F0},{bayWorldPos.y:F0},{bayWorldPos.z:F0}) dist={distance:F0}m screen=({sp.x:F0},{sp.y:F0}) z={sp.z:F0} active={m.rootObj.activeSelf}");
                     }
 
 
-                    // Hide marker if more than 1km away
-                    if (distance > 1000f)
+                    // Hide marker when too close (< 300m — bay is directly visible)
+                    // or too far (> 5000m — beyond useful navigation range)
+                    if (distance < 300f || distance > 5000f)
                     {
                         if (m.rootObj.activeSelf) m.rootObj.SetActive(false);
                         continue;
@@ -604,9 +683,9 @@ namespace StarTruckMP.StarTruckClient
 
                     // Project to screen
                     Vector3 screenPos3 = gameCam.WorldToScreenPoint(bayWorldPos);
-                    if (screenPos3.z < 0)
+                    if (screenPos3.z < 0f || screenPos3.z < 50f)
                     {
-                        // Behind camera — hide
+                        // Behind camera or too close to near plane — hide to prevent screen overflow
                         if (m.rootObj.activeSelf) m.rootObj.SetActive(false);
                         continue;
                     }
