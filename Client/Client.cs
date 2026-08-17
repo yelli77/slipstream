@@ -15,6 +15,7 @@ namespace StarTruckMP.StarTruckClient
         public static Client client = new Client();
         public static Dictionary<ushort, playerInfo> playerList = new Dictionary<ushort, playerInfo>();
         public static string currentSector = "none";
+        public static string currentDestinationGateId = "";
         public static movementTrans playerTrans = new movementTrans();
         public static movementTrans truckTrans = new movementTrans();
         public static movementTrans trailerTrans = new movementTrans();
@@ -81,6 +82,7 @@ namespace StarTruckMP.StarTruckClient
             SmoothTruckMovement();
             BillboardNameLabels();
             UpdateMapIndicators();
+            DetectDestinationGates();
 
             if (pendingSectorRetry && client.IsConnected && Time.realtimeSinceStartup >= nextSectorRetryTime)
             {
@@ -88,7 +90,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     OnArrivedAtSector();
                     DockingBayHUD.OnSectorChanged();
-                    WarpGateHUD.OnSectorChanged();
+                    WarpGateBillboard.OnSectorChanged();
                     pendingSectorRetry = false;
                 }
                 catch (System.Exception exSectorRetry)
@@ -289,7 +291,7 @@ namespace StarTruckMP.StarTruckClient
             // bekannten Sektor mit (SpawnMapIndicators/UpdateMapIndicators pruefen currentSector
             // unabhaengig vom tatsaechlichen Verbindungsstatus).
             DockingBayHUD.Cleanup();
-            WarpGateHUD.Cleanup();
+            WarpGateBillboard.Cleanup();
             currentSector = "none";
         }
 
@@ -367,7 +369,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"Failed to send player name: {ex.Message}");
             }
-            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateHUD.OnSectorChanged(); }
+            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateBillboard.OnSectorChanged(); }
             catch (System.Exception exSector)
             {
                 StarTruckMP.Log.LogWarning($"OnArrivedAtSector at connect failed, will retry: {exSector.Message}");
@@ -489,6 +491,8 @@ namespace StarTruckMP.StarTruckClient
                     bool isTruck = e.Message.GetBool();
                     bool inSeat = e.Message.GetBool();
                     bool remoteIsHonking = e.Message.GetBool();
+                    string remoteDestGate = "";
+                    try { remoteDestGate = e.Message.GetString(); } catch { }
 
                     playerInfo currentPlayer;
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
@@ -542,7 +546,6 @@ namespace StarTruckMP.StarTruckClient
                                 if (suitR != null && !suitR.enabled) suitR.enabled = true;
                             }
                         }
-                        playerList[playerId] = currentPlayer;
                         // Receiver-side edge detection: only play on false→true, stop on true→false
                         bool wasRemoteHonking = false;
                         lastRemoteHonking.TryGetValue(playerId, out wasRemoteHonking);
@@ -551,6 +554,8 @@ namespace StarTruckMP.StarTruckClient
                         else if (!remoteIsHonking && wasRemoteHonking && currentPlayer.Truck != null)
                             HandleRemoteHonkStop(playerId);
                         lastRemoteHonking[playerId] = remoteIsHonking;
+                        currentPlayer.destinationGateId = remoteDestGate;
+                        playerList[playerId] = currentPlayer;
                     }
                 }
             }
@@ -795,6 +800,80 @@ namespace StarTruckMP.StarTruckClient
             isHonking = UnityEngine.Input.GetKey(StarTruckMP.HonkKey);
         }
 
+        /// <summary>
+        /// Auto-detect which warp gate each player is heading toward.
+        /// Uses proximity (1500m) + velocity direction (dot product > 0.3 toward gate).
+        /// Sets currentDestinationGateId for local player.
+        /// </summary>
+        public static void DetectDestinationGates()
+        {
+            try
+            {
+                if (!client.IsConnected) return;
+                if (myTruck == null) return;
+
+                WarpTriggerZone[] allGates;
+                try { allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>(); }
+                catch { return; }
+                if (allGates == null || allGates.Length == 0)
+                {
+                    currentDestinationGateId = "";
+                    return;
+                }
+
+                Vector3 myPos = myTruck.transform.position;
+                Vector3 myVel = myTruckRigid != null ? myTruckRigid.velocity : Vector3.zero;
+                float bestScore = -1f;
+                string bestGateId = "";
+
+                foreach (var zone in allGates)
+                {
+                    if (zone == null || zone.gameObject == null) continue;
+                    Vector3 gatePos = zone.transform.position;
+                    float dist = Vector3.Distance(myPos, gatePos);
+                    if (dist > 1500f) continue;
+
+                    Vector3 toGate = (gatePos - myPos).normalized;
+                    float dot = Vector3.Dot(myVel.normalized, toGate);
+                    if (dot < 0.3f) continue;
+
+                    float score = (1f - dist / 1500f) * 0.5f + dot * 0.5f;
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        WarpGate gateComp = null;
+                        try { gateComp = zone.GetComponent<WarpGate>(); } catch { }
+                        if (gateComp == null) try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
+                        if (gateComp != null)
+                        {
+                            try
+                            {
+                                var fi = gateComp.GetType().GetField("entryGateId",
+                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                                if (fi != null) bestGateId = fi.GetValue(gateComp) as string;
+                                if (string.IsNullOrEmpty(bestGateId))
+                                {
+                                    var pi = gateComp.GetType().GetProperty("entryGateId",
+                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                                    if (pi != null) bestGateId = pi.GetValue(gateComp) as string;
+                                }
+                            }
+                            catch { }
+                        }
+                        if (string.IsNullOrEmpty(bestGateId))
+                        {
+                            bestGateId = zone.gameObject.name;
+                            int ci = bestGateId.IndexOf("(Clone)");
+                            if (ci > 0) bestGateId = bestGateId.Substring(0, ci).Trim();
+                        }
+                    }
+                }
+
+                currentDestinationGateId = bestGateId;
+            }
+            catch { }
+        }
+
         public static void SendMovement()
         {
             if (!client.IsConnected) return;
@@ -811,7 +890,7 @@ namespace StarTruckMP.StarTruckClient
                     if (honkJustStarted || honkJustEnded) wasHonking = isHonking;
                     if (!sentFirstUpdate || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
-                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk));
+                        client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk, currentDestinationGateId));
                         truckTrans.Pos = floatingOrigin.m_currentOrigin + myTruck.transform.position;
                         truckTrans.Rot = myTruck.transform.eulerAngles;
                         truckTrans.Vel = myTruckRigid.velocity;
@@ -822,7 +901,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (!sentFirstUpdate || PlayerLocation.worldPosition != playerTrans.Pos || playerCam.transform.eulerAngles != playerTrans.Rot || myPlayerRigid.velocity != playerTrans.Vel || myPlayerRigid.angularVelocity != playerTrans.AngVel)
                     {
-                        client.Send(Messages.createMovementMessage(client.Id, PlayerLocation.worldPosition + new Vector3(0, -1, 0), playerCam.transform.eulerAngles, myPlayerRigid.velocity, myPlayerRigid.angularVelocity, false, false));
+                        client.Send(Messages.createMovementMessage(client.Id, PlayerLocation.worldPosition + new Vector3(0, -1, 0), playerCam.transform.eulerAngles, myPlayerRigid.velocity, myPlayerRigid.angularVelocity, false, false, false, currentDestinationGateId));
                         playerTrans.Pos = PlayerLocation.worldPosition;
                         playerTrans.Rot = playerCam.transform.eulerAngles;
                         playerTrans.Vel = myPlayerRigid.velocity;

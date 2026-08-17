@@ -383,7 +383,7 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
-        public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat, bool isHonking = false)
+        public static Message createMovementMessage(ushort playerId, Vector3 position, Vector3 rotation, Vector3 velocity, Vector3 angVel, bool isTruck, bool inSeat, bool isHonking = false, string destinationGateId = "")
         {
             float[] playerTransform = { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z, velocity.x, velocity.y, velocity.z, angVel.x, angVel.y, angVel.z};
 
@@ -393,6 +393,7 @@ namespace StarTruckMP.Encoding
             message.AddBool(isTruck);
             message.AddBool(inSeat);
             message.AddBool(isHonking);
+            message.AddString(destinationGateId ?? "");
 
             return message;
         }
@@ -702,6 +703,14 @@ namespace StarTruckMP.Encoding
                 StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}] failed: {ex.Message}");
                 return null;
             }
+        }
+
+        public static Message createDestinationGateMessage(ushort playerId, string gateId)
+        {
+            Message message = Message.Create(MessageSendMode.Unreliable, messageType.setDestinationGate);
+            message.AddUShort(playerId);
+            message.AddString(gateId ?? "");
+            return message;
         }
 
     }

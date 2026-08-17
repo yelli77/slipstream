@@ -69,7 +69,7 @@ public class StarTruckMP : BasePlugin
             StarTruckClient.StarTruckClient.CheckHonk();
             StarTruckClient.StarTruckClient.SendMovement();
             StarTruckClient.DockingBayHUD.UpdatePositions();
-            StarTruckClient.WarpGateHUD.UpdatePositions();
+            StarTruckClient.WarpGateBillboard.UpdatePositions();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]
@@ -85,7 +85,7 @@ public class StarTruckMP : BasePlugin
         {
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
             try { StarTruckClient.DockingBayHUD.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"DockingBayHUD.OnSectorChanged error: {ex.Message}"); }
-            try { StarTruckClient.WarpGateHUD.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"WarpGateHUD.OnSectorChanged error: {ex.Message}"); }
+            try { StarTruckClient.WarpGateBillboard.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"WarpGateBillboard.OnSectorChanged error: {ex.Message}"); }
         }
 
         // Online/Offline-Umschalter sitzt im Pause-Menue (nicht im Hauptmenue) - da ist der

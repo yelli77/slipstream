@@ -19,7 +19,8 @@ namespace StarTruckMP.Utilities
         linkStatus,
         clientVersion,
         jobBoardSync,
-        cargoSync
+        cargoSync,
+        setDestinationGate
     }
 
     public struct playerInfo
@@ -45,6 +46,7 @@ namespace StarTruckMP.Utilities
         public float spawnTime;
         public bool isColliding;
         public bool collisionReady;
+        public string destinationGateId;
     }
 
     public struct movementTrans
