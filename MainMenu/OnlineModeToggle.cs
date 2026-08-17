@@ -32,6 +32,7 @@ namespace StarTruckMP.MainMenu
         public static bool OnlineModeEnabled { get; private set; } = LoadMode();
 
         private static Button toggleButtonInstance;
+        private static MenuButton templateInstance;
         private static TMP_Text toggleLabel;
 
         // Bewusst KEIN Laden eines gespeicherten "online"-Zustands: das Spiel soll bei jedem
@@ -247,6 +248,7 @@ namespace StarTruckMP.MainMenu
             // in dieser Kette - der Controller "ueberspringt" ihn, weil weder er die Nachbarn
             // kennt noch die Nachbarn ihn. Fix: explizit einhaengen (uns selbst UND die
             // ehemaligen direkten Nachbarn des Templates umbiegen).
+            templateInstance = template;
             WireUpNavigation(template, button);
 
             toggleLabel = text;
@@ -377,6 +379,21 @@ namespace StarTruckMP.MainMenu
 
             UpdateLabel();
             StarTruckMP.Log.LogInfo($"Modus umgeschaltet: {(OnlineModeEnabled ? "Online" : "Offline")}");
+        }
+
+        /// <summary>
+        /// Verdrahtet die Controller-Navigation erneut. PauseScreen.Awake() (wo wir das erste
+        /// Mal verdrahten) laeuft VOR Start()/OnEnable() - falls das Spiel die Navigation fuer
+        /// "Speichern"/"Nutzerhandbuch" (die haben mit m_saveOption ein eigenes, vermutlich
+        /// bedingt gesetztes Feld) erst dort fertig aufbaut, lesen wir bei Awake() einen
+        /// unfertigen Zwischenzustand. Wird zusaetzlich bei jedem tatsaechlichen Anzeigen des
+        /// Pause-Menues erneut aufgerufen (ScreenController.Activate), wenn die Navigation dann
+        /// garantiert fertig aufgebaut ist.
+        /// </summary>
+        public static void RefreshNavigation()
+        {
+            if (templateInstance == null || toggleButtonInstance == null) return;
+            WireUpNavigation(templateInstance, toggleButtonInstance);
         }
 
         public static void UpdateLabel()

@@ -618,6 +618,20 @@ namespace StarTruckMP.StarTruckClient
                     playerList[clientId] = clientInfo;
 
                     RemoveFromSector(clientId, clientInfo);
+
+                    // Job-/Cargo-Sync fuer Spaetankoemmlinge: bisher wurde nur beim MOMENT der
+                    // lokalen Generierung gesendet. Wenn ich (allein) schon ein Board fuer diesen
+                    // Sektor habe und jetzt jemand NEU in meinen aktuellen Sektor kommt, wuerde
+                    // der sonst nie etwas empfangen - meine Generierung liegt ja schon in der
+                    // Vergangenheit, es feuert kein neuer Trigger. Deshalb hier: wenn der andere
+                    // Spieler jetzt in meinem Sektor ist UND ich (jetzt) die Autoritaet bin,
+                    // schicke ich meinen bereits bestehenden Stand erneut (kein Neu-Generieren,
+                    // nur Re-Broadcast der aktuellen Live-Daten).
+                    if (clientInfo.sector == currentSector && JobBoardSync.IsAuthorityForCurrentSector())
+                    {
+                        try { CargoSync.OnLocalCargoSpawned(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"CargoSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
+                        try { JobBoardSync.OnLocalJobsGenerated(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"JobBoardSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
+                    }
                 }
             }
 
