@@ -1,3 +1,6 @@
+## Neu in custom-build-215: DockingBay Name Format
+
+- DockingBayHUD Name-Anzeige geaendert: "Bay {name} - Jobs" -> "{name} (Jobs)".
 ## Neu in custom-build-210: DockingBayHUD Font + Position Fix
 
 - Name-Label groesser (fontSize 12->14) und DIST-Label (11->13) fuer bessere Lesbarkeit.
