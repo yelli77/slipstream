@@ -240,10 +240,10 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                if (!StarTruckClient.client.IsConnected) return;
+                if (!StarTruckClient.client.IsConnected) { StarTruckMP.Log.LogInfo("WarpGateHUD: not connected, skipping."); return; }
 
                 string sector = StarTruckClient.currentSector;
-                if (string.IsNullOrEmpty(sector) || sector == "none") return;
+                if (string.IsNullOrEmpty(sector) || sector == "none") { StarTruckMP.Log.LogInfo($"WarpGateHUD: sector is null/empty/none (val={sector}), skipping."); return; }
 
                 // Only refresh if sector changed or timer expired
                 if (sector == lastSector && Time.realtimeSinceStartup < nextRefreshTime) return;
@@ -251,11 +251,11 @@ namespace StarTruckMP.StarTruckClient
                 nextRefreshTime = Time.realtimeSinceStartup + RefreshInterval;
 
                 EnsureHUDCanvas();
-                if (hudCanvas == null) return;
+                if (hudCanvas == null) { StarTruckMP.Log.LogWarning("WarpGateHUD: hudCanvas still null after EnsureHUDCanvas, skipping."); return; }
 
                 if (gameCam == null)
                     gameCam = StarTruckClient.playerCam?.GetComponent<Camera>();
-                if (gameCam == null) return;
+                if (gameCam == null) { StarTruckMP.Log.LogWarning("WarpGateHUD: gameCam is null (playerCam not available), skipping."); return; }
 
                 ClearMarkers();
 

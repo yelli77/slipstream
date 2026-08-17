@@ -88,6 +88,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     OnArrivedAtSector();
                     DockingBayHUD.OnSectorChanged();
+                    WarpGateHUD.OnSectorChanged();
                     pendingSectorRetry = false;
                 }
                 catch (System.Exception exSectorRetry)
@@ -366,7 +367,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"Failed to send player name: {ex.Message}");
             }
-            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); }
+            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateHUD.OnSectorChanged(); }
             catch (System.Exception exSector)
             {
                 StarTruckMP.Log.LogWarning($"OnArrivedAtSector at connect failed, will retry: {exSector.Message}");
