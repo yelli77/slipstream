@@ -125,7 +125,21 @@ namespace StarTruckMP.StarTruckClient
         public static bool versionRejected = false;
         public static string versionRejectedReason = "";
         private static float nextConnectAttemptTime = 0f;
-        private const float ConnectRetryDelaySeconds = 5f;
+        // War 5s, auf Wunsch (nach Test mit schnellem Offline/Online-Hin-und-Her-Klicken) auf 10s
+        // erhoeht: dem Server muss genug Zeit bleiben, den alten Disconnect sauber abzuschliessen
+        // (SteamID-basierter Ghost-Fix, _players-Aufraeumen, ClientDisconnect-Broadcast an alle),
+        // bevor derselbe Spieler wieder als neue Verbindung reinkommt. Nebenbei eine kleine
+        // Spam-Bremse gegen sehr schnelles Reconnect-Toggeln.
+        private const float ConnectRetryDelaySeconds = 10f;
+
+        // Setzt die Reconnect-Sperre sofort, statt nur auf das asynchrone Disconnected-Event zu
+        // warten - wird sowohl von dort als auch direkt beim manuellen Offline-Umschalten
+        // (OnlineModeToggle) aufgerufen, damit die Sperre garantiert in dem Moment aktiv ist, in
+        // dem der Disconnect angestossen wird, nicht erst wenn das Event irgendwann durchkommt.
+        public static void ArmReconnectCooldown()
+        {
+            nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
+        }
 
         public static void Update()
         {
@@ -234,7 +248,7 @@ namespace StarTruckMP.StarTruckClient
         {
             StarTruckMP.Log.LogInfo($"Disconnected from Server: {e.Reason.ToString()}");
             isConnecting = false;
-            nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
+            ArmReconnectCooldown();
 
             if (e.Reason == DisconnectReason.Kicked)
             {
@@ -360,7 +374,7 @@ namespace StarTruckMP.StarTruckClient
         {
             StarTruckMP.Log.LogInfo($"Connection Failed");
             isConnecting = false;
-            nextConnectAttemptTime = Time.realtimeSinceStartup + ConnectRetryDelaySeconds;
+            ArmReconnectCooldown();
         }
 
         /// <summary>

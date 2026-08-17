@@ -347,8 +347,10 @@ namespace StarTruckMP.MainMenu
         }
 
         // Verhindert Connect/Disconnect-Spam durch schnelles Mehrfachklicken - Klicks innerhalb
-        // der Cooldown-Zeit nach dem letzten tatsaechlichen Umschalten werden ignoriert.
-        private const float ToggleCooldownSeconds = 3f;
+        // der Cooldown-Zeit nach dem letzten tatsaechlichen Umschalten werden ignoriert. War 3s,
+        // auf 10s erhoeht: das ist die Zeit, die der Server braucht, um einen Disconnect wirklich
+        // sauber abzuschliessen (siehe SC.ArmReconnectCooldown), zusaetzlich zur Spam-Bremse.
+        private const float ToggleCooldownSeconds = 10f;
         private static float lastToggleTime = -999f;
 
         private static void OnToggleClicked()
@@ -385,6 +387,15 @@ namespace StarTruckMP.MainMenu
                 catch (Exception ex)
                 {
                     StarTruckMP.Log.LogWarning($"Konnte beim Umschalten auf Offline nicht trennen: {ex.Message}");
+                }
+                finally
+                {
+                    // Reconnect-Sperre sofort scharf machen, nicht erst wenn das asynchrone
+                    // Disconnected-Event irgendwann durchkommt - falls der Spieler kurz danach
+                    // wieder auf Online klickt (nach Ablauf des obigen Cooldowns), soll trotzdem
+                    // die volle ConnectRetryDelaySeconds-Wartezeit gelten, damit der Server Zeit
+                    // hatte, den alten Disconnect abzuschliessen.
+                    SC.ArmReconnectCooldown();
                 }
             }
 
