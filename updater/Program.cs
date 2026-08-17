@@ -39,7 +39,7 @@ namespace StarTruckMPUpdater
             while (gamePath == null || !IsValidGameFolder(gamePath))
             {
                 gamePath = Microsoft.VisualBasic.Interaction.InputBox(
-                    "Star Trucker Installationsordner nicht gefunden.\n\nBitte Pfad zum Star Trucker Ordner eingeben:",
+                    "Star Trucker install folder not found.\n\nPlease enter the path to the Star Trucker folder:",
                     "Slipstream",
                     @"C:\Program Files (x86)\Steam\steamapps\common\Star Trucker");
 
@@ -67,7 +67,7 @@ namespace StarTruckMPUpdater
             catch (Exception ex)
             {
                 Log($"Fehler beim Installieren von BepInEx: {ex.Message}");
-                ShowError($"Fehler beim Installieren von BepInEx:\n{ex.Message}");
+                ShowError($"Error installing BepInEx:\n{ex.Message}");
                 return 1;
             }
 
@@ -106,14 +106,14 @@ namespace StarTruckMPUpdater
             catch (Exception ex)
             {
                 Log($"Fehler beim Abrufen der Versionsinfo: {ex.Message}");
-                ShowError($"Fehler beim Abrufen der Versionsinfo:\n{ex.Message}");
+                ShowError($"Error fetching version info:\n{ex.Message}");
                 return 1;
             }
 
             if (remote == null)
             {
                 Log("Konnte keine Versionsinfo laden.");
-                ShowError("Konnte keine Versionsinfo laden.");
+                ShowError("Could not load version info.");
                 return 1;
             }
 
@@ -130,7 +130,7 @@ namespace StarTruckMPUpdater
             while (IsGameRunning())
             {
                 var result = MessageBox.Show(
-                    "Star Trucker läuft gerade und muss für das Update geschlossen werden.\n\nBitte das Spiel schließen und dann OK klicken.",
+                    "Star Trucker is currently running and needs to be closed for the update.\n\nPlease close the game, then click OK.",
                     "Slipstream",
                     MessageBoxButtons.OKCancel,
                     MessageBoxIcon.Warning);
@@ -160,7 +160,7 @@ namespace StarTruckMPUpdater
             catch (Exception ex)
             {
                 Log($"Fehler beim Installieren: {ex.Message}");
-                ShowError($"Fehler beim Installieren:\n{ex.Message}");
+                ShowError($"Error installing:\n{ex.Message}");
                 return 1;
             }
 
@@ -212,7 +212,7 @@ namespace StarTruckMPUpdater
             {
                 try
                 {
-                    form.UpdateStatus("Spiel wird vorbereitet, kann bis zu zwei Minuten dauern...");
+                    form.UpdateStatus("Preparing the game, this can take up to two minutes...");
                     Log("Fresh-Install: Start...");
                     LaunchGame(gamePath);
 
@@ -277,17 +277,17 @@ namespace StarTruckMPUpdater
                         WorkingDirectory = gamePath,
                         UseShellExecute = true
                     });
-                    ShowError("Star Trucker wurde ohne Steam gestartet. Falls das Spiel sich sofort wieder schliesst, bitte Steam vorher manuell starten und Star Trucker darueber oeffnen.");
+                    ShowError("Star Trucker was started without Steam. If the game closes immediately, please start Steam manually first and launch Star Trucker from there.");
                     return;
                 }
 
                 Log("Konnte Star Trucker.exe nicht finden.");
-                ShowError("Konnte Star Trucker.exe nicht finden. Bitte manuell ueber Steam starten.");
+                ShowError("Could not find Star Trucker.exe. Please start it manually via Steam.");
             }
             catch (Exception ex2)
             {
                 Log($"Star Trucker konnte nicht automatisch gestartet werden: {ex2.Message}");
-                ShowError($"Star Trucker konnte nicht automatisch gestartet werden:\n{ex2.Message}\n\nBitte manuell ueber Steam starten.");
+                ShowError($"Star Trucker could not be started automatically:\n{ex2.Message}\n\nPlease start it manually via Steam.");
             }
         }
 
@@ -557,7 +557,7 @@ namespace StarTruckMPUpdater
 
         static void ShowError(string message)
         {
-            MessageBox.Show(message, "Slipstream - Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(message, "Slipstream - Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -661,7 +661,7 @@ namespace StarTruckMPUpdater
 
             statusLabel = new Label
             {
-                Text = "Wird vorbereitet...",
+                Text = "Preparing...",
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopCenter,
                 Dock = DockStyle.Bottom,

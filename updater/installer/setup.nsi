@@ -1,6 +1,6 @@
 !define APPNAME "Slipstream"
 !define COMPANYNAME "Slipstream"
-!define DESCRIPTION "Installer & Auto-Updater fuer den StarTruckMP Multiplayer-Mod (Slipstream)"
+!define DESCRIPTION "Installer & auto-updater for the StarTruckMP multiplayer mod (Slipstream)"
 !define INSTALLDIR "$LOCALAPPDATA\Slipstream"
 
 Unicode true
@@ -15,19 +15,19 @@ SetCompressor /SOLID lzma
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
 !define MUI_WELCOMEPAGE_TITLE "Slipstream Setup"
-!define MUI_WELCOMEPAGE_TEXT "Dieser Assistent installiert Slipstream, mit dem du den StarTruckMP Multiplayer-Mod installierst und aktuell haeltst.$\r$\n$\r$\nSlipstream laedt bei jedem Start automatisch die neueste Mod-Version von GitHub (yelli77/slipstream)."
+!define MUI_WELCOMEPAGE_TEXT "This wizard will install Slipstream, which installs and keeps the StarTruckMP multiplayer mod up to date.$\r$\n$\r$\nSlipstream automatically downloads the latest mod version from GitHub (yelli77/slipstream) every time it starts."
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\Slipstream.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Slipstream jetzt starten"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch Slipstream now"
 !insertmacro MUI_PAGE_FINISH
 
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 
-!insertmacro MUI_LANGUAGE "German"
+!insertmacro MUI_LANGUAGE "English"
 
 Section "Install"
     SetOutPath "$INSTDIR"
