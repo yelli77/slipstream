@@ -482,10 +482,14 @@ namespace StarTruckMP.StarTruckClient
             if (nameLabel != null)
             {
                 nameLabel.text = $"Bay {bayName} - Jobs";
-                nameLabel.fontSize = 12;
+                nameLabel.fontSize = 14;
                 nameLabel.color = Color.white;
                 nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
                 nameLabel.raycastTarget = false;
+                // Ensure font is set (IL2CPP Instantiate quirk)
+                if (nameLabel.font == null && sourceTMP.font != null)
+                    nameLabel.font = sourceTMP.font;
+                nameLabel.ForceMeshUpdate();
             }
 
             // Distance label
@@ -504,7 +508,7 @@ namespace StarTruckMP.StarTruckClient
             if (distLabel != null)
             {
                 distLabel.text = "...";
-                distLabel.fontSize = 11;
+                distLabel.fontSize = 13;
                 distLabel.color = new Color(0.7f, 0.9f, 1f, 0.9f);
                 distLabel.alignment = TMPro.TextAlignmentOptions.Center;
                 distLabel.raycastTarget = false;
@@ -546,8 +550,11 @@ namespace StarTruckMP.StarTruckClient
 
                 try
                 {
-                    // World position accounting for floating origin
+                    // World position — prefer Renderer bounds center for visual accuracy
                     Vector3 bayWorldPos = m.bay.transform.position;
+                    var bayRenderer = m.bay.GetComponentInChildren<Renderer>();
+                    if (bayRenderer != null)
+                        bayWorldPos = bayRenderer.bounds.center;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
 
