@@ -292,13 +292,12 @@ namespace StarTruckMP.StarTruckClient
             if (gameCam == null || gameCam == null)
                 gameCam = StarTruckClient.playerCam?.GetComponent<Camera>();
             if (gameCam == null) return;
-            if (StarTruckClient.floatingOrigin == null) return;
+            
 
             if (Time.realtimeSinceStartup < nextUpdateTime) return;
             nextUpdateTime = Time.realtimeSinceStartup + UpdateInterval;
 
-            Vector3 origin = StarTruckClient.floatingOrigin.m_currentOrigin;
-            Vector3 camPos = gameCam.transform.position;
+                        Vector3 camPos = gameCam.transform.position;
             Vector3 camForward = gameCam.transform.forward;
             float screenW = Screen.width;
             float screenH = Screen.height;
@@ -310,7 +309,7 @@ namespace StarTruckMP.StarTruckClient
                 try
                 {
                     // World position accounting for floating origin
-                    Vector3 bayWorldPos = m.bay.transform.position + origin;
+                    Vector3 bayWorldPos = m.bay.transform.position;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
                     // Format distance
@@ -332,7 +331,7 @@ namespace StarTruckMP.StarTruckClient
 
                     // Project to screen
                     Vector3 screenPos3 = gameCam.WorldToScreenPoint(bayWorldPos);
-
+                    StarTruckMP.Log.LogInfo($"DockBayHUD DEBUG: camPos={camPos} bayPos={m.bay.transform.position} screenPos={screenPos3}");
                     if (screenPos3.z < 0)
                     {
                         // Behind camera — hide
