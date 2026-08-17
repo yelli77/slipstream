@@ -21,7 +21,7 @@ namespace StarTruckMP.StarTruckClient
         private static string lastSector = "none";
         private static float nextUpdateTime = 0f;
         private static readonly float UpdateInterval = 0.5f; // 2 Hz text updates
-        private static readonly float BillboardDistance = 300f; // meters before gate
+        private static readonly float BillboardDistance = 900f; // meters before gate
         private static readonly float MaxVisibleDistance = 5000f; // hide if camera too far
 
         // Colors
@@ -214,7 +214,7 @@ namespace StarTruckMP.StarTruckClient
             bg.name = "BG";
             bg.transform.SetParent(root.transform, false);
             bg.transform.localPosition = Vector3.zero;
-            bg.transform.localScale = new Vector3(15f, 25f, 1f);
+            bg.transform.localScale = new Vector3(45f, 75f, 1f);
             var bgRenderer = bg.GetComponent<MeshRenderer>();
             if (bgRenderer != null)
             {
@@ -232,19 +232,19 @@ namespace StarTruckMP.StarTruckClient
 
             // Gate name label (top area)
             GameObject nameObj = CreateTMPObject(root.transform, "GateName",
-                new Vector3(0f, 9f, -0.1f), 6f, GateNameColor,
+                new Vector3(0f, 27f, -0.1f), 6f, GateNameColor,
                 $"EXIT GATE: {gateName}", TMPro.TextAlignmentOptions.Center);
             var nameTMP = nameObj != null ? nameObj.GetComponent<TMPro.TextMeshPro>() : null;
 
             // Separator line
             var sepObj = CreateTMPObject(root.transform, "Separator",
-                new Vector3(0f, 7.5f, -0.1f), 3f, SepColor,
+                new Vector3(0f, 22f, -0.1f), 3f, SepColor,
                 "————————————————", TMPro.TextAlignmentOptions.Center);
             var sepTMP = sepObj != null ? sepObj.GetComponent<TMPro.TextMeshPro>() : null;
 
             // Content label (player list or "FREE")
             var contentObj = CreateTMPObject(root.transform, "Content",
-                new Vector3(0f, 2f, -0.1f), 5f, FreeColor,
+                new Vector3(0f, 5f, -0.1f), 5f, FreeColor,
                 "FREE", TMPro.TextAlignmentOptions.Center);
             var contentTMP = contentObj != null ? contentObj.GetComponent<TMPro.TextMeshPro>() : null;
 
