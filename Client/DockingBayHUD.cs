@@ -448,7 +448,7 @@ namespace StarTruckMP.StarTruckClient
             var rootRT = root.AddComponent<RectTransform>();
             rootRT.anchorMin = new Vector2(0.5f, 0.5f);
             rootRT.anchorMax = new Vector2(0.5f, 0.5f);
-            rootRT.sizeDelta = new Vector2(200f, 80f);
+            rootRT.sizeDelta = new Vector2(150f, 60f);
 
             // Dot
             GameObject dot = new GameObject("Dot");
@@ -457,7 +457,7 @@ namespace StarTruckMP.StarTruckClient
             dotRT.anchorMin = new Vector2(0.5f, 0.5f);
             dotRT.anchorMax = new Vector2(0.5f, 0.5f);
             dotRT.anchoredPosition = new Vector2(0f, 0f);
-            dotRT.sizeDelta = new Vector2(30f, 30f);
+            dotRT.sizeDelta = new Vector2(23f, 23f);
 
             var dotImg = dot.AddComponent<UnityEngine.UI.Image>();
             dotImg.sprite = GetCircleSprite();
@@ -474,15 +474,15 @@ namespace StarTruckMP.StarTruckClient
             {
                 nameRT.anchorMin = new Vector2(0.5f, 0.5f);
                 nameRT.anchorMax = new Vector2(0.5f, 0.5f);
-                nameRT.anchoredPosition = new Vector2(0f, 25f);
-                nameRT.sizeDelta = new Vector2(250f, 30f);
+                nameRT.anchoredPosition = new Vector2(0f, 19f);
+                nameRT.sizeDelta = new Vector2(188f, 23f);
                 nameRT.localScale = Vector3.one;
             }
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
             if (nameLabel != null)
             {
-                nameLabel.text = bayName;
-                nameLabel.fontSize = 16;
+                nameLabel.text = $"Bay {bayName} - Jobs";
+                nameLabel.fontSize = 12;
                 nameLabel.color = Color.white;
                 nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
                 nameLabel.raycastTarget = false;
@@ -496,15 +496,15 @@ namespace StarTruckMP.StarTruckClient
             {
                 distRT.anchorMin = new Vector2(0.5f, 0.5f);
                 distRT.anchorMax = new Vector2(0.5f, 0.5f);
-                distRT.anchoredPosition = new Vector2(0f, -25f);
-                distRT.sizeDelta = new Vector2(250f, 30f);
+                distRT.anchoredPosition = new Vector2(0f, -19f);
+                distRT.sizeDelta = new Vector2(188f, 23f);
                 distRT.localScale = Vector3.one;
             }
             var distLabel = distObj.GetComponent<TMPro.TextMeshProUGUI>();
             if (distLabel != null)
             {
                 distLabel.text = "...";
-                distLabel.fontSize = 14;
+                distLabel.fontSize = 11;
                 distLabel.color = new Color(0.7f, 0.9f, 1f, 0.9f);
                 distLabel.alignment = TMPro.TextAlignmentOptions.Center;
                 distLabel.raycastTarget = false;
