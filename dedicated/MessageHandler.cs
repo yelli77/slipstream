@@ -76,11 +76,23 @@ public class MessageHandler
     // Jobboard-Update zu dauerhaft widerspruechlichen Missionslisten fuehren wuerde.
     private void HandleJobBoardSync(MessageReceivedEventArgs e, Riptide.Server server)
     {
+        // Wireformat (siehe Client/ChunkedBlobTransfer.cs): sector, transferId, chunkIndex,
+        // totalChunks, chunkBytes. Der Server versteht/braucht die Bedeutung dieser Felder
+        // nicht, reicht sie nur 1:1 als eigenstaendige, kleine Nachricht weiter (jeder Chunk
+        // passt fuer sich locker in eine Riptide-Nachricht - das grosse Gesamtpaket wird nie
+        // auf einmal durch den Server geschickt).
         string sector = e.Message.GetString();
-        byte[] jobBlob = e.Message.GetBytes();
+        byte transferId = e.Message.GetByte();
+        ushort chunkIndex = e.Message.GetUShort();
+        ushort totalChunks = e.Message.GetUShort();
+        byte[] chunkBytes = e.Message.GetBytes();
+
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardSync);
         msg.AddString(sector);
-        msg.AddBytes(jobBlob);
+        msg.AddByte(transferId);
+        msg.AddUShort(chunkIndex);
+        msg.AddUShort(totalChunks);
+        msg.AddBytes(chunkBytes);
         server.SendToAll(msg, e.FromConnection.Id);
     }
 
@@ -91,11 +103,19 @@ public class MessageHandler
     // Jobs generiert), Riptide liefert Reliable-Nachrichten in Sendereihenfolge aus.
     private void HandleCargoSync(MessageReceivedEventArgs e, Riptide.Server server)
     {
+        // Gleiches Wireformat/Prinzip wie HandleJobBoardSync (siehe dort).
         string sector = e.Message.GetString();
-        byte[] cargoBlob = e.Message.GetBytes();
+        byte transferId = e.Message.GetByte();
+        ushort chunkIndex = e.Message.GetUShort();
+        ushort totalChunks = e.Message.GetUShort();
+        byte[] chunkBytes = e.Message.GetBytes();
+
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.CargoSync);
         msg.AddString(sector);
-        msg.AddBytes(cargoBlob);
+        msg.AddByte(transferId);
+        msg.AddUShort(chunkIndex);
+        msg.AddUShort(totalChunks);
+        msg.AddBytes(chunkBytes);
         server.SendToAll(msg, e.FromConnection.Id);
     }
 

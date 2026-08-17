@@ -92,10 +92,7 @@ namespace StarTruckMP.StarTruckClient
                 byte[] blob = SerializeJobs(saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>());
                 int jobCount = saveList.Count;
 
-                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardSync);
-                msg.AddString(StarTruckClient.currentSector);
-                msg.AddBytes(blob);
-                client.Send(msg);
+                ChunkedBlobTransfer.Send("job", (ushort)messageType.jobBoardSync, StarTruckClient.currentSector, blob);
 
                 StarTruckMP.Log.LogInfo($"JobBoardSync: {jobCount} Jobs fuer Sektor '{StarTruckClient.currentSector}' gesendet ({blob.Length} bytes).");
             }
@@ -109,8 +106,10 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                string sector = e.Message.GetString();
-                byte[] blob = e.Message.GetBytes();
+                if (!ChunkedBlobTransfer.TryReceiveChunk("job", e.Message, out string sector, out byte[] blob))
+                {
+                    return; // noch nicht alle Chunks da, warten auf den Rest
+                }
 
                 // Nur uebernehmen wenn wir selbst gerade in diesem Sektor sind - Jobboards
                 // anderer Sektoren wuerden sonst den lokalen ProceduralJobGenerator-State fuer

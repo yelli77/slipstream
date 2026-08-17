@@ -63,10 +63,7 @@ namespace StarTruckMP.StarTruckClient
                 byte[] blob = SerializeContainers(cargoSave.containers);
                 int count = Il2CppCount(cargoSave.containers);
 
-                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.cargoSync);
-                msg.AddString(StarTruckClient.currentSector);
-                msg.AddBytes(blob);
-                client.Send(msg);
+                ChunkedBlobTransfer.Send("cargo", (ushort)messageType.cargoSync, StarTruckClient.currentSector, blob);
 
                 StarTruckMP.Log.LogInfo($"CargoSync: {count} Container fuer Sektor '{StarTruckClient.currentSector}' gesendet ({blob.Length} bytes).");
             }
@@ -80,8 +77,10 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                string sector = e.Message.GetString();
-                byte[] blob = e.Message.GetBytes();
+                if (!ChunkedBlobTransfer.TryReceiveChunk("cargo", e.Message, out string sector, out byte[] blob))
+                {
+                    return; // noch nicht alle Chunks da, warten auf den Rest
+                }
 
                 if (sector != StarTruckClient.currentSector) return;
                 if (JobBoardSync.IsAuthorityForCurrentSector()) return;
