@@ -394,6 +394,39 @@ namespace StarTruckMP.MainMenu
         {
             if (templateInstance == null || toggleButtonInstance == null) return;
             WireUpNavigation(templateInstance, toggleButtonInstance);
+            DumpFullNavigation();
+        }
+
+        /// <summary>
+        /// Diagnose: loggt Name + alle vier Navigation-Nachbarn JEDES Selectable im Pause-Menue
+        /// (sortiert nach Bildschirm-Y-Position, oben nach unten), nicht nur der drei, die
+        /// WireUpNavigation anfasst. Die bisherigen zwei Fix-Versuche (custom-build-176/178)
+        /// haben am beobachteten 'Load -> Exit' Sprung nichts geaendert - um nicht weiter zu
+        /// raten, hier die vollstaendige Topologie.
+        /// </summary>
+        private static void DumpFullNavigation()
+        {
+            try
+            {
+                if (toggleButtonInstance == null) return;
+                var root = toggleButtonInstance.transform.root;
+                var all = root.GetComponentsInChildren<Selectable>(true);
+
+                var sorted = new System.Collections.Generic.List<Selectable>();
+                for (int i = 0; i < all.Length; i++) sorted.Add(all[i]);
+                sorted.Sort((a, b) => b.transform.position.y.CompareTo(a.transform.position.y));
+
+                string N(Selectable s) => s != null ? s.gameObject.name : "-";
+                foreach (var sel in sorted)
+                {
+                    var nav = sel.navigation;
+                    StarTruckMP.Log.LogInfo($"OnlineModeToggle: NAV-DUMP '{sel.gameObject.name}' (active={sel.gameObject.activeInHierarchy}, interactable={sel.interactable}, mode={nav.mode}): up={N(nav.selectOnUp)} down={N(nav.selectOnDown)} left={N(nav.selectOnLeft)} right={N(nav.selectOnRight)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"OnlineModeToggle: DumpFullNavigation fehlgeschlagen: {ex}");
+            }
         }
 
         public static void UpdateLabel()
