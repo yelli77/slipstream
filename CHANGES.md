@@ -1,3 +1,11 @@
+## Neu in custom-build-210: DockingBayHUD Font + Position Fix
+
+- Name-Label groesser (fontSize 12->14) und DIST-Label (11->13) fuer bessere Lesbarkeit.
+- Font-Fallback: Prueft ob nameLabel.font nach IL2CPP-Instantiate null ist und setzt explizit.
+- ForceMeshUpdate() nach Text-Setzung erzwingt sofortiges Rendering.
+- Marker-Position: Nutzt Renderer.bounds.center des DockingBay-Kind-Objekts statt
+  der DockingBay-Transform-Position fuer genauere visuelle Platzierung am Docking-Pad.
+
 
 ## Neu in custom-build-208: WarpGateHUD — Stargate-Nachbaranzeige
 
