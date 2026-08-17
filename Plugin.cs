@@ -50,6 +50,7 @@ public class StarTruckMP : BasePlugin
 
         Log.LogInfo($"Plugin {pluginGuid} is loaded! [{customBuildNumber}]");
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
+        ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.StarTruckClient.WarpGateBillboard.BillboardBehavior>();
 
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));

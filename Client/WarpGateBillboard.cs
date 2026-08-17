@@ -21,7 +21,7 @@ namespace StarTruckMP.StarTruckClient
         private static string lastSector = "none";
         private static float nextUpdateTime = 0f;
         private static readonly float UpdateInterval = 0.5f; // 2 Hz text updates
-        private static readonly float BillboardDistance = 500f; // meters before gate
+        private static readonly float BillboardDistance = 300f; // meters before gate
         private static readonly float MaxVisibleDistance = 5000f; // hide if camera too far
 
         // Colors
@@ -191,7 +191,7 @@ namespace StarTruckMP.StarTruckClient
         /// <summary>
         /// Creates a world-space billboard for a single gate.
         /// </summary>
-        private static void CreateBillboard(WarpTriggerZone zone, TMPro.TextMeshPro sourceTMP)
+        private static void CreateBillboard(WarpTriggerZone zone)
         {
             string gateId = GetGateId(zone);
             string gateName = GetGateName(zone);
@@ -199,7 +199,12 @@ namespace StarTruckMP.StarTruckClient
             // Root object
             GameObject root = new GameObject($"Billboard_{gateName}");
             root.transform.SetParent(null); // world-space, not under any parent
-            root.transform.position = zone.transform.position + zone.transform.forward * BillboardDistance;
+            // Position: between gate and nearest player (so player sees it when approaching)
+                Vector3 toPlayer = (StarTruckClient.myTruck != null)
+                    ? (StarTruckClient.myTruck.transform.position - zone.transform.position)
+                    : zone.transform.forward * -1f;
+                if (toPlayer.sqrMagnitude < 0.01f) toPlayer = zone.transform.forward * -1f;
+                root.transform.position = zone.transform.position + toPlayer.normalized * BillboardDistance;
 
             // Billboard behavior (faces camera)
             root.AddComponent<BillboardBehavior>();
@@ -226,53 +231,22 @@ namespace StarTruckMP.StarTruckClient
             if (bgCollider != null) UnityEngine.Object.Destroy(bgCollider);
 
             // Gate name label (top area)
-            GameObject nameObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
-            nameObj.name = "GateName";
-            nameObj.transform.localPosition = new Vector3(0f, 9f, -0.1f);
-            nameObj.transform.localScale = Vector3.one;
-            var nameTMP = nameObj.GetComponent<TMPro.TextMeshPro>();
-            if (nameTMP != null)
-            {
-                nameTMP.text = $"EXIT GATE: {gateName}";
-                nameTMP.fontSize = 6f;
-                nameTMP.color = GateNameColor;
-                nameTMP.alignment = TMPro.TextAlignmentOptions.Center;
-                nameTMP.enableAutoSizing = false;
-                nameTMP.overflowMode = TMPro.TextOverflowModes.Overflow;
-                nameTMP.enableWordWrapping = false;
-            }
+            GameObject nameObj = CreateTMPObject(root.transform, "GateName",
+                new Vector3(0f, 9f, -0.1f), 6f, GateNameColor,
+                $"EXIT GATE: {gateName}", TMPro.TextAlignmentOptions.Center);
+            var nameTMP = nameObj != null ? nameObj.GetComponent<TMPro.TextMeshPro>() : null;
 
             // Separator line
-            GameObject sepObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
-            sepObj.name = "Separator";
-            sepObj.transform.localPosition = new Vector3(0f, 7.5f, -0.1f);
-            sepObj.transform.localScale = Vector3.one;
-            var sepTMP = sepObj.GetComponent<TMPro.TextMeshPro>();
-            if (sepTMP != null)
-            {
-                sepTMP.text = "————————————————";
-                sepTMP.fontSize = 3f;
-                sepTMP.color = SepColor;
-                sepTMP.alignment = TMPro.TextAlignmentOptions.Center;
-                sepTMP.enableAutoSizing = false;
-            }
+            var sepObj = CreateTMPObject(root.transform, "Separator",
+                new Vector3(0f, 7.5f, -0.1f), 3f, SepColor,
+                "————————————————", TMPro.TextAlignmentOptions.Center);
+            var sepTMP = sepObj != null ? sepObj.GetComponent<TMPro.TextMeshPro>() : null;
 
             // Content label (player list or "FREE")
-            GameObject contentObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
-            contentObj.name = "Content";
-            contentObj.transform.localPosition = new Vector3(0f, 2f, -0.1f);
-            contentObj.transform.localScale = Vector3.one;
-            var contentTMP = contentObj.GetComponent<TMPro.TextMeshPro>();
-            if (contentTMP != null)
-            {
-                contentTMP.text = "FREE";
-                contentTMP.fontSize = 5f;
-                contentTMP.color = FreeColor;
-                contentTMP.alignment = TMPro.TextAlignmentOptions.Center;
-                contentTMP.enableAutoSizing = false;
-                contentTMP.overflowMode = TMPro.TextOverflowModes.Overflow;
-                contentTMP.enableWordWrapping = false;
-            }
+            var contentObj = CreateTMPObject(root.transform, "Content",
+                new Vector3(0f, 2f, -0.1f), 5f, FreeColor,
+                "FREE", TMPro.TextAlignmentOptions.Center);
+            var contentTMP = contentObj != null ? contentObj.GetComponent<TMPro.TextMeshPro>() : null;
 
             billboards.Add(new GateBillboard
             {
@@ -374,6 +348,33 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+
+        /// <summary>
+        /// Creates a TextMeshPro 3D text object from scratch (no cloning needed).
+        /// </summary>
+        private static GameObject CreateTMPObject(UnityEngine.Transform parent, string name,
+            Vector3 localPos, float fontSize, UnityEngine.Color color, string text,
+            TMPro.TextAlignmentOptions alignment)
+        {
+            GameObject obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            obj.transform.localPosition = localPos;
+            obj.transform.localScale = Vector3.one;
+            var tmp = obj.AddComponent<TMPro.TextMeshPro>();
+            if (tmp != null)
+            {
+                tmp.text = text;
+                tmp.fontSize = fontSize;
+                tmp.color = color;
+                tmp.alignment = alignment;
+                tmp.enableAutoSizing = false;
+                tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
+                tmp.enableWordWrapping = false;
+                tmp.raycastTarget = false;
+            }
+            return obj;
+        }
+
         public static void RefreshBillboards()
         {
             try
@@ -421,7 +422,7 @@ namespace StarTruckMP.StarTruckClient
                     if (zone == null || zone.gameObject == null) continue;
                     try
                     {
-                        CreateBillboard(zone, sourceTMP);
+                        CreateBillboard(zone);
                     }
                     catch (Exception ex)
                     {
