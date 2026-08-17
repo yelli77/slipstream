@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-180";
+    public const string customBuildNumber = "custom-build-181";
     public const int protocolBuildNumber = 151;
     internal static new ManualLogSource Log;
 
@@ -81,18 +81,18 @@ public class StarTruckMP : BasePlugin
             try { OnlineModeToggle.CreateToggleButton(__instance); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle-Button konnte nicht erstellt werden: {ex.Message}"); }
         }
 
-        // ScreenController.Activate() wird von JEDEM Screen beim Anzeigen aufgerufen - deshalb
-        // hier auf PauseScreen filtern, sonst wuerde das Label bei jedem beliebigen Screen-Wechsel
-        // (unnoetig, aber harmlos) mit aktualisiert.
-        [HarmonyPatch(typeof(com.monsterandmonster.Menu.ScreenController), nameof(com.monsterandmonster.Menu.ScreenController.Activate))]
+        // Vorheriger Ansatz (ScreenController.Activate() + "__instance is PauseScreen") hat beim
+        // echten Test NIE gefeuert - vermutlich funktioniert der C#-"is"-Typcheck auf IL2CPP-
+        // Interop-Objekten hier nicht zuverlaessig (aehnliche Interop-Eigenheiten hatten wir
+        // schon bei Listen/Nullable). Stattdessen: direkt PauseScreen.OnPauseButton() patchen -
+        // das ist die konkrete, eindeutige Methode, die beim Druecken der Pause-Taste laeuft,
+        // kein Typcheck noetig. Protected -> ueber String statt nameof() patchen.
+        [HarmonyPatch(typeof(PauseScreen), "OnPauseButton")]
         [HarmonyPostfix]
-        public static void ScreenController_Activate(com.monsterandmonster.Menu.ScreenController __instance)
+        public static void PauseScreen_OnPauseButton()
         {
-            if (__instance is PauseScreen)
-            {
-                try { OnlineModeToggle.UpdateLabel(); } catch { /* Label-Refresh darf nie den Rest stoppen */ }
-                try { OnlineModeToggle.RefreshNavigation(); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle.RefreshNavigation Fehler: {ex.Message}"); }
-            }
+            try { OnlineModeToggle.UpdateLabel(); } catch { /* Label-Refresh darf nie den Rest stoppen */ }
+            try { OnlineModeToggle.RefreshNavigation(); } catch (Exception ex) { Log.LogWarning($"OnlineModeToggle.RefreshNavigation Fehler: {ex.Message}"); }
         }
 
     }
