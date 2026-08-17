@@ -286,6 +286,7 @@ namespace StarTruckMP.StarTruckClient
             // Ohne dieses Reset zaehlt die Kartenanzeige den lokalen Spieler weiterhin im zuletzt
             // bekannten Sektor mit (SpawnMapIndicators/UpdateMapIndicators pruefen currentSector
             // unabhaengig vom tatsaechlichen Verbindungsstatus).
+            DockingBayHUD.Cleanup();
             currentSector = "none";
         }
 

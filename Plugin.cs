@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-186";
+    public const string customBuildNumber = "custom-build-187";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -68,6 +68,7 @@ public class StarTruckMP : BasePlugin
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.CheckHonk();
             StarTruckClient.StarTruckClient.SendMovement();
+            StarTruckClient.DockingBayHUD.UpdatePositions();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]
@@ -82,6 +83,7 @@ public class StarTruckMP : BasePlugin
         public static void OnArrivedAtSector(Object sender, EventArgs eventArgs)
         {
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
+            try { StarTruckClient.DockingBayHUD.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"DockingBayHUD.OnSectorChanged error: {ex.Message}"); }
         }
 
         // Online/Offline-Umschalter sitzt im Pause-Menue (nicht im Hauptmenue) - da ist der
