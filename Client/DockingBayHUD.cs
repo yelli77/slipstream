@@ -550,6 +550,13 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 bayWorldPos = m.bay.transform.position;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
+
+                    // Hide marker if more than 1km away
+                    if (distance > 1000f)
+                    {
+                        if (m.rootObj.activeSelf) m.rootObj.SetActive(false);
+                        continue;
+                    }
                     // Format distance — throttled to avoid per-frame string allocation
                     if (doTextUpdate)
                     {
