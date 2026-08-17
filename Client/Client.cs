@@ -150,6 +150,25 @@ namespace StarTruckMP.StarTruckClient
             sentFirstUpdate = false;
             try
             {
+                // WICHTIG: erst ab-, dann wieder anmelden (idempotent). ConnectToServer wird bei
+                // jedem Reconnect (Auto-Connect-Retry, manuelles Online/Offline-Umschalten) erneut
+                // aufgerufen: ohne dieses Unsubscribe-zuerst-Pattern haeufte sich pro Reconnect eine
+                // weitere Subscription auf denselben statischen "client" an. Ergebnis: jede
+                // eingehende Nachricht loeste Client_MessageReceived mehrfach fuer dasselbe Message-
+                // Objekt aus - der erste Aufruf las die Felder komplett (Lesecursor am Ende), der
+                // zweite/dritte Aufruf las dieselbe Nachricht dann ab einer bereits erschoepften
+                // Position weiter und lief ins Leere: IndexOutOfRangeException/OverflowException in
+                // GetFloats()/GetUShort() bei movementUpdate/trailerMovementUpdate, dazu
+                // Geister-Spieler wie 'Player 0' mit leerem Namen/Sektor aus so einem Fehl-Read.
+                // Gleichzeitig erklaert es die doppelten "Connected to Server"/"Sent player name"-
+                // Logzeilen, da auch Client_Connected mehrfach subscribed war.
+                client.Connected -= Client_Connected;
+                client.ConnectionFailed -= Client_ConnectionFailed;
+                client.MessageReceived -= Client_MessageReceived;
+                client.ClientConnected -= Client_ClientConnected;
+                client.ClientDisconnected -= Client_ClientDisconnected;
+                client.Disconnected -= Client_Disconnected;
+
                 var connection = client.Connect(IPAddress, 5);
                 client.Connected += Client_Connected;
                 client.ConnectionFailed += Client_ConnectionFailed;
