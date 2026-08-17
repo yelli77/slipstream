@@ -197,64 +197,50 @@ namespace StarTruckMP.StarTruckClient
 
         private static bool IsJobsBoard(DockingBay bay)
         {
+            if (bay == null) return false;
             try
             {
-                if (!groupReflectionSearched)
+                // Direct property access on DockingBay — no nested reflection needed.
+                // amenityType is a public property on DockingBay returning StationAmenity enum.
+                // StationAmenity.JobsBoard == 1 (confirmed from IL2CPP metadata).
+                var amenityTypeProp = bay.GetType().GetProperty("amenityType",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (amenityTypeProp != null)
                 {
-                    groupReflectionSearched = true;
-                    var bayType = bay.GetType();
-                    // m_dockingBayGroups is declared on Station (the base class of DockingBay),
-                    // so search the Station type for it. Fall back to bayType if Station not found.
-                    var stationType = TryFindType("Station");
-                    fi_dockingBayGroups = stationType != null
-                        ? FindMember(stationType, "m_dockingBayGroups")
-                        : FindMember(bayType, "m_dockingBayGroups");
-                    // DockingBayGroup is nested in Station. Find Station, then its nested type.
-                    var groupType = stationType != null
-                        ? stationType.GetNestedType("DockingBayGroup", BindingFlags.Public | BindingFlags.NonPublic)
-                        : null;
-                    if (groupType != null)
+                    var val = amenityTypeProp.GetValue(bay);
+                    if (val != null)
                     {
-                        fi_groupAmenityType = FindMember(groupType, "amenityType");
+                        int amenityInt = System.Convert.ToInt32(val);
+                        StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} amenityType={amenityInt}");
+                        return amenityInt == 1; // StationAmenity.JobsBoard
                     }
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard reflection: groupsField={(fi_dockingBayGroups!=null)}, amenityField={(fi_groupAmenityType!=null)}, stationType={(stationType!=null)}, groupType={(groupType!=null)}");
                 }
-                if (fi_dockingBayGroups == null || fi_groupAmenityType == null) return false;
 
-                var groupsObj = ReadIl2CppField(fi_dockingBayGroups, bay);
-                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBGRP groupsObj={groupsObj!=null} type={(groupsObj?.GetType()?.FullName)}");
-                if (groupsObj == null) return false;
-
-                // Il2Cpp List: use Count + indexer via reflection
-                var listType = groupsObj.GetType();
-                var countProp = listType.GetProperty("Count", BindingFlags.Public | BindingFlags.Instance);
-                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG countProp={countProp!=null} listType={listType?.FullName}");
-                if (countProp == null) return false;
-                int count = (int)countProp.GetValue(groupsObj);
-                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG groups count={count}");
-                var itemMethod = listType.GetMethod("get_Item", BindingFlags.Public | BindingFlags.Instance, null, new[] { typeof(int) }, null);
-                if (itemMethod == null) return false;
-
-                for (int i = 0; i < count; i++)
+                // Fallback: try AmenityType (capital A)
+                var amenityProp2 = bay.GetType().GetProperty("AmenityType",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (amenityProp2 != null)
                 {
-                    var grp = itemMethod.Invoke(groupsObj, new object[] { i });
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] grp={(grp!=null)} type={(grp?.GetType()?.FullName)}");
-                    if (grp == null) continue;
-                    var amenityVal = ReadIl2CppField(fi_groupAmenityType, grp);
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] amenityVal={(amenityVal!=null)} aType={(amenityVal?.GetType()?.FullName)}");
-                    if (amenityVal == null) continue;
-                    // amenityVal is an Il2CppSystem.Enum — get numeric value robustly
-                    int numeric = 0;
-                    try { numeric = Convert.ToInt32(amenityVal); }
-                    catch
+                    var val2 = amenityProp2.GetValue(bay);
+                    if (val2 != null)
                     {
-                        // Il2Cpp enums may expose value__ or need .value
-                        var vfield = amenityVal.GetType().GetField("value__", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (vfield != null) numeric = Convert.ToInt32(vfield.GetValue(amenityVal));
+                        int amenityInt2 = System.Convert.ToInt32(val2);
+                        StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} AmenityType={amenityInt2}");
+                        return amenityInt2 == 1;
                     }
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] numeric={numeric} (want {AmenityJobsBoard})");
-                    if (numeric == AmenityJobsBoard) return true;
                 }
+
+                // Fallback: try IsQuestBay (boolean)
+                var questProp = bay.GetType().GetProperty("IsQuestBay",
+                    BindingFlags.Public | BindingFlags.Instance);
+                if (questProp != null)
+                {
+                    bool isQuest = (bool)questProp.GetValue(bay);
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} IsQuestBay={isQuest}");
+                    return isQuest;
+                }
+
+                StarTruckMP.Log.LogWarning($"DockingBayHUD.IsJobsBoard: no amenityType/IsQuestBay found on {bay.GetType().Name}");
             }
             catch (Exception ex)
             {
@@ -262,7 +248,6 @@ namespace StarTruckMP.StarTruckClient
             }
             return false;
         }
-
         private static System.Type TryGetNestedType(System.Type parent, string name)
         {
             try
@@ -433,8 +418,8 @@ namespace StarTruckMP.StarTruckClient
                     if (bay == null || bay.gameObject == null) continue;
                     try
                     {
-                        // TODO: re-enable JobsBoard filter once IL2CPP reflection is sorted
-                        // if (!IsJobsBoard(bay)) continue;
+                        // JobsBoard filter — uses bay.amenityType (direct property, no nested reflection)
+                        if (!IsJobsBoard(bay)) continue;
                         CreateMarker(bay, sourceTMP);
                         jobsBoardCount++;
                     }
