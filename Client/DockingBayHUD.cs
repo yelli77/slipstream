@@ -276,9 +276,14 @@ namespace StarTruckMP.StarTruckClient
 
         private static string GetBayName(DockingBay bay)
         {
+            // Return a clean display name for the bay.
+            // Game object names look like: "Docking_Bay_02 [ 006 ]" or "Docking_Bay_01 [ Shop ]"
+            // We extract the part in brackets (the bay ID) and clean it up.
+            string raw = bay?.gameObject?.name ?? "???";
+
+            // Try m_dockingBayId via reflection first
             try
             {
-                // Try m_dockingBayId via reflection
                 if (!reflectionSearched)
                 {
                     reflectionSearched = true;
@@ -288,27 +293,22 @@ namespace StarTruckMP.StarTruckClient
                 if (fi_dockingBayId != null)
                 {
                     var val = fi_dockingBayId.GetValue(bay) as string;
-                    if (!string.IsNullOrEmpty(val)) return val;
+                    if (!string.IsNullOrEmpty(val)) return val.Trim();
                 }
             }
             catch { }
 
-            // Fallback: child TextMeshPro or object name
-            try
+            // Extract content from square brackets: "Docking_Bay_02 [ 006 ]" -> "006"
+            int bracketStart = raw.IndexOf("[");
+            int bracketEnd = raw.IndexOf("]");
+            if (bracketStart >= 0 && bracketEnd > bracketStart)
             {
-                var tmps = bay.GetComponentsInChildren<TMPro.TextMeshPro>();
-                if (tmps != null)
-                {
-                    foreach (var tmp in tmps)
-                    {
-                        if (tmp != null && !string.IsNullOrEmpty(tmp.text))
-                            return tmp.text;
-                    }
-                }
+                string inside = raw.Substring(bracketStart + 1, bracketEnd - bracketStart - 1).Trim();
+                if (!string.IsNullOrEmpty(inside)) return inside;
             }
-            catch { }
 
-            return bay.gameObject.name;
+            // Fallback: just the raw name
+            return raw;
         }
 
         private static Sprite cachedCircleSprite = null;
