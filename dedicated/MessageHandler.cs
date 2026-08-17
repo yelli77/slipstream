@@ -87,8 +87,15 @@ public class MessageHandler
         ushort totalChunks = e.Message.GetUShort();
         byte[] chunkBytes = e.Message.GetBytes();
 
+        // Absender-ID wird beim Relay ergaenzt (im eingehenden Client->Server-Wireformat nicht
+        // enthalten). Ohne sie koennen zwei Spieler, die etwa gleichzeitig einen Job-/Cargo-Sync
+        // senden, auf Empfaengerseite nicht auseinandergehalten werden - ChunkedBlobTransfer
+        // puffert sonst nur pro "channel" ("job"/"cargo"), nicht pro Absender, wodurch sich zwei
+        // parallele Transfers gegenseitig ueberschreiben/verwuersten konnten (siehe
+        // ChunkedBlobTransfer.cs TryReceiveChunk).
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardSync);
         msg.AddString(sector);
+        msg.AddUShort(e.FromConnection.Id);
         msg.AddByte(transferId);
         msg.AddUShort(chunkIndex);
         msg.AddUShort(totalChunks);
@@ -110,8 +117,10 @@ public class MessageHandler
         ushort totalChunks = e.Message.GetUShort();
         byte[] chunkBytes = e.Message.GetBytes();
 
+        // Absender-ID ergaenzen - siehe Kommentar in HandleJobBoardSync.
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.CargoSync);
         msg.AddString(sector);
+        msg.AddUShort(e.FromConnection.Id);
         msg.AddByte(transferId);
         msg.AddUShort(chunkIndex);
         msg.AddUShort(totalChunks);

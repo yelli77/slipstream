@@ -735,7 +735,13 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"Client_MessageReceived error: {ex.Message}");
+                // Vollen Stacktrace + MessageType statt nur ex.Message loggen, damit ein
+                // kuenftiger Fall sofort auf Handler+Zeile zeigt statt nur "Index was outside
+                // the bounds of the array" ohne jeden Kontext.
+                string msgTypeName;
+                try { msgTypeName = ((messageType)e.MessageId).ToString(); }
+                catch { msgTypeName = e.MessageId.ToString(); }
+                StarTruckMP.Log.LogWarning($"Client_MessageReceived error (MessageType={msgTypeName}): {ex}");
             }
         }
 

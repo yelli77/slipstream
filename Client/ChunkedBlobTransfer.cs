@@ -32,6 +32,12 @@ namespace StarTruckMP.StarTruckClient
             public byte[][] chunks;
             public int received;
         }
+        // Schluessel ist "channel:senderId" statt nur "channel" - sonst wuerden parallele
+        // Transfers zweier verschiedener Spieler (z.B. beide senden beim Sektorwechsel fast
+        // gleichzeitig einen Job-/Cargo-Sync) sich denselben Puffer teilen und sich gegenseitig
+        // die Chunks ueberschreiben/zerhacken, sobald eine neue transferId reinkommt bevor der
+        // andere Transfer fertig ist. Das fuehrte zu korrupten, falsch zusammengesetzten Blobs
+        // (kaputte Strings, teils Index-out-of-range beim Deserialisieren).
         private static readonly Dictionary<string, ReceiveState> receiveStates = new Dictionary<string, ReceiveState>();
 
         public static void Send(string channel, ushort messageTypeId, string sector, byte[] payload)
@@ -77,6 +83,7 @@ namespace StarTruckMP.StarTruckClient
         public static bool TryReceiveChunk(string channel, Message msg, out string sector, out byte[] completePayload)
         {
             sector = msg.GetString();
+            ushort senderId = msg.GetUShort();
             byte transferId = msg.GetByte();
             ushort chunkIndex = msg.GetUShort();
             ushort totalChunks = msg.GetUShort();
@@ -84,7 +91,9 @@ namespace StarTruckMP.StarTruckClient
 
             completePayload = null;
 
-            if (!receiveStates.TryGetValue(channel, out var state) || state.transferId != transferId)
+            string key = channel + ":" + senderId;
+
+            if (!receiveStates.TryGetValue(key, out var state) || state.transferId != transferId)
             {
                 state = new ReceiveState
                 {
@@ -93,7 +102,7 @@ namespace StarTruckMP.StarTruckClient
                     chunks = new byte[totalChunks][],
                     received = 0
                 };
-                receiveStates[channel] = state;
+                receiveStates[key] = state;
             }
 
             if (chunkIndex < state.chunks.Length && state.chunks[chunkIndex] == null)
@@ -116,7 +125,7 @@ namespace StarTruckMP.StarTruckClient
             }
 
             completePayload = result;
-            receiveStates.Remove(channel);
+            receiveStates.Remove(key);
             return true;
         }
     }

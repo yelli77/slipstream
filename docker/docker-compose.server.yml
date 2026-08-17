@@ -12,5 +12,5 @@ services:
       - MAX_CLIENTS=8
       - SERVER_NAME=StarTruckMP Server
       - STARTTRUCKMP_BRIDGE_URL=http://discord-bridge-bot:4500
-      - MIN_CLIENT_BUILD=151
+      - MIN_CLIENT_BUILD=152
     restart: unless-stopped
