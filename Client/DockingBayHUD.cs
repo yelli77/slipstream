@@ -559,7 +559,7 @@ namespace StarTruckMP.StarTruckClient
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
             if (nameLabel != null)
             {
-                nameLabel.text = $"Bay {bayName} - Jobs";
+                nameLabel.text = $"{bayName} (Jobs)";
                 nameLabel.fontSize = 14;
                 nameLabel.color = Color.white;
                 nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
