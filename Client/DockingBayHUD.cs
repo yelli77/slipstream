@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using HarmonyLib;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -43,6 +45,244 @@ namespace StarTruckMP.StarTruckClient
         // Reflection cache for DockingBay.m_dockingBayId
         private static FieldInfo fi_dockingBayId = null;
         private static bool reflectionSearched = false;
+
+        // Reflection cache for DockingBay.m_dockingBayGroups (Il2Cpp FIELD, type List<DockingBayGroup>)
+        // and Station.DockingBayGroup.amenityType (Il2Cpp FIELD, type StationAmenity enum).
+        private static MemberInfo fi_dockingBayGroups = null;
+        private static MemberInfo fi_groupAmenityType = null;
+        private static bool groupReflectionSearched = false;
+
+        // StationAmenity.JobsBoard == 1 (None=0). Only this bay type is the Auftragsboerse.
+        private static readonly int AmenityJobsBoard = 1;
+
+        /// <summary>
+        /// Returns true if the DockingBay belongs to at least one DockingBayGroup whose
+        /// amenityType == StationAmenity.JobsBoard (the job board / Auftragsboerse).
+        /// Uses reflection because DockingBayGroup is a nested Il2Cpp type we can't
+        /// reference at compile time.
+        /// </summary>
+        // Finds a member (field OR property getter) by name across the type and all base types.
+        // Il2CppInterop exposes some Il2Cpp fields as .NET properties (e.g. DockingBayGroups,
+        // amenityType), so we must check both.
+        private static MemberInfo FindMember(System.Type t, string name)
+        {
+            var cur = t;
+            while (cur != null && cur != typeof(object))
+            {
+                var f = cur.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                if (f != null) return f;
+                var p = cur.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                if (p != null && p.CanRead) return p;
+                cur = cur.BaseType;
+            }
+            // Last resort: case-insensitive scan
+            cur = t;
+            while (cur != null && cur != typeof(object))
+            {
+                foreach (var f in cur.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                    if (f.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase)) return f;
+                foreach (var p in cur.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                    if (p.CanRead && p.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase)) return p;
+                cur = cur.BaseType;
+            }
+            return null;
+        }
+
+        private static object GetMemberValue(MemberInfo m, object target)
+        {
+            if (m is FieldInfo fi) return fi.GetValue(target);
+            if (m is PropertyInfo pi) return pi.GetGetMethod(true).Invoke(target, null);
+            return null;
+        }
+        // Reads an Il2Cpp value robustly. Tries, in order:
+        //   1. Property getter — Il2CppInterop generates clean proxies; this is the
+        //      official, cleanest path (e.g. Station.get_DockingBayGroups → List<DockingBayGroup>).
+        //   2. Native field read via il2cpp_field_get_value + NativeFieldInfoPtr_<name>
+        //      (fallback for private backing fields when property getter is unavailable).
+        //   3. Reflection GetValue (last resort — may fail if declaring type != runtime type).
+        private static unsafe object ReadIl2CppField(MemberInfo member, object target)
+        {
+            string memberName = member?.Name ?? "?";
+
+            // ── Path 1: Property getter (preferred) ──
+            if (member is PropertyInfo pi && pi.CanRead)
+            {
+                try
+                {
+                    var getter = pi.GetGetMethod(true);
+                    if (getter != null)
+                    {
+                        var result = getter.Invoke(target, null);
+                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': Property-Getter OK, result={result!=null} type={result?.GetType()?.FullName}");
+                        return result;
+                    }
+                }
+                catch (Exception pex)
+                {
+                    StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': Property-Getter failed: {pex.InnerException?.Message ?? pex.Message}");
+                }
+            }
+
+            // ── Path 2: Native field read via il2cpp_field_get_value ──
+            var fi = member as FieldInfo;
+            if (fi != null)
+            {
+                var il2cppObj = target as Il2CppObjectBase;
+                if (il2cppObj != null)
+                {
+                    var declType = fi.DeclaringType;
+                    var nativeField = declType?.GetField("NativeFieldInfoPtr_" + fi.Name,
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    if (nativeField != null)
+                    {
+                        try
+                        {
+                            var nativeFieldPtr = (System.IntPtr)nativeField.GetValue(null);
+                            var objPtr = IL2CPP.Il2CppObjectBaseToPtr(il2cppObj);
+                            StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read objPtr={objPtr!=System.IntPtr.Zero} nativePtr={nativeFieldPtr!=System.IntPtr.Zero}");
+                            if (objPtr != System.IntPtr.Zero && nativeFieldPtr != System.IntPtr.Zero)
+                            {
+                                int ptrSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(System.IntPtr));
+                                var buf = System.Runtime.InteropServices.Marshal.AllocHGlobal(ptrSize);
+                                try
+                                {
+                                    unsafe
+                                    {
+                                        IL2CPP.il2cpp_field_get_value(objPtr, nativeFieldPtr, (void*)buf);
+                                    }
+                                    var fieldValPtr = System.Runtime.InteropServices.Marshal.ReadIntPtr(buf);
+                                    StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': fieldValPtr={fieldValPtr!=System.IntPtr.Zero}");
+                                    if (fieldValPtr != System.IntPtr.Zero)
+                                    {
+                                        return System.Activator.CreateInstance(fi.FieldType, new object[] { fieldValPtr });
+                                    }
+                                }
+                                finally
+                                {
+                                    System.Runtime.InteropServices.Marshal.FreeHGlobal(buf);
+                                }
+                            }
+                        }
+                        catch (Exception nex)
+                        {
+                            StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read failed: {nex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': no NativeFieldInfoPtr_ on {declType?.FullName}");
+                    }
+                }
+            }
+
+            // ── Path 3: Reflection GetValue (last resort) ──
+            try
+            {
+                var fallback = GetMemberValue(member, target);
+                StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': reflection fallback result={fallback!=null} type={fallback?.GetType()?.FullName}");
+                return fallback;
+            }
+            catch (Exception fex)
+            {
+                StarTruckMP.Log.LogWarning($"DockingBayHUD.ReadIl2CppField '{memberName}': ALL paths failed: {fex.Message}");
+                return null;
+            }
+        }
+
+
+        private static bool IsJobsBoard(DockingBay bay)
+        {
+            try
+            {
+                if (!groupReflectionSearched)
+                {
+                    groupReflectionSearched = true;
+                    var bayType = bay.GetType();
+                    // m_dockingBayGroups is declared on Station (the base class of DockingBay),
+                    // so search the Station type for it. Fall back to bayType if Station not found.
+                    var stationType = TryFindType("Station");
+                    fi_dockingBayGroups = stationType != null
+                        ? FindMember(stationType, "DockingBayGroups")
+                        : FindMember(bayType, "DockingBayGroups");
+                    // DockingBayGroup is nested in Station. Find Station, then its nested type.
+                    var groupType = stationType != null
+                        ? stationType.GetNestedType("DockingBayGroup", BindingFlags.Public | BindingFlags.NonPublic)
+                        : null;
+                    if (groupType != null)
+                    {
+                        fi_groupAmenityType = FindMember(groupType, "amenityType");
+                    }
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard reflection: groupsField={(fi_dockingBayGroups!=null)}, amenityField={(fi_groupAmenityType!=null)}, stationType={(stationType!=null)}, groupType={(groupType!=null)}");
+                }
+                if (fi_dockingBayGroups == null || fi_groupAmenityType == null) return false;
+
+                var groupsObj = ReadIl2CppField(fi_dockingBayGroups, bay);
+                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBGRP groupsObj={groupsObj!=null} type={(groupsObj?.GetType()?.FullName)}");
+                if (groupsObj == null) return false;
+
+                // Il2Cpp List: use Count + indexer via reflection
+                var listType = groupsObj.GetType();
+                var countProp = listType.GetProperty("Count", BindingFlags.Public | BindingFlags.Instance);
+                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG countProp={countProp!=null} listType={listType?.FullName}");
+                if (countProp == null) return false;
+                int count = (int)countProp.GetValue(groupsObj);
+                StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG groups count={count}");
+                var itemMethod = listType.GetMethod("get_Item", BindingFlags.Public | BindingFlags.Instance, null, new[] { typeof(int) }, null);
+                if (itemMethod == null) return false;
+
+                for (int i = 0; i < count; i++)
+                {
+                    var grp = itemMethod.Invoke(groupsObj, new object[] { i });
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] grp={(grp!=null)} type={(grp?.GetType()?.FullName)}");
+                    if (grp == null) continue;
+                    var amenityVal = ReadIl2CppField(fi_groupAmenityType, grp);
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] amenityVal={(amenityVal!=null)} aType={(amenityVal?.GetType()?.FullName)}");
+                    if (amenityVal == null) continue;
+                    // amenityVal is an Il2CppSystem.Enum — get numeric value robustly
+                    int numeric = 0;
+                    try { numeric = Convert.ToInt32(amenityVal); }
+                    catch
+                    {
+                        // Il2Cpp enums may expose value__ or need .value
+                        var vfield = amenityVal.GetType().GetField("value__", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (vfield != null) numeric = Convert.ToInt32(vfield.GetValue(amenityVal));
+                    }
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.DBG group[{i}] numeric={numeric} (want {AmenityJobsBoard})");
+                    if (numeric == AmenityJobsBoard) return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"DockingBayHUD.IsJobsBoard error: {ex.Message}");
+            }
+            return false;
+        }
+
+        private static System.Type TryGetNestedType(System.Type parent, string name)
+        {
+            try
+            {
+                var nested = parent.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
+                foreach (var n in nested)
+                    if (n.Name == name) return n;
+            }
+            catch { }
+            return null;
+        }
+
+        private static System.Type TryFindType(string typeName)
+        {
+            try
+            {
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    var t = asm.GetType(typeName, false, false);
+                    if (t != null) return t;
+                }
+            }
+            catch { }
+            return null;
+        }
 
         private static string GetBayName(DockingBay bay)
         {
@@ -182,18 +422,28 @@ namespace StarTruckMP.StarTruckClient
                 var sourceTMP = FindSourceTMP();
                 if (sourceTMP == null) return;
 
+                int jobsBoardCount = 0;
                 foreach (var bay in allBays)
                 {
                     if (bay == null || bay.gameObject == null) continue;
                     try
                     {
+                        // Only show the Auftragsboerse (JobsBoard) bays — other docking bays
+                        // (BodyShop, Repairs, ParkingBay, ...) are not relevant for job pickup.
+                        if (!IsJobsBoard(bay))
+                        {
+                            StarTruckMP.Log.LogInfo($"DockingBayHUD: skipping non-JobsBoard bay '{bay.gameObject.name}'");
+                            continue;
+                        }
                         CreateMarker(bay, sourceTMP);
+                        jobsBoardCount++;
                     }
                     catch (Exception ex)
                     {
                         StarTruckMP.Log.LogWarning($"DockingBayHUD: marker creation failed for '{bay.gameObject.name}': {ex.Message}");
                     }
                 }
+                StarTruckMP.Log.LogInfo($"DockingBayHUD: {jobsBoardCount} JobsBoard marker(s) created.");
 
                 StarTruckMP.Log.LogInfo($"DockingBayHUD: {markers.Count} markers created.");
             }
@@ -294,13 +544,16 @@ namespace StarTruckMP.StarTruckClient
             if (gameCam == null) return;
             
 
-            if (Time.realtimeSinceStartup < nextUpdateTime) return;
-            nextUpdateTime = Time.realtimeSinceStartup + UpdateInterval;
-
-                        Vector3 camPos = gameCam.transform.position;
+            Vector3 camPos = gameCam.transform.position;
             Vector3 camForward = gameCam.transform.forward;
             float screenW = Screen.width;
             float screenH = Screen.height;
+
+            // Distance text + color fade are throttled (~20 Hz) to avoid string allocations
+            // every frame. The actual marker POSITION is updated every frame so it glides
+            // smoothly instead of stuttering at 20 Hz (the "huepfen" effect).
+            bool doTextUpdate = Time.realtimeSinceStartup >= nextUpdateTime;
+            if (doTextUpdate) nextUpdateTime = Time.realtimeSinceStartup + UpdateInterval;
 
             foreach (var m in markers)
             {
@@ -312,26 +565,28 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 bayWorldPos = m.bay.transform.position;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
-                    // Format distance
-                    string distText;
-                    if (distance >= 1000f)
-                        distText = $"{distance / 1000f:F1} km";
-                    else
-                        distText = $"{distance:F0} m";
-
-                    if (m.distLabel != null)
-                        m.distLabel.text = distText;
-
-                    // Fade based on distance
-                    if (m.dotImg != null)
+                    // Format distance — throttled to avoid per-frame string allocation
+                    if (doTextUpdate)
                     {
-                        float t = Mathf.Clamp01((distance - 2000f) / 18000f); // 2-20km fade
-                        m.dotImg.color = Color.Lerp(DockingColor, DockingColorFar, t);
+                        string distText;
+                        if (distance >= 1000f)
+                            distText = $"{distance / 1000f:F1} km";
+                        else
+                            distText = $"{distance:F0} m";
+
+                        if (m.distLabel != null)
+                            m.distLabel.text = distText;
+
+                        // Fade based on distance
+                        if (m.dotImg != null)
+                        {
+                            float t = Mathf.Clamp01((distance - 2000f) / 18000f); // 2-20km fade
+                            m.dotImg.color = Color.Lerp(DockingColor, DockingColorFar, t);
+                        }
                     }
 
                     // Project to screen
                     Vector3 screenPos3 = gameCam.WorldToScreenPoint(bayWorldPos);
-                    StarTruckMP.Log.LogInfo($"DockBayHUD DEBUG: camPos={camPos} bayPos={m.bay.transform.position} screenPos={screenPos3}");
                     if (screenPos3.z < 0)
                     {
                         // Behind camera — hide
