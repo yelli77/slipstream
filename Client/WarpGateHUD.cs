@@ -482,7 +482,7 @@ namespace StarTruckMP.StarTruckClient
 
                     // Project to screen
                     Vector3 screenPos3 = gameCam.WorldToScreenPoint(gateWorldPos);
-                    if (screenPos3.z < 0)
+                    if (screenPos3.z < 0f || screenPos3.z < 500f)
                     {
                         if (m.rootObj.activeSelf) m.rootObj.SetActive(false);
                         continue;
