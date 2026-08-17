@@ -1,3 +1,12 @@
+## Neu in custom-build-215: WarpGateBillboard — 3D-Anzeigetafel an WarpGates
+
+- WarpGateHUD (Screen-Space Overlay) komplett ersetzt durch WarpGateBillboard (3D World-Space).
+- 500m vor jedem WarpGate erscheint eine grosse Anzeigetafel (15m x 25m, dunkelblau).
+- Zeigt ALLE Spieler die das Gate als Ziel haben: "POS 1. Name --- 342m", sortiert nach Distanz.
+- "FREE" in Gross + Gruen wenn niemand das Gate als Ziel markiert hat.
+- Detection: Spieler innerhalb 1500m + Velocity zeigt zum Gate (Dot-Product > 0.3).
+- Billboard rotiert automatisch zur Kamera (BillboardBehavior MonoBehaviour).
+- destinationGateId wird pro Movement-Update synchronisiert (backward-compatible, appended).
 ## Neu in custom-build-215: DockingBay Name Format
 
 - DockingBayHUD Name-Anzeige geaendert: "Bay {name} - Jobs" -> "{name} (Jobs)".
