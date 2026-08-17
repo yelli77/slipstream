@@ -288,6 +288,7 @@ namespace StarTruckMP.StarTruckClient
             // bekannten Sektor mit (SpawnMapIndicators/UpdateMapIndicators pruefen currentSector
             // unabhaengig vom tatsaechlichen Verbindungsstatus).
             DockingBayHUD.Cleanup();
+            WarpGateHUD.Cleanup();
             currentSector = "none";
         }
 

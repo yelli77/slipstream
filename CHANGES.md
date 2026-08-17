@@ -1,3 +1,13 @@
+
+## Neu in custom-build-208: WarpGateHUD — Stargate-Nachbaranzeige
+
+- An jedem WarpGate (Stargate) im Sektor wird ein ScreenSpace-Overlay angezeigt,
+  welcher Spieler im 2km-Umkreis als naechster springen darf.
+- Zeigt: Gate-Name, Spielername + Entfernung (m/km),
+  "Kein Spieler in Reichweite" wenn niemand in 2km.
+- Auto-Hide bei >5km Kamera-Entfernung, Orange-Dimming fuer Off-Screen Gates.
+- Aktualisiert sich alle 2s (Gate-Refresh) bzw. 0.2s (Text-Updates).
+
 # StarTruckMP — Custom Build Changes (custom-build-15)
 
 ## Server-Update (kein neuer Client-Build noetig): Rueckkehr zu General beim Disconnect
