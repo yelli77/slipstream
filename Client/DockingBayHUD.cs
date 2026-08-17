@@ -683,7 +683,7 @@ namespace StarTruckMP.StarTruckClient
 
                     // Project to screen
                     Vector3 screenPos3 = gameCam.WorldToScreenPoint(bayWorldPos);
-                    if (screenPos3.z < 0f || screenPos3.z < 50f)
+                    if (screenPos3.z < 0f || screenPos3.z < 200f)
                     {
                         // Behind camera or too close to near plane — hide to prevent screen overflow
                         if (m.rootObj.activeSelf) m.rootObj.SetActive(false);
