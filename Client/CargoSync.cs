@@ -49,18 +49,15 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
 
+                // CargoTracker.GetData(context)/SystemSaveData-Union ist NICHT fuer den Live-
+                // Gebrauch gedacht (wirft InvalidOperationException ausserhalb des eigentlichen
+                // Speicher-Vorgangs - siehe Log von custom-build-176, gleiches Problem wie bei
+                // JobBoardSync). CargoTracker hat aber eine direkte saveData-Property, kein
+                // Kontext-Umweg noetig.
                 var tracker = CargoTracker.Get();
                 if (tracker == null) return;
 
-                var emptyCurrent = new Il2CppSystem.Nullable<SystemSaveData>();
-                var saveDataOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
-                if (saveDataOpt == null || !saveDataOpt.HasValue)
-                {
-                    StarTruckMP.Log.LogWarning("CargoSync: CargoTracker.GetData() lieferte keinen Wert.");
-                    return;
-                }
-
-                var cargoSave = saveDataOpt.Value.CargoSaveData;
+                var cargoSave = tracker.saveData;
                 if (cargoSave == null || cargoSave.containers == null) return;
 
                 byte[] blob = SerializeContainers(cargoSave.containers);
@@ -100,12 +97,7 @@ namespace StarTruckMP.StarTruckClient
                 Il2CppSystem.Collections.Generic.IList<CargoContainerSaveData> localContainers = null;
                 if (tracker != null)
                 {
-                    var emptyCurrent = new Il2CppSystem.Nullable<SystemSaveData>();
-                    var localOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
-                    if (localOpt != null && localOpt.HasValue)
-                    {
-                        localContainers = localOpt.Value.CargoSaveData?.containers;
-                    }
+                    localContainers = tracker.saveData?.containers;
                 }
 
                 var incomingIds = new System.Collections.Generic.HashSet<long>();

@@ -70,25 +70,27 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
 
-                var tracker = QuestTracker.Get();
-                if (tracker == null) return;
+                // QuestTracker.GetData(context)/SystemSaveData-Union ist NICHT fuer den Live-
+                // Gebrauch gedacht (wirft InvalidOperationException ausserhalb des eigentlichen
+                // Speicher-Vorgangs - siehe Log von custom-build-176). Direkter, sauberer Weg
+                // ohne Umweg ueber den Save-Provider-Mechanismus: ProceduralJobGenerator haelt
+                // die Live-Jobliste selbst, und jede QuestInstance kann sich per GetData() (ganz
+                // ohne Kontext/Parameter) direkt in ihre QuestInstanceSaveData umwandeln.
+                var generator = ProceduralJobGenerator.Get();
+                if (generator == null) return;
 
-                var emptyCurrent = new Il2CppSystem.Nullable<SystemSaveData>();
-                var saveDataOpt = tracker.GetData(emptyCurrent, SaveState.GetDataContext.SaveGame);
-                if (saveDataOpt == null || !saveDataOpt.HasValue)
+                var liveJobs = ProceduralJobGenerator.GetAvailableJobs();
+                if (liveJobs == null) return;
+
+                var saveList = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>();
+                int liveCount = liveJobs.Count;
+                for (int i = 0; i < liveCount; i++)
                 {
-                    StarTruckMP.Log.LogWarning("JobBoardSync: QuestTracker.GetData() lieferte keinen Wert.");
-                    return;
+                    saveList.Add(liveJobs[i].GetData());
                 }
 
-                var questSave = saveDataOpt.Value.QuestSaveData;
-                if (questSave == null || questSave.availableJobs == null)
-                {
-                    return;
-                }
-
-                byte[] blob = SerializeJobs(questSave.availableJobs);
-                int jobCount = Il2CppCount(questSave.availableJobs);
+                byte[] blob = SerializeJobs(saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>());
+                int jobCount = saveList.Count;
 
                 var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardSync);
                 msg.AddString(StarTruckClient.currentSector);
