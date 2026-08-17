@@ -525,12 +525,24 @@ namespace StarTruckMP.StarTruckClient
             });
         }
 
+        private static int diagCounter = 0;
         public static void UpdatePositions()
         {
-            if (markers.Count == 0) return;
+            diagCounter++;
+            if (markers.Count == 0) {
+                if (diagCounter % 120 == 1)
+                    StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: markers.Count=0, skipping");
+                return;
+            }
             if (gameCam == null || gameCam == null)
                 gameCam = StarTruckClient.playerCam?.GetComponent<Camera>();
-            if (gameCam == null) return;
+            if (gameCam == null) {
+                if (diagCounter % 120 == 1)
+                    StarTruckMP.Log.LogWarning("DockingBayHUD.UpdatePos: gameCam=null");
+                return;
+            }
+            if (diagCounter % 120 == 1)
+                StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: {markers.Count} markers, cam={gameCam.name}, camPos=({gameCam.transform.position.x:F0},{gameCam.transform.position.y:F0},{gameCam.transform.position.z:F0})");
             
 
             Vector3 camPos = gameCam.transform.position;
@@ -556,6 +568,12 @@ namespace StarTruckMP.StarTruckClient
                     if (bayRenderer != null)
                         bayWorldPos = bayRenderer.bounds.center;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
+
+                    if (diagCounter % 120 == 1)
+                    {
+                        Vector3 sp = gameCam.WorldToScreenPoint(bayWorldPos);
+                        StarTruckMP.Log.LogInfo($"  DockBay [{m.bayName}]: world=({bayWorldPos.x:F0},{bayWorldPos.y:F0},{bayWorldPos.z:F0}) dist={distance:F0}m screen=({sp.x:F0},{sp.y:F0}) z={sp.z:F0} active={m.rootObj.activeSelf}");
+                    }
 
 
                     // Hide marker if more than 1km away
