@@ -859,9 +859,7 @@ namespace StarTruckMP.StarTruckClient
                             foreach (var z in allGates)
                             {
                                 if (z == null || z.gameObject == null) continue;
-                                WarpGate gateComp = null;
-                                try { gateComp = z.GetComponent<WarpGate>(); } catch { }
-                                if (gateComp == null) try { gateComp = z.GetComponentInParent<WarpGate>(); } catch { }
+                                WarpGate gateComp = JumpgateUtils.FindWarpGateForZone(z);
                                 if (gateComp == null) continue;
                                 string destSectorName = "";
                                 try { destSectorName = gateComp.DestinationSectorId != null ? gateComp.DestinationSectorId.name : ""; } catch { }
@@ -895,9 +893,7 @@ namespace StarTruckMP.StarTruckClient
                             foreach (var z in allGates)
                             {
                                 if (z == null || z.gameObject == null) continue;
-                                WarpGate gateComp = null;
-                                try { gateComp = z.GetComponent<WarpGate>(); } catch { }
-                                if (gateComp == null) try { gateComp = z.GetComponentInParent<WarpGate>(); } catch { }
+                                WarpGate gateComp = JumpgateUtils.FindWarpGateForZone(z);
                                 string destName;
                                 if (gateComp != null)
                                 {
