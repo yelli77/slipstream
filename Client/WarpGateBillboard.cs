@@ -22,6 +22,8 @@ namespace StarTruckMP.StarTruckClient
         private static float nextUpdateTime = 0f;
         private static readonly float UpdateInterval = 0.5f;
         private static readonly float BillboardDistance = 50f;
+        private static readonly float SideOffset = 25f;   // pushes the board off the direct flight line
+        private static readonly float HeightOffset = 12f; // and up, like a roadside/gantry sign
         private static readonly float MaxVisibleDistance = 5000f;
 
         // How far / how aligned with a gate an NPC (or player) truck has to be
@@ -252,12 +254,24 @@ namespace StarTruckMP.StarTruckClient
             GameObject root = new GameObject($"Billboard_{gateName}");
             root.transform.SetParent(null);
 
-            // Position: between gate and player (approach corridor)
+            // Position: beside the approach corridor (like a real airport/highway board),
+            // not directly on the gate-to-player line. A billboard sitting exactly on that
+            // line gets driven straight through - the camera clips inside the paper-thin
+            // WorldSpace canvas plane at close range and it visually "disappears". Offsetting
+            // it sideways + up keeps it out of the flight path while staying readable as the
+            // truck passes.
             Vector3 towardPlayer = (StarTruckClient.myTruck != null)
                 ? (StarTruckClient.myTruck.transform.position - zone.transform.position)
                 : zone.transform.forward * -1f;
             if (towardPlayer.sqrMagnitude < 0.01f) towardPlayer = zone.transform.forward * -1f;
-            root.transform.position = zone.transform.position + towardPlayer.normalized * BillboardDistance;
+            towardPlayer.Normalize();
+
+            Vector3 sideAxis = Vector3.Cross(Vector3.up, towardPlayer);
+            if (sideAxis.sqrMagnitude < 0.01f) sideAxis = zone.transform.right;
+            sideAxis.Normalize();
+
+            Vector3 corridorPoint = zone.transform.position + towardPlayer * BillboardDistance;
+            root.transform.position = corridorPoint + sideAxis * SideOffset + Vector3.up * HeightOffset;
             var cam = Camera.main;
             float camDist = cam != null ? Vector3.Distance(root.transform.position, cam.transform.position) : -1f;
             StarTruckMP.Log.LogInfo($"WarpGateBillboard: placed '{gateName}' at {root.transform.position}, camDist={camDist:F0}m, gatePos={zone.transform.position}");
@@ -304,7 +318,7 @@ namespace StarTruckMP.StarTruckClient
             if (nameLabel != null)
             {
                 nameLabel.text = $"EXIT GATE: {gateName}";
-                nameLabel.fontSize = 60f;
+                nameLabel.fontSize = 260f;
                 nameLabel.color = GateNameColor;
                 nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
                 nameLabel.raycastTarget = false;
@@ -330,7 +344,7 @@ namespace StarTruckMP.StarTruckClient
             if (sepTMP != null)
             {
                 sepTMP.text = "————————————";
-                sepTMP.fontSize = 40f;
+                sepTMP.fontSize = 140f;
                 sepTMP.color = SepColor;
                 sepTMP.alignment = TMPro.TextAlignmentOptions.Center;
                 sepTMP.raycastTarget = false;
@@ -356,7 +370,7 @@ namespace StarTruckMP.StarTruckClient
             if (contentTMP != null)
             {
                 contentTMP.text = "FREE";
-                contentTMP.fontSize = 80f;
+                contentTMP.fontSize = 260f;
                 contentTMP.color = FreeColor;
                 contentTMP.alignment = TMPro.TextAlignmentOptions.Center;
                 contentTMP.raycastTarget = false;
@@ -452,7 +466,7 @@ namespace StarTruckMP.StarTruckClient
             if (players.Count == 0)
             {
                 bb.contentLabel.text = "FREE";
-                bb.contentLabel.fontSize = 80f;
+                bb.contentLabel.fontSize = 260f;
                 bb.contentLabel.color = FreeColor;
             }
             else
@@ -474,7 +488,7 @@ namespace StarTruckMP.StarTruckClient
                     sb.AppendLine($"... +{players.Count - 10} more");
 
                 bb.contentLabel.text = sb.ToString().TrimEnd();
-                bb.contentLabel.fontSize = 45f;
+                bb.contentLabel.fontSize = 150f;
                 bb.contentLabel.color = PlayerColor;
             }
 
