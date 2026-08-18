@@ -266,7 +266,7 @@ namespace StarTruckMP.StarTruckClient
 
             // Canvas RectTransform sizing: 4500x7500 canvas units, scaled to 0.01 = 45m x 75m world
             RectTransform canvasRT = root.GetComponent<RectTransform>();
-            canvasRT.sizeDelta = new Vector2(2000f, 6000f);
+            canvasRT.sizeDelta = new Vector2(3500f, 6000f);
             root.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
             // Background Image (not Quad)
@@ -277,7 +277,7 @@ namespace StarTruckMP.StarTruckClient
             bgRT.anchorMax = Vector2.one;
             bgRT.offsetMin = Vector2.zero;
             bgRT.offsetMax = Vector2.zero;
-            bgRT.sizeDelta = new Vector2(2000f, 6000f);
+            bgRT.sizeDelta = new Vector2(3500f, 6000f);
             var bgImg = bg.AddComponent<UnityEngine.UI.Image>();
             bgImg.color = BgColor;
             bgImg.raycastTarget = false;
@@ -291,7 +291,7 @@ namespace StarTruckMP.StarTruckClient
                 nameRT.anchorMin = new Vector2(0.5f, 0.5f);
                 nameRT.anchorMax = new Vector2(0.5f, 0.5f);
                 nameRT.anchoredPosition = new Vector2(0f, 1800f);
-                nameRT.sizeDelta = new Vector2(1900f, 1000f);
+                nameRT.sizeDelta = new Vector2(3400f, 1000f);
                 nameRT.localScale = Vector3.one;
             }
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -317,7 +317,7 @@ namespace StarTruckMP.StarTruckClient
                 sepRT.anchorMin = new Vector2(0.5f, 0.5f);
                 sepRT.anchorMax = new Vector2(0.5f, 0.5f);
                 sepRT.anchoredPosition = new Vector2(0f, 1100f);
-                sepRT.sizeDelta = new Vector2(1900f, 400f);
+                sepRT.sizeDelta = new Vector2(3400f, 400f);
                 sepRT.localScale = Vector3.one;
             }
             var sepTMP = sepObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -343,7 +343,7 @@ namespace StarTruckMP.StarTruckClient
                 contentRT.anchorMin = new Vector2(0.5f, 0.5f);
                 contentRT.anchorMax = new Vector2(0.5f, 0.5f);
                 contentRT.anchoredPosition = new Vector2(0f, -400f);
-                contentRT.sizeDelta = new Vector2(1900f, 3600f);
+                contentRT.sizeDelta = new Vector2(3400f, 3600f);
                 contentRT.localScale = Vector3.one;
             }
             var contentTMP = contentObj.GetComponent<TMPro.TextMeshProUGUI>();
