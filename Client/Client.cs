@@ -93,7 +93,7 @@ namespace StarTruckMP.StarTruckClient
                     WarpGateBillboard.OnSectorChanged();
                     JumpgateOption1.CreateBoards();
                     JumpgateOption2.CreateBoards();
-                    JumpgateOption3.CreateBoards();
+                    // JumpgateOption3.CreateBoards(); // disabled: heavy per-pixel texture render froze the client and caused server disconnects
                     pendingSectorRetry = false;
                 }
                 catch (System.Exception exSectorRetry)
@@ -297,7 +297,7 @@ namespace StarTruckMP.StarTruckClient
             WarpGateBillboard.Cleanup();
             JumpgateOption1.Cleanup();
             JumpgateOption2.Cleanup();
-            JumpgateOption3.Cleanup();
+            // JumpgateOption3.Cleanup(); // disabled: option 3 no longer used
             currentSector = "none";
         }
 
@@ -377,7 +377,7 @@ namespace StarTruckMP.StarTruckClient
             }
             try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateBillboard.OnSectorChanged(); JumpgateOption1.CreateBoards();
                     JumpgateOption2.CreateBoards();
-                    JumpgateOption3.CreateBoards(); }
+                    /* JumpgateOption3.CreateBoards(); */ }
             catch (System.Exception exSector)
             {
                 StarTruckMP.Log.LogWarning($"OnArrivedAtSector at connect failed, will retry: {exSector.Message}");
