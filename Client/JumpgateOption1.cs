@@ -299,6 +299,15 @@ namespace StarTruckMP.StarTruckClient
             return name.Length > DriverNameMaxChars ? name.Substring(0, DriverNameMaxChars) : name;
         }
 
+        // Fixed number of position slots on the board - matches roughly how many rows fit
+        // in the sign's height before the top-most row would overflow past the board edge
+        // (title + header + one 3x-tall POS-1 row + up to 10 normal rows). This is a hard
+        // cap: any player beyond MaxBoardPositions simply isn't shown (they still count for
+        // gate-detection etc., just not on this particular sign), and unused slots below the
+        // cap are rendered as dimmed empty placeholder rows so the board always shows the
+        // same fixed layout.
+        private const int MaxBoardPositions = 11;
+
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
             var sb = new System.Text.StringBuilder();
@@ -310,20 +319,20 @@ namespace StarTruckMP.StarTruckClient
             sb.Append("<mspace=0.6em>");
             sb.AppendLine(FormatRow("POS", "DRIVER".PadRight(18), "DISTANCE"));
 
-            if (entries.Count == 0)
+            // Hard cut: only the first MaxBoardPositions entries (already ranked, POS 1
+            // first) are shown on this board.
+            int shownCount = Mathf.Min(entries.Count, MaxBoardPositions);
+
+            // Build every row first (still keyed by its real rank, pos 1 = best/next to
+            // jump), then render them BOTTOM-UP: pos 1 ends up as the last line (closest
+            // to the gate on the sign), higher/farther positions stack above it - easier
+            // to see who's up next while approaching.
+            var rows = new List<string>(MaxBoardPositions);
+            for (int pos = 1; pos <= MaxBoardPositions; pos++)
             {
-                sb.AppendLine("---");
-            }
-            else
-            {
-                // Build every row first (still keyed by its real rank, pos 1 = best/next to
-                // jump), then render them BOTTOM-UP: pos 1 ends up as the last line (closest
-                // to the gate on the sign), higher/farther positions stack above it - easier
-                // to see who's up next while approaching.
-                var rows = new List<string>(entries.Count);
-                int pos = 1;
-                foreach (var entry in entries)
+                if (pos <= shownCount)
                 {
+                    var entry = entries[pos - 1];
                     string distText;
                     if (entry.distanceFromGate < 1000f)
                         distText = $"{entry.distanceFromGate:F0}m";
@@ -362,12 +371,17 @@ namespace StarTruckMP.StarTruckClient
                         driverCell = driverTrunc.PadRight(18);
                     }
                     rows.Add(FormatRow(pos.ToString(), driverCell, distText));
-                    pos++;
                 }
-
-                for (int i = rows.Count - 1; i >= 0; i--)
-                    sb.AppendLine(rows[i]);
+                else
+                {
+                    // Empty slot - dimmed placeholder, same column widths as a real row.
+                    string emptyDriver = "---".PadRight(18);
+                    rows.Add($"<color=#5a5a5a>{FormatRow(pos.ToString(), emptyDriver, "---")}</color>");
+                }
             }
+
+            for (int i = rows.Count - 1; i >= 0; i--)
+                sb.AppendLine(rows[i]);
 
             sb.Append("</mspace>");
             return sb.ToString();
