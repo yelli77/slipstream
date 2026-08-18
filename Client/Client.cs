@@ -828,25 +828,34 @@ namespace StarTruckMP.StarTruckClient
 
                 try
                 {
-                    var gsp = GameStatePersistence.instance;
-                    if (gsp != null)
+                    // NOTE: GameStatePersistence.instance.journeyTrackerState is a SAVE-DATA
+                    // snapshot (JourneyTrackerData) - it only reflects what was last written to
+                    // the save file (e.g. on autosave/dock), NOT the player's live in-session
+                    // route selection. Switching destinations on the galaxy map updates the
+                    // LIVE JourneyTracker instance immediately, but that change doesn't reach
+                    // journeyTrackerState until the next save - which is why the old gate's
+                    // board never cleared after a route change. The live route lives on
+                    // PlayerProperties.instance.journeyTracker.CurrentJourney instead.
+                    var pp = PlayerProperties.instance;
+                    var jt = pp != null ? pp.journeyTracker : null;
+                    if (jt != null)
                     {
-                        var jtd = gsp.journeyTrackerState;
-                        if (jtd != null)
+                        var journey = jt.CurrentJourney;
+                        if (journey != null)
                         {
-                            var wps = jtd.waypoints;
-                            if (wps != null)
+                            int wpCount = journey.Count;
+                            waypointCount = wpCount;
+                            if (wpCount > 0)
                             {
-                                int wpCount = wps.Cast<Il2CppSystem.Collections.Generic.ICollection<string>>().Count;
-                                waypointCount = wpCount;
-                                if (wpCount > 0) nextSectorId = wps[0] ?? "";
+                                var firstSector = journey[0];
+                                nextSectorId = firstSector != null ? firstSector.name : "";
                             }
                         }
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    StarTruckMP.Log.LogWarning($"DetectDestinationGates: journeyTrackerState read failed: {ex.Message}");
+                    StarTruckMP.Log.LogWarning($"DetectDestinationGates: live journeyTracker read failed: {ex.Message}");
                 }
 
                 if (!string.IsNullOrEmpty(nextSectorId))
