@@ -21,7 +21,7 @@ namespace StarTruckMP.StarTruckClient
         private static bool nativeSignAvailable = false;
 
         // ─── Constants ───
-        private const float SideOffset = 25f;     // meters to the side (offset from Option 1)
+        private const float SideOffset = 39f;      // meters to the side, spaced past Option 1 with a 4m gap (board is 20m wide)
         private const float HeightOffset = 8f;
         private const float SignWidth = 2000f;
         private const float SignHeight = 3000f;
