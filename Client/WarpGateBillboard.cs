@@ -11,8 +11,8 @@ namespace StarTruckMP.StarTruckClient
 {
     /// <summary>
     /// 3D World-Space Billboard near each WarpGate showing which players
-    /// have marked this gate as their destination jumpgate.
-    /// Shows: Gate Name, player list (sorted by distance), or "FREE" when empty.
+    /// (and NPC trucks) have marked this gate as their destination jumpgate.
+    /// Shows: Gate Name, ranked list (sorted by distance), or "FREE" when empty.
     /// Uses WorldSpace Canvas + TextMeshProUGUI (proven DockingBayHUD pattern).
     /// </summary>
     public static class WarpGateBillboard
@@ -24,9 +24,15 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float BillboardDistance = 50f;
         private static readonly float MaxVisibleDistance = 5000f;
 
+        // How far / how aligned with a gate an NPC (or player) truck has to be
+        // before it counts as "heading to" that gate. Mirrors Client.DetectDestinationGates().
+        private static readonly float HeadingCheckRadius = 1500f;
+        private static readonly float HeadingMinDot = 0.3f;
+
         // Colors
         private static readonly Color GateNameColor = Color.white;
         private static readonly Color PlayerColor = new Color(0.2f, 1f, 0.8f, 1f);
+        private static readonly Color NpcColor = new Color(1f, 0.85f, 0.3f, 1f);
         private static readonly Color FreeColor = new Color(0f, 1f, 0.5f, 0.95f);
         private static readonly Color BgColor = new Color(0.05f, 0.08f, 0.15f, 0.85f);
         private static readonly Color SepColor = new Color(0.3f, 0.5f, 0.7f, 0.6f);
@@ -35,6 +41,12 @@ namespace StarTruckMP.StarTruckClient
         private static FieldInfo fi_entryGateName = null;
         private static FieldInfo fi_entryGateId = null;
         private static bool gateNameReflectionSearched = false;
+
+        // Reflection cache for AIVehicleDriver (NPC) name/id resolution
+        private static PropertyInfo pi_driverId = null;
+        private static bool driverReflectionSearched = false;
+
+        private static bool diagLogged = false;
 
         /// <summary>
         /// MonoBehaviour that makes the billboard face the camera each frame.
@@ -188,6 +200,47 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
+        /// Configures a TMP label cloned from sourceTMP so it actually renders.
+        /// Cloning an arbitrary scene TMP object via Instantiate() can silently carry
+        /// over state that makes the clone invisible even though the GameObject exists
+        /// (e.g. enableAutoSizing recalculating to a near-zero size in the new, differently
+        /// proportioned RectTransform, a stale/shared font material reference, or a
+        /// CanvasRenderer alpha baked in from a faded/hidden source panel). This resets
+        /// every one of those explicitly instead of hoping the clone "just works".
+        /// </summary>
+        private static void HardenClonedLabel(GameObject obj, TMPro.TextMeshProUGUI label, TMPro.TextMeshProUGUI sourceTMP)
+        {
+            if (obj == null || label == null) return;
+
+            // Make sure the clone itself (and everything up to our root) is active —
+            // Instantiate() preserves the source's active state, so if sourceTMP was
+            // ever found on a currently-inactive object this clone would silently stay off.
+            if (!obj.activeSelf) obj.SetActive(true);
+
+            // Autosizing recalculates fontSize on its own; if it survived the clone it
+            // will silently override the explicit fontSize set right after this call and
+            // can collapse the text to ~0pt in our much larger canvas. Force it off.
+            label.enableAutoSizing = false;
+            label.overflowMode = TMPro.TextOverflowModes.Overflow;
+            label.enabled = true;
+
+            // Re-bind font + material explicitly rather than trusting the cloned
+            // reference — IL2CPP interop clones have been observed losing/blanking the
+            // shared material reference on TMP components.
+            if (sourceTMP != null)
+            {
+                if (sourceTMP.font != null) label.font = sourceTMP.font;
+                if (sourceTMP.fontSharedMaterial != null) label.fontSharedMaterial = sourceTMP.fontSharedMaterial;
+            }
+
+            label.alpha = 1f;
+            var cr = obj.GetComponent<CanvasRenderer>();
+            if (cr != null) cr.SetAlpha(1f);
+            var cg = obj.GetComponent<CanvasGroup>();
+            if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = true; cg.interactable = true; }
+        }
+
+        /// <summary>
         /// Creates a world-space billboard for a single gate using Canvas + TMPUGUI.
         /// </summary>
         private static void CreateBillboard(WarpTriggerZone zone, TMPro.TextMeshProUGUI sourceTMP)
@@ -247,6 +300,7 @@ namespace StarTruckMP.StarTruckClient
                 nameRT.localScale = Vector3.one;
             }
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
+            HardenClonedLabel(nameObj, nameLabel, sourceTMP);
             if (nameLabel != null)
             {
                 nameLabel.text = $"EXIT GATE: {gateName}";
@@ -272,6 +326,7 @@ namespace StarTruckMP.StarTruckClient
                 sepRT.localScale = Vector3.one;
             }
             var sepTMP = sepObj.GetComponent<TMPro.TextMeshProUGUI>();
+            HardenClonedLabel(sepObj, sepTMP, sourceTMP);
             if (sepTMP != null)
             {
                 sepTMP.text = "————————————";
@@ -297,6 +352,7 @@ namespace StarTruckMP.StarTruckClient
                 contentRT.localScale = Vector3.one;
             }
             var contentTMP = contentObj.GetComponent<TMPro.TextMeshProUGUI>();
+            HardenClonedLabel(contentObj, contentTMP, sourceTMP);
             if (contentTMP != null)
             {
                 contentTMP.text = "FREE";
@@ -307,6 +363,24 @@ namespace StarTruckMP.StarTruckClient
                 if (contentTMP.font == null && sourceTMP.font != null)
                     contentTMP.font = sourceTMP.font;
                 contentTMP.ForceMeshUpdate();
+            }
+
+            // Force an immediate layout/geometry rebuild instead of waiting an
+            // indeterminate number of frames for IL2CPP's Canvas update loop.
+            Canvas.ForceUpdateCanvases();
+
+            if (!diagLogged)
+            {
+                diagLogged = true;
+                try
+                {
+                    var crN = nameObj.GetComponent<CanvasRenderer>();
+                    StarTruckMP.Log.LogInfo($"WarpGateBillboard DIAG: nameLabel active={nameLabel?.isActiveAndEnabled} alpha={nameLabel?.alpha} font={(nameLabel?.font != null)} mat={(nameLabel?.fontSharedMaterial != null)} canvasRendererAlpha={crN?.GetAlpha()} autoSize={nameLabel?.enableAutoSizing} fontSize={nameLabel?.fontSize}");
+                }
+                catch (Exception dex)
+                {
+                    StarTruckMP.Log.LogWarning($"WarpGateBillboard DIAG failed: {dex.Message}");
+                }
             }
 
             billboards.Add(new GateBillboard
@@ -322,8 +396,9 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Collects all players (remote + local) heading to a specific gate.
-        /// Returns list of (name, distance) tuples, sorted by distance.
+        /// Collects all players (remote + local) and NPC trucks heading to a specific
+        /// gate. Returns list of (name, distance) tuples, sorted by distance — the
+        /// sort order is what determines each entry's "POS N" slot on the board.
         /// </summary>
         private static List<(string name, float distance)> GetPlayersForGate(string gateId, Vector3 gateWorldPos)
         {
