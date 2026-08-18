@@ -91,6 +91,9 @@ namespace StarTruckMP.StarTruckClient
                     OnArrivedAtSector();
                     DockingBayHUD.OnSectorChanged();
                     WarpGateBillboard.OnSectorChanged();
+                    JumpgateOption1.CreateBoards();
+                    JumpgateOption2.CreateBoards();
+                    JumpgateOption3.CreateBoards();
                     pendingSectorRetry = false;
                 }
                 catch (System.Exception exSectorRetry)
@@ -292,6 +295,9 @@ namespace StarTruckMP.StarTruckClient
             // unabhaengig vom tatsaechlichen Verbindungsstatus).
             DockingBayHUD.Cleanup();
             WarpGateBillboard.Cleanup();
+            JumpgateOption1.Cleanup();
+            JumpgateOption2.Cleanup();
+            JumpgateOption3.Cleanup();
             currentSector = "none";
         }
 
@@ -369,7 +375,9 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"Failed to send player name: {ex.Message}");
             }
-            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateBillboard.OnSectorChanged(); }
+            try { OnArrivedAtSector(); DockingBayHUD.OnSectorChanged(); WarpGateBillboard.OnSectorChanged(); JumpgateOption1.CreateBoards();
+                    JumpgateOption2.CreateBoards();
+                    JumpgateOption3.CreateBoards(); }
             catch (System.Exception exSector)
             {
                 StarTruckMP.Log.LogWarning($"OnArrivedAtSector at connect failed, will retry: {exSector.Message}");

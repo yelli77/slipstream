@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-233";
+    public const string customBuildNumber = "custom-build-234";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -70,6 +70,9 @@ public class StarTruckMP : BasePlugin
             StarTruckClient.StarTruckClient.SendMovement();
             StarTruckClient.DockingBayHUD.UpdatePositions();
             StarTruckClient.WarpGateBillboard.UpdatePositions();
+            StarTruckClient.JumpgateOption1.UpdatePositions();
+            StarTruckClient.JumpgateOption2.UpdatePositions();
+            StarTruckClient.JumpgateOption3.UpdatePositions();
         }
 
         [HarmonyPatch(typeof(CustomizationState), nameof(CustomizationState.EquipLivery))]
@@ -86,6 +89,9 @@ public class StarTruckMP : BasePlugin
             try { StarTruckClient.StarTruckClient.OnArrivedAtSector(); } catch (Exception ex) { Log.LogError($"OnArrivedAtSector error: {ex.Message}"); }
             try { StarTruckClient.DockingBayHUD.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"DockingBayHUD.OnSectorChanged error: {ex.Message}"); }
             try { StarTruckClient.WarpGateBillboard.OnSectorChanged(); } catch (Exception ex) { Log.LogError($"WarpGateBillboard.OnSectorChanged error: {ex.Message}"); }
+            try { StarTruckClient.JumpgateOption1.CreateBoards(); } catch (Exception ex2) { Log.LogError($"JumpgateOption1.CreateBoards error: {ex2.Message}"); }
+            try { StarTruckClient.JumpgateOption2.CreateBoards(); } catch (Exception ex3) { Log.LogError($"JumpgateOption2.CreateBoards error: {ex3.Message}"); }
+            try { StarTruckClient.JumpgateOption3.CreateBoards(); } catch (Exception ex4) { Log.LogError($"JumpgateOption3.CreateBoards error: {ex4.Message}"); }
         }
 
         // Online/Offline-Umschalter sitzt im Pause-Menue (nicht im Hauptmenue) - da ist der
