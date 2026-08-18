@@ -294,6 +294,7 @@ namespace StarTruckMP.StarTruckClient
             DockingBayHUD.Cleanup();
             WarpGateBillboard.Cleanup();
             JumpgateOption1.Cleanup();
+            TruckTrafficDisabler.Cleanup();
             currentSector = "none";
         }
 
