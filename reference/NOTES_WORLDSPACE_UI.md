@@ -146,3 +146,61 @@ Not yet attempted — this is a lead, not a verified solution. If it turns out
 `m_signText`/the sign GameObject depend on private detection/trigger logic
 that's awkward to instantiate standalone, fall back to the from-scratch
 recipe above.
+
+## Option 3: reuse the native roadside billboard (`SectorBillboard`) — promising, needs verification
+
+The game has its own advertising-billboard system (from `reference/api-dump/Assembly-CSharp.txt`):
+
+```
+### SectorDynamicFeature : UnityEngine.MonoBehaviour
+  properties: _id, active, childFeatureCount, id
+  methods:    Activate, GetFeatureSpecificData, GetSaveData, Init, OnSaveSector, SetInteractable, SetSaveData, Start
+
+### SectorBillboard : SectorDynamicFeature
+  properties: active, availablePosterMaterials, billboardState, childFeatureCount, completeFlags,
+              expiry, location, onLocationTaskCompletedEvent, posterGroupPrefab, posterIdx,
+              ready, relatedQuest
+  methods:    Activate, DelayedApplySaveData, GetFeatureSpecificData, Init, OnDestroy,
+              OnSegmentComplete, SetInteractable, SetSaveData
+
+### SectorBillboardSegment : UnityEngine.MonoBehaviour
+  properties: animator, interactableAndPoI, posterMaterialSlot
+  methods:    Init, MarkCompleted, SetInteractable
+
+### SectorBillboardSegmentState : UnityEngine.MonoBehaviour
+  properties: allSegmentsCompleted, completedCount, onSegmentComplete, onSegmentCompleteGameEvent,
+              pointOfInterest, segmentCount, segments
+  methods:    Init, OnDisable, OnEnable, OnSegmentComplete, SetInteractable, add_/remove_onSegmentComplete
+```
+
+Why this is attractive: it's a real, correctly-lit, correctly-scaled 3D billboard
+mesh already placed in the world by the game's own content — reusing it
+sidesteps every problem in this document (URP shader mismatches, TMP-clone
+quirks, positioning/orientation, edge-on invisibility) because the mesh,
+material slot, and lighting are already right.
+
+Two open questions before committing to this path:
+
+1. **It's poster-based, not live text.** `availablePosterMaterials` /
+   `posterIdx` / `posterMaterialSlot` strongly suggest it swaps between a
+   fixed set of pre-baked poster *materials* (ad art), not runtime text
+   rendering. To show live content ("POS 1. PlayerName --- 3.2km") you'd
+   likely need to generate a `Texture2D` at runtime (draw the text into it
+   in code — no Unity Editor needed, just per-pixel/font-rasterization or a
+   simple bitmap font) and assign it as a new material on
+   `posterMaterialSlot`, rather than picking from `availablePosterMaterials`.
+   This is very doable but is a different technique than "clone a TMP
+   object" — budget time for it separately.
+
+2. **It's tied to `SectorDynamicFeature`'s quest/save system**
+   (`relatedQuest`, `onLocationTaskCompletedEvent`, `expiry`,
+   `GetSaveData`/`SetSaveData`). This looks like it's meant to be
+   quest-content placed at authored locations, not necessarily present at
+   every warp gate/sector generically. Needs checking at runtime (e.g. via
+   `FindObjectsOfType<SectorBillboard>()` while docked/in a sector with a
+   gate) whether one exists near warp gates at all before building on this.
+
+Not yet attempted. If it pans out, it's likely the best-looking, most robust
+option of the three in this document. If `SectorBillboard` turns out to be
+absent near warp gates or too tied to the quest system to repurpose cleanly,
+fall back to the from-scratch static sign recipe above.
