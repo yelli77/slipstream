@@ -23,9 +23,9 @@ namespace StarTruckMP.StarTruckClient
         // ─── Constants ───
         private const float SideOffset = 200f;     // meters to the side, further out than Option 1
         private const float HeightOffset = 8f;
-        private const float SignWidth = 2000f;
-        private const float SignHeight = 3000f;
-        private const float FontSizeValue = 180f;
+        private const float SignWidth = 6000f;     // 3x wider
+        private const float SignHeight = 9000f;    // 3x taller, matches 3x font
+        private const float FontSizeValue = 540f;  // 3x larger
 
         // ─── Internal types ───
         private struct PlayerEntry
