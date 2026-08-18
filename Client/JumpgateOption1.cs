@@ -479,8 +479,14 @@ namespace StarTruckMP.StarTruckClient
             tmp.fontSizeMin = FontSizeValue;
             tmp.fontSizeMax = FontSizeValue;
 
-            // 4. Alignment: top-left
-            tmp.alignment = TMPro.TextAlignmentOptions.TopLeft;
+            // 4. Alignment: bottom-left. The board's canvas/RectTransform is much taller
+            // than the handful of text lines it holds; anchoring to the TOP left the whole
+            // block (including POS 1, the row players actually care about) crammed near the
+            // top edge with a big empty gap below. Bottom-left anchoring means the text block
+            // grows UPWARD from the bottom edge, so combined with rows being appended
+            // bottom-up (POS 1 last => POS 1 ends up as the very last/bottom-most line), POS 1
+            // now sits right at the bottom of the sign - closest to eye level while approaching.
+            tmp.alignment = TMPro.TextAlignmentOptions.BottomLeft;
 
             // Disable word wrapping so the table columns don't break onto new lines,
             // and let overflow show (the board/canvas is sized generously already).
