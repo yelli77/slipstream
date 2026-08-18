@@ -48,7 +48,6 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Reflection cache for WarpGate.entryGateId ───
         private static FieldInfo fi_entryGateId;
-        private static bool reflectionCached = false;
 
 
 
@@ -140,13 +139,7 @@ namespace StarTruckMP.StarTruckClient
                     // Find all players heading to this gate
                     var playerEntries = CollectPlayersForGate(entryId, zone.transform.position);
 
-                    if (playerEntries.Count == 0)
-                    {
-                        // No players heading to this gate — skip
-                        continue;
-                    }
-
-                    // Create the board
+                    // Create the board (always — show FREE when no players)
                     var board = CreateBoardForGate(entryId, zone.transform, playerEntries, sourceTMP);
                     if (board != null)
                     {
@@ -232,7 +225,7 @@ namespace StarTruckMP.StarTruckClient
 
             if (entries.Count == 0)
             {
-                sb.AppendLine("NO DEPARTURES SCHEDULED");
+                sb.AppendLine("FREE");
                 return sb.ToString();
             }
 
@@ -437,18 +430,8 @@ namespace StarTruckMP.StarTruckClient
                     // Collect current players for this gate
                     var currentEntries = CollectPlayersForGate(entryId, zone.transform.position);
 
-                    if (currentEntries.Count == 0)
-                    {
-                        // No players heading here — destroy board if it exists
-                        if (boards.TryGetValue(entryId, out var existingBoard))
-                        {
-                            if (existingBoard.rootObject != null)
-                                UnityEngine.Object.Destroy(existingBoard.rootObject);
-                            boards.Remove(entryId);
-                            StarTruckMP.Log.LogInfo($"JumpgateOption1: removed board for gate '{entryId}' (no players).");
-                        }
-                        continue;
-                    }
+                    // Always keep board alive — update text to FREE when empty
+                    // (boards are permanent, never destroyed)
 
                     // Check if player list changed
                     bool changed = false;

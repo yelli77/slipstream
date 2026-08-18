@@ -461,8 +461,6 @@ namespace StarTruckMP.StarTruckClient
                     }
 
                     var entries = CollectPlayersForGate(entryId, zone.transform.position);
-                    if (entries.Count == 0) continue;
-
                     var board = CreateBoardForGate(entryId, zone.transform, entries);
                     if (board != null)
                     {
@@ -521,16 +519,7 @@ namespace StarTruckMP.StarTruckClient
 
                     var currentEntries = CollectPlayersForGate(entryId, zone.transform.position);
 
-                    if (currentEntries.Count == 0)
-                    {
-                        if (boards.TryGetValue(entryId, out var existing))
-                        {
-                            if (existing.rootObject != null) UnityEngine.Object.Destroy(existing.rootObject);
-                            if (existing.runtimeTexture != null) UnityEngine.Object.Destroy(existing.runtimeTexture);
-                            boards.Remove(entryId);
-                        }
-                        continue;
-                    }
+                    // Always keep board alive — update text to FREE when empty
 
                     if (boards.TryGetValue(entryId, out var board))
                     {
