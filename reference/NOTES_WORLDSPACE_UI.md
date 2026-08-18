@@ -76,3 +76,44 @@ UnityEngine.CoreModule, and both URP runtime assemblies. Grep it for a
 keyword before writing `GetField`/`GetProperty` reflection against a guessed
 name — see `reference/api-dump/README.md` for usage and its limitation (names
 only, no parameter/return types).
+
+## Recipe: static "airport departure board" style sign (fixed orientation, no rotation)
+
+If the goal is a real airport/highway-sign look — a board mounted next to the
+gate that does **not** rotate to face the camera, and you read it as you fly
+past — the camera-facing "billboard" trick above is the WRONG tool. Don't add
+`Update()` rotation at all for this case. Instead:
+
+1. **Position**: offset to the side of the gate's approach corridor and up,
+   not on the direct flight line (see build 221,
+   `git show 51a97e7 -- Client/WarpGateBillboard.cs` — `SideOffset`/
+   `HeightOffset` computed from `Vector3.Cross(Vector3.up, approachDirection)`).
+   This is still correct and independent of the rotation question.
+
+2. **Orientation: set ONCE at creation, never touched again.** Don't compute
+   it from `Camera.main` (that's what makes it a rotating billboard). Compute
+   it from the gate/corridor geometry instead, e.g.:
+   ```csharp
+   // Face the sign back along the approach direction, tilted very slightly
+   // toward where trucks are expected to fly past, like a real roadside sign
+   // angled to be readable from the direction of travel.
+   Quaternion fixedRot = Quaternion.LookRotation(-approachDirection, Vector3.up);
+   root.transform.rotation = fixedRot;
+   ```
+   No `BillboardBehavior`/`Update()` component at all — the object is 100%
+   static after `CreateBillboard()` runs. This also sidesteps any flicker
+   concerns from per-frame rotation interacting with floating-origin rebasing
+   (root.transform.SetParent(null) means its transform is in absolute world
+   space, so it needs no per-frame repositioning either — position it once).
+
+3. **Single flat plane is fine here** — you don't need the "cross-billboard
+   2 perpendicular planes" workaround from build 232. That trick exists to
+   make a sign readable from *any* angle when it can't rotate; a real airport
+   board is only meant to be read from the approach direction, same as here.
+   One plane, correctly oriented once, matches the reference photo (a single
+   flat road sign) and is simpler/more robust than the dual-plane hack.
+
+4. Everything from the TMP-cloning section above (autosizing off, font/material
+   rebind, active-state/alpha reset, `Canvas.ForceUpdateCanvases()`, and
+   fontSize tuned in the low hundreds) still applies — that part was never the
+   rotation-related issue.
