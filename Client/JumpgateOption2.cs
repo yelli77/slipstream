@@ -260,16 +260,16 @@ namespace StarTruckMP.StarTruckClient
             // Try native sign first
             if (nativeSignAvailable)
             {
-                var nativeBoard = TryCreateNativeSign(entryGateId, signPos, fixedRot, entries);
+                var nativeBoard = TryCreateNativeSign(entryGateId, gateTransform, signPos, fixedRot, entries);
                 if (nativeBoard != null) return nativeBoard;
             }
 
             // Fallback: Canvas+TMP (same as Option 1)
-            return CreateFallbackBoard(entryGateId, signPos, fixedRot, entries, sourceTMP);
+            return CreateFallbackBoard(entryGateId, gateTransform, signPos, fixedRot, entries, sourceTMP);
         }
 
         private static GateBoard TryCreateNativeSign(
-            string entryGateId, Vector3 signPos, Quaternion fixedRot, List<PlayerEntry> entries)
+            string entryGateId, Transform gateTransform, Vector3 signPos, Quaternion fixedRot, List<PlayerEntry> entries)
         {
             try
             {
@@ -299,6 +299,7 @@ namespace StarTruckMP.StarTruckClient
                     // Position
                     clone.transform.position = signPos;
                     clone.transform.rotation = fixedRot;
+                    clone.transform.SetParent(gateTransform, true);
 
                     // Find text component on clone
                     TMPro.TextMeshProUGUI tmpLabel = null;
@@ -368,6 +369,7 @@ namespace StarTruckMP.StarTruckClient
                                 clone.name = $"DepartureBoard_CargoBay_{entryGateId}";
                                 clone.transform.position = signPos;
                                 clone.transform.rotation = fixedRot;
+                                clone.transform.SetParent(gateTransform, true);
 
                                 TMPro.TextMeshProUGUI tmpLabel = null;
                                 var allTMP = clone.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
@@ -434,7 +436,7 @@ namespace StarTruckMP.StarTruckClient
         }
 
         private static GateBoard CreateFallbackBoard(
-            string entryGateId, Vector3 signPos, Quaternion fixedRot,
+            string entryGateId, Transform gateTransform, Vector3 signPos, Quaternion fixedRot,
             List<PlayerEntry> entries, TMPro.TextMeshProUGUI sourceTMP)
         {
             if (sourceTMP == null)
@@ -447,6 +449,9 @@ namespace StarTruckMP.StarTruckClient
             canvasObj.transform.position = signPos;
             canvasObj.transform.rotation = fixedRot;
             canvasObj.transform.localScale = Vector3.one * 0.01f;
+
+            // Parent to gate so Floating Origin shifts move the board automatically
+            canvasObj.transform.SetParent(gateTransform, true);
 
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;

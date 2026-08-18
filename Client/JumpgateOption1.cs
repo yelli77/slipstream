@@ -269,6 +269,9 @@ namespace StarTruckMP.StarTruckClient
             canvasObj.transform.rotation = fixedRot;
             canvasObj.transform.localScale = Vector3.one * 0.01f; // Scale canvas down to world size
 
+            // Parent to gate so Floating Origin shifts move the board automatically
+            canvasObj.transform.SetParent(gateTransform, true);
+
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.sortingOrder = 500;

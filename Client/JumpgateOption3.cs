@@ -327,6 +327,9 @@ namespace StarTruckMP.StarTruckClient
             billboardObj.transform.position = signPos;
             billboardObj.transform.rotation = fixedRot;
 
+            // Parent to gate so Floating Origin shifts move the billboard automatically
+            billboardObj.transform.SetParent(gateTransform, true);
+
             // Create a quad (Plane with 1x1 scale = 10x10 Unity units, scale to desired size)
             var meshFilter = billboardObj.AddComponent<MeshFilter>();
             var meshRenderer = billboardObj.AddComponent<MeshRenderer>();
