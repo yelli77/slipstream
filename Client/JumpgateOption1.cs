@@ -246,7 +246,7 @@ namespace StarTruckMP.StarTruckClient
                     else
                         distText = $"{entry.distanceFromGate / 1000f:F1}km";
 
-                    string driverName = entry.isLocal ? "(Du)" : entry.playerName;
+                    string driverName = entry.playerName;
                     sb.AppendLine(FormatRow(pos.ToString(), driverName, distText));
                     pos++;
                 }
@@ -356,21 +356,26 @@ namespace StarTruckMP.StarTruckClient
             // 4. Alignment: top-left
             tmp.alignment = TMPro.TextAlignmentOptions.TopLeft;
 
-            // 5. Text color: bright yellow/green for visibility in space
-            tmp.color = new Color(0.85f, 0.85f, 0.85f, 1f); // light gray
+            // Disable word wrapping so the table columns don't break onto new lines,
+            // and let overflow show (the board/canvas is sized generously already).
+            try { tmp.enableWordWrapping = false; } catch { }
+            try { tmp.overflowMode = TMPro.TextOverflowModes.Overflow; } catch { }
+
+            // 5. Text color: keep the source's default color, just halve opacity
+            //    (explicitly overriding the color didn't visually take effect before).
 
             // 6. Re-assert active state and alpha
             tmpObj.SetActive(true);
             try
             {
                 var renderer = tmpObj.GetComponent<CanvasRenderer>();
-                if (renderer != null) renderer.SetAlpha(1f);
+                if (renderer != null) renderer.SetAlpha(0.5f);
             }
             catch { }
             try
             {
                 var cg = tmpObj.GetComponent<CanvasGroup>();
-                if (cg != null) cg.alpha = 1f;
+                if (cg != null) cg.alpha = 0.5f;
             }
             catch { }
 
