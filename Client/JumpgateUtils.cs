@@ -47,20 +47,31 @@ namespace StarTruckMP.StarTruckClient
         public static string GetEntryGateIdForZone(WarpTriggerZone zone)
         {
             if (zone == null) return "";
-            SectorEntryPoint ep = FindEntryPoint(zone.gameObject);
-            string id = GetEntryGateId(ep);
-            if (!string.IsNullOrEmpty(id)) return id;
-            if (zone.transform.parent != null)
+            try
             {
-                ep = FindEntryPoint(zone.transform.parent.gameObject);
-                id = GetEntryGateId(ep);
+                SectorEntryPoint ep = FindEntryPoint(zone.gameObject);
+                string id = GetEntryGateId(ep);
                 if (!string.IsNullOrEmpty(id)) return id;
+                if (zone.transform.parent != null)
+                {
+                    ep = FindEntryPoint(zone.transform.parent.gameObject);
+                    id = GetEntryGateId(ep);
+                    if (!string.IsNullOrEmpty(id)) return id;
+                }
+                // IL2CPP: foreach on Transform enumerator yields Il2CppSystem.Object boxes,
+                // causing InvalidCastException. Use index-based GetChild() instead.
+                int childCount = zone.transform.childCount;
+                for (int i = 0; i < childCount; i++)
+                {
+                    Transform child = zone.transform.GetChild(i);
+                    ep = FindEntryPoint(child.gameObject);
+                    id = GetEntryGateId(ep);
+                    if (!string.IsNullOrEmpty(id)) return id;
+                }
             }
-            foreach (Transform child in zone.transform)
+            catch (Exception ex)
             {
-                ep = FindEntryPoint(child.gameObject);
-                id = GetEntryGateId(ep);
-                if (!string.IsNullOrEmpty(id)) return id;
+                StarTruckMP.Log.LogWarning("JumpgateUtils.GetEntryGateIdForZone: " + ex.Message);
             }
             string fallback = zone.gameObject.name;
             int ci = fallback.IndexOf("(Clone)");
