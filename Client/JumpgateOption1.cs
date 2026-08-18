@@ -383,11 +383,20 @@ namespace StarTruckMP.StarTruckClient
                 approachDir = Vector3.forward;
             approachDir = approachDir.normalized;
 
-            // Position sign centered directly above the gate
-            Vector3 signPos = gatePos + Vector3.up * HeightOffset;
+            // Position sign centered directly "above" the gate - using the GATE's own up
+            // vector, not world-up. Some gates/rings are themselves tilted (mounted at an
+            // angle on an asteroid, rotated for visual variety, etc.); offsetting and
+            // orienting with world Vector3.up made the sign upright in world space but
+            // visibly crooked relative to that particular tilted gate ring. Using the gate's
+            // local up keeps the sign flush with the ring's own orientation at every gate.
+            Vector3 gateUp = gateTransform.up;
+            if (gateUp.sqrMagnitude < 0.01f)
+                gateUp = Vector3.up;
+            Vector3 signPos = gatePos + gateUp * HeightOffset;
 
-            // Orientation: face back along the approach direction (like a roadside sign)
-            Quaternion fixedRot = Quaternion.LookRotation(-approachDir, Vector3.up);
+            // Orientation: face back along the approach direction (like a roadside sign),
+            // banked to match the gate's own tilt.
+            Quaternion fixedRot = Quaternion.LookRotation(-approachDir, gateUp);
 
             // ── Create Canvas root ──
             GameObject canvasObj = new GameObject($"DepartureBoard_{entryGateId}");
