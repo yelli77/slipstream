@@ -21,7 +21,7 @@ namespace StarTruckMP.StarTruckClient
         private static string lastSector = "none";
         private static float nextUpdateTime = 0f;
         private static readonly float UpdateInterval = 0.5f;
-        private static readonly float BillboardDistance = 900f;
+        private static readonly float BillboardDistance = 50f;
         private static readonly float MaxVisibleDistance = 5000f;
 
         // Colors
@@ -44,9 +44,13 @@ namespace StarTruckMP.StarTruckClient
         {
             private Camera mainCam = null;
 
+            private bool logged = false;
             public void Awake()
             {
                 mainCam = Camera.main;
+                var canvas = GetComponent<Canvas>();
+                StarTruckMP.Log.LogInfo($"WarpGateBillboard.BillboardBehavior.Awake: cam={mainCam != null}, canvas={canvas != null}, renderMode={canvas?.renderMode}, pos={transform.position}");
+                logged = true;
             }
 
             public void Update()
@@ -201,6 +205,9 @@ namespace StarTruckMP.StarTruckClient
                 : zone.transform.forward * -1f;
             if (towardPlayer.sqrMagnitude < 0.01f) towardPlayer = zone.transform.forward * -1f;
             root.transform.position = zone.transform.position + towardPlayer.normalized * BillboardDistance;
+            var cam = Camera.main;
+            float camDist = cam != null ? Vector3.Distance(root.transform.position, cam.transform.position) : -1f;
+            StarTruckMP.Log.LogInfo($"WarpGateBillboard: placed '{gateName}' at {root.transform.position}, camDist={camDist:F0}m, gatePos={zone.transform.position}");
 
             // Billboard behavior (faces camera)
             root.AddComponent<BillboardBehavior>();
@@ -213,7 +220,7 @@ namespace StarTruckMP.StarTruckClient
 
             // Canvas RectTransform sizing: 4500x7500 canvas units, scaled to 0.01 = 45m x 75m world
             RectTransform canvasRT = root.GetComponent<RectTransform>();
-            canvasRT.sizeDelta = new Vector2(4500f, 7500f);
+            canvasRT.sizeDelta = new Vector2(1500f, 2500f);
             root.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
             // Background Image (not Quad)
@@ -224,7 +231,7 @@ namespace StarTruckMP.StarTruckClient
             bgRT.anchorMax = Vector2.one;
             bgRT.offsetMin = Vector2.zero;
             bgRT.offsetMax = Vector2.zero;
-            bgRT.sizeDelta = new Vector2(4500f, 7500f);
+            bgRT.sizeDelta = new Vector2(1500f, 2500f);
             var bgImg = bg.AddComponent<UnityEngine.UI.Image>();
             bgImg.color = BgColor;
             bgImg.raycastTarget = false;
