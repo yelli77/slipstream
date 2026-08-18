@@ -121,20 +121,7 @@ namespace StarTruckMP.StarTruckClient
                     if (zone == null || zone.gameObject == null) continue;
 
                     // Get entryGateId via reflection on WarpGate component
-                    WarpGate gateComp = null;
-                    try { gateComp = zone.GetComponent<WarpGate>(); } catch { }
-                    if (gateComp == null)
-                        try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
-
-                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
-                    if (string.IsNullOrEmpty(entryId))
-                    {
-                        // Fallback: use game object name
-                        entryId = zone.gameObject.name;
-                        int ci = entryId.IndexOf("(Clone)");
-                        if (ci > 0) entryId = entryId.Substring(0, ci).Trim();
-                        StarTruckMP.Log.LogInfo($"JumpgateOption1: using fallback entryId '{entryId}' for gate '{zone.gameObject.name}'");
-                    }
+                    string entryId = JumpgateUtils.GetEntryGateIdForZone(zone);
 
                     // Find all players heading to this gate
                     var playerEntries = CollectPlayersForGate(entryId, zone.transform.position);
@@ -186,14 +173,12 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"JumpgateOption1: playerList iteration error: {ex.Message}");
             }
 
-            // Local player (via currentDestinationGateId OR proximity detection)
+            // Local player
             try
             {
-                string localApproaching = JumpgateUtils.DetectLocalPlayerApproachingGate();
-                bool localGateMatch = (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
-                    && StarTruckClient.currentDestinationGateId == entryGateId)
-                    || (!string.IsNullOrEmpty(localApproaching) && localApproaching == entryGateId);
-                if (localGateMatch && StarTruckClient.myTruck != null)
+                if (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
+                    && StarTruckClient.currentDestinationGateId == entryGateId
+                    && StarTruckClient.myTruck != null)
                 {
                     Vector3 myPos = StarTruckClient.floatingOrigin != null
                         ? StarTruckClient.floatingOrigin.m_currentOrigin + StarTruckClient.myTruck.transform.position
@@ -412,18 +397,7 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (zone == null || zone.gameObject == null) continue;
 
-                    WarpGate gateComp = null;
-                    try { gateComp = zone.GetComponent<WarpGate>(); } catch { }
-                    if (gateComp == null)
-                        try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
-
-                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
-                    if (string.IsNullOrEmpty(entryId))
-                    {
-                        entryId = zone.gameObject.name;
-                        int ci = entryId.IndexOf("(Clone)");
-                        if (ci > 0) entryId = entryId.Substring(0, ci).Trim();
-                    }
+                                        string entryId = JumpgateUtils.GetEntryGateIdForZone(zone);
 
                     seenGateIds.Add(entryId);
 
