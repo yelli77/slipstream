@@ -210,68 +210,92 @@ namespace StarTruckMP.StarTruckClient
                 }
             }
 
-            // Try to use Font.GetCharacterInfo for text rendering
+            // Try to use Font.GetCharacterInfo + the font's own atlas texture for real glyph rendering
             bool fontRendered = false;
             try
             {
                 Font font = Font.CreateDynamicFontFromOSFont("Arial", 48);
                 if (font != null && font.dynamic)
                 {
+                    // Force the glyphs we need onto the atlas before reading it back
                     string[] lines = text.Split('\n');
-                    float lineHeight = 48f;
-                    float startX = 20f;
-                    float startY = height - 50f;
-                    Color textColor = new Color(0.2f, 1f, 0.4f, 1f); // green
+                    string allChars = text.Replace("\n", "");
+                    font.RequestCharactersInTexture(allChars, 48, FontStyle.Normal);
 
-                    for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+                    // Make a CPU-readable copy of the font's atlas texture (it usually isn't readable directly)
+                    Texture srcAtlas = font.material.mainTexture;
+                    Texture2D readableAtlas = null;
+                    if (srcAtlas != null)
                     {
-                        string line = lines[lineIdx];
-                        float cursorX = startX;
-                        float cursorY = startY - lineIdx * lineHeight;
+                        RenderTexture rt = RenderTexture.GetTemporary(srcAtlas.width, srcAtlas.height, 0, RenderTextureFormat.ARGB32);
+                        RenderTexture prevActive = RenderTexture.active;
+                        Graphics.Blit(srcAtlas, rt);
+                        RenderTexture.active = rt;
+                        readableAtlas = new Texture2D(srcAtlas.width, srcAtlas.height, TextureFormat.RGBA32, false);
+                        readableAtlas.ReadPixels(new Rect(0, 0, srcAtlas.width, srcAtlas.height), 0, 0);
+                        readableAtlas.Apply();
+                        RenderTexture.active = prevActive;
+                        RenderTexture.ReleaseTemporary(rt);
+                    }
 
-                        // Color: header line is bright cyan, others green
-                        Color lineColor = lineIdx == 0 ? new Color(1f, 0.9f, 0.2f, 1f) : textColor;
+                    if (readableAtlas != null)
+                    {
+                        float lineHeight = 48f;
+                        float startX = 20f;
+                        float startY = height - 50f;
+                        Color textColor = new Color(0.2f, 1f, 0.4f, 1f); // green
+                        int atlasW = readableAtlas.width;
+                        int atlasH = readableAtlas.height;
 
-                        foreach (char c in line)
+                        for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
                         {
-                            if (font.GetCharacterInfo(c, out CharacterInfo info, 48))
+                            string line = lines[lineIdx];
+                            float cursorX = startX;
+                            float cursorY = startY - lineIdx * lineHeight;
+
+                            // Color: header line is bright yellow, others green
+                            Color lineColor = lineIdx == 0 ? new Color(1f, 0.9f, 0.2f, 1f) : textColor;
+
+                            foreach (char c in line)
                             {
-                                // Render character pixels
-                                int glyphW = info.glyphWidth;
-                                int glyphH = info.glyphHeight;
-                                int atlasX = info.uvBottomLeft.x > 0 ? (int)(info.uvBottomLeft.x * font.material.mainTexture.width) : 0;
-                                int atlasY = info.uvBottomLeft.y > 0 ? (int)(info.uvBottomLeft.y * font.material.mainTexture.height) : 0;
-
-                                // Simple block rendering: draw a filled rectangle for each character
-                                int pixX = (int)cursorX + info.advance;
-                                int pixY = (int)cursorY;
-
-                                // Just draw character width as a visible block — enough for debug
-                                for (int px = 0; px < info.advance && (pixX + px) < width; px++)
+                                if (font.GetCharacterInfo(c, out CharacterInfo info, 48))
                                 {
-                                    for (int py = 0; py < (int)lineHeight && (pixY + py) < height; py++)
+                                    int ax0 = Mathf.RoundToInt(Mathf.Min(info.uvBottomLeft.x, info.uvTopRight.x) * atlasW);
+                                    int ax1 = Mathf.RoundToInt(Mathf.Max(info.uvBottomLeft.x, info.uvTopRight.x) * atlasW);
+                                    int ay0 = Mathf.RoundToInt(Mathf.Min(info.uvBottomLeft.y, info.uvTopRight.y) * atlasH);
+                                    int ay1 = Mathf.RoundToInt(Mathf.Max(info.uvBottomLeft.y, info.uvTopRight.y) * atlasH);
+                                    int glyphW = Mathf.Max(0, ax1 - ax0);
+                                    int glyphH = Mathf.Max(0, ay1 - ay0);
+
+                                    int pixX = (int)cursorX + info.minX;
+                                    int pixY = (int)cursorY + info.minY;
+
+                                    for (int gx = 0; gx < glyphW; gx++)
                                     {
-                                        if (pixY + py >= 0 && pixY + py < height && pixX + px >= 0 && pixX + px < width)
+                                        int dx = pixX + gx;
+                                        if (dx < 0 || dx >= width) continue;
+                                        for (int gy = 0; gy < glyphH; gy++)
                                         {
-                                            // Create character shape: skip some pixels to make it look like text
-                                            int nx = px * 16 / Mathf.Max(1, info.advance);
-                                            int ny = py * 16 / Mathf.Max(1, (int)lineHeight);
-                                            // Simple character mask: filled except at edges
-                                            if (nx > 1 && nx < 15 && ny > 2 && ny < 14)
-                                                tex.SetPixel(pixX + px, pixY + py, lineColor);
+                                            int dy = pixY + gy;
+                                            if (dy < 0 || dy >= height) continue;
+                                            Color atlasPixel = readableAtlas.GetPixel(ax0 + gx, ay0 + gy);
+                                            float coverage = atlasPixel.a > 0.01f ? atlasPixel.a : atlasPixel.r;
+                                            if (coverage < 0.05f) continue;
+                                            Color existing = tex.GetPixel(dx, dy);
+                                            tex.SetPixel(dx, dy, Color.Lerp(existing, lineColor, coverage));
                                         }
                                     }
+                                    cursorX += info.advance;
                                 }
-                                cursorX += info.advance;
-                            }
-                            else
-                            {
-                                cursorX += 24f; // fallback spacing
+                                else
+                                {
+                                    cursorX += 24f; // fallback spacing
+                                }
                             }
                         }
+                        fontRendered = true;
+                        tex.Apply();
                     }
-                    fontRendered = true;
-                    tex.Apply();
                 }
             }
             catch (Exception ex)

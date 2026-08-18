@@ -280,6 +280,19 @@ namespace StarTruckMP.StarTruckClient
             if (canvasRT == null) canvasRT = canvasObj.AddComponent<RectTransform>();
             canvasRT.sizeDelta = new Vector2(SignWidth, SignHeight);
 
+            // ── Background panel (dark board backdrop behind the text) ──
+            GameObject panelObj = new GameObject("BoardBackground");
+            panelObj.transform.SetParent(canvasObj.transform, false);
+            var panelRT = panelObj.AddComponent<RectTransform>();
+            panelRT.anchorMin = Vector2.zero;
+            panelRT.anchorMax = Vector2.one;
+            panelRT.offsetMin = Vector2.zero;
+            panelRT.offsetMax = Vector2.zero;
+            panelRT.localScale = Vector3.one;
+            var panelImg = panelObj.AddComponent<UnityEngine.UI.Image>();
+            panelImg.color = new Color(0.05f, 0.05f, 0.08f, 0.85f);
+            panelObj.transform.SetAsFirstSibling();
+
             // ── Clone TMP from source ──
             GameObject tmpObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, canvasObj.transform);
             tmpObj.name = "DepartureText";
