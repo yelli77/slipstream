@@ -53,9 +53,14 @@ namespace StarTruckMP.StarTruckClient
             public WarpTriggerZone gateZone;
             public GameObject rootObj;
             public GameObject backingObj;
+            // Front text (faces gate approach direction)
             public GameObject textNameObj;
             public GameObject textSepObj;
             public GameObject textContentObj;
+            // Mirror text (rotated 90 degrees, faces perpendicular)
+            public GameObject mirrorNameObj;
+            public GameObject mirrorSepObj;
+            public GameObject mirrorContentObj;
             public float lastContentUpdate;
         }
 
@@ -363,21 +368,39 @@ namespace StarTruckMP.StarTruckClient
             // 3D backing slab
             GameObject backing = CreateBacking(gateName, root.transform);
 
-            // EXIT GATE line — yellow, large
+            // === CROSS-BILLBOARD: 2 perpendicular text planes ===
             string exitText = "EXIT GATE:\n" + gateName;
+
+            // Front text (faces gate approach direction)
             GameObject nameObj = CreateTextLine(exitText, 80f, GateNameColor,
                 root.transform, new Vector3(0f, 4.5f, -0.1f), 12f);
             if (nameObj != null) nameObj.name = "Name_" + gateName;
 
-            // Separator line
-            GameObject sepObj = CreateTextLine("————————————————", 60f, SepColor,
+            GameObject sepObj = CreateTextLine("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500", 60f, SepColor,
                 root.transform, new Vector3(0f, 1.0f, -0.1f), 12f);
             if (sepObj != null) sepObj.name = "Sep_" + gateName;
 
-            // Player content — starts as "FREE"
             GameObject contentObj = CreateTextLine("FREE", 70f, FreeColor,
                 root.transform, new Vector3(0f, -2.5f, -0.1f), 12f);
             if (contentObj != null) contentObj.name = "Content_" + gateName;
+
+            // Mirror text (rotated 90 degrees around Y — faces perpendicular)
+            GameObject mirrorContainer = new GameObject("Mirror_" + gateName);
+            mirrorContainer.transform.SetParent(root.transform, false);
+            mirrorContainer.transform.localPosition = Vector3.zero;
+            mirrorContainer.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+
+            GameObject mirrorName = CreateTextLine(exitText, 80f, GateNameColor,
+                mirrorContainer.transform, new Vector3(0f, 4.5f, -0.1f), 12f);
+            if (mirrorName != null) mirrorName.name = "MirrorName_" + gateName;
+
+            GameObject mirrorSep = CreateTextLine("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500", 60f, SepColor,
+                mirrorContainer.transform, new Vector3(0f, 1.0f, -0.1f), 12f);
+            if (mirrorSep != null) mirrorSep.name = "MirrorSep_" + gateName;
+
+            GameObject mirrorContent = CreateTextLine("FREE", 70f, FreeColor,
+                mirrorContainer.transform, new Vector3(0f, -2.5f, -0.1f), 12f);
+            if (mirrorContent != null) mirrorContent.name = "MirrorContent_" + gateName;
 
             if (!diagLogged)
             {
@@ -396,6 +419,9 @@ namespace StarTruckMP.StarTruckClient
                 textNameObj = nameObj,
                 textSepObj = sepObj,
                 textContentObj = contentObj,
+                mirrorNameObj = mirrorName,
+                mirrorSepObj = mirrorSep,
+                mirrorContentObj = mirrorContent,
                 lastContentUpdate = 0f,
             });
         }
@@ -505,6 +531,29 @@ namespace StarTruckMP.StarTruckClient
             {
                 mr.material.SetColor("_Color", contentColor);
             }
+
+            // Update mirror content too
+            if (bb.mirrorContentObj != null)
+            {
+                var mirrorMF = bb.mirrorContentObj.GetComponent<MeshFilter>();
+                if (mirrorMF != null)
+                {
+                    if (mirrorMF.mesh != null) UnityEngine.Object.Destroy(mirrorMF.mesh);
+                    Mesh mirrorMesh = BuildTextMesh(contentText, font, (int)fontSize);
+                    if (mirrorMesh != null)
+                    {
+                        Bounds mb = mirrorMesh.bounds;
+                        float ms = (mb.size.x > 0) ? (targetWidth / mb.size.x) : 0.01f;
+                        bb.mirrorContentObj.transform.localScale = new Vector3(ms, ms, ms);
+                        mirrorMF.mesh = mirrorMesh;
+                    }
+                }
+                var mirrorMR = bb.mirrorContentObj.GetComponent<MeshRenderer>();
+                if (mirrorMR != null && mirrorMR.material != null)
+                {
+                    mirrorMR.material.SetColor("_Color", contentColor);
+                }
+            }
         }
 
         public static void RefreshBillboards()
@@ -586,17 +635,7 @@ namespace StarTruckMP.StarTruckClient
 
                 try
                 {
-                    // Text meshes always face camera for readability
-                    // (Cube backing stays static)
-                    Vector3 toCam = cam.transform.position - bb.rootObj.transform.position;
-                    if (toCam.sqrMagnitude > 0.01f)
-                    {
-                        Quaternion faceCamera = Quaternion.LookRotation(toCam.normalized, Vector3.up);
-                        if (bb.textNameObj != null) bb.textNameObj.transform.rotation = faceCamera;
-                        if (bb.textSepObj != null) bb.textSepObj.transform.rotation = faceCamera;
-                        if (bb.textContentObj != null) bb.textContentObj.transform.rotation = faceCamera;
-                    }
-
+                    // Cross-billboard: fully static, no rotation
                     if (doTextUpdate)
                     {
                         UpdateBillboardContent(bb);
