@@ -275,8 +275,16 @@ namespace StarTruckMP.StarTruckClient
             mf.mesh = mesh;
 
             MeshRenderer mr = textObj.AddComponent<MeshRenderer>();
+            // Use font material but ensure URP compatibility
             var textMat = new Material(font.material);
-            textMat.SetColor("_Color", color);
+            // If font shader is hidden/broken, try URP unlit
+            if (textMat.shader == null || textMat.shader.name.Contains("Hidden"))
+            {
+                Shader fallback = Shader.Find("Universal Render Pipeline/Unlit");
+                if (fallback != null) textMat.shader = fallback;
+            }
+            textMat.SetColor("_BaseColor", color); // URP unlit color
+            textMat.SetColor("_Color", color);     // Built-in fallback
             textMat.SetInt("_Cull", 0); // No backface culling
             mr.material = textMat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -302,22 +310,19 @@ namespace StarTruckMP.StarTruckClient
             var bRenderer = backing.GetComponent<MeshRenderer>();
             if (bRenderer != null)
             {
-                var mat = new Material(Shader.Find("Standard"));
-                if (mat.shader != null)
-                {
-                    mat.color = new Color(0.05f, 0.05f, 0.1f, 0.92f);
-                    mat.SetFloat("_Mode", 3f);
-                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                    mat.SetInt("_ZWrite", 0);
-                    mat.DisableKeyword("_ALPHATEST_ON");
-                    mat.EnableKeyword("_ALPHABLEND_ON");
-                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                    mat.renderQueue = 3000;
-                }
+                // Try URP shaders first, fallback to Standard
+                Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (shader == null) shader = Shader.Find("Unlit/Color");
+                if (shader == null) shader = Shader.Find("Standard");
+
+                var mat = new Material(shader);
+                mat.color = new Color(0.08f, 0.08f, 0.15f, 1f); // Visible dark blue, fully opaque
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", new Color(0.02f, 0.03f, 0.06f));
                 bRenderer.material = mat;
                 bRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 bRenderer.receiveShadows = false;
+                bRenderer.enabled = true;
             }
 
             var autoCol = backing.GetComponent<Collider>();
@@ -581,6 +586,17 @@ namespace StarTruckMP.StarTruckClient
 
                 try
                 {
+                    // Text meshes always face camera for readability
+                    // (Cube backing stays static)
+                    Vector3 toCam = cam.transform.position - bb.rootObj.transform.position;
+                    if (toCam.sqrMagnitude > 0.01f)
+                    {
+                        Quaternion faceCamera = Quaternion.LookRotation(toCam.normalized, Vector3.up);
+                        if (bb.textNameObj != null) bb.textNameObj.transform.rotation = faceCamera;
+                        if (bb.textSepObj != null) bb.textSepObj.transform.rotation = faceCamera;
+                        if (bb.textContentObj != null) bb.textContentObj.transform.rotation = faceCamera;
+                    }
+
                     if (doTextUpdate)
                     {
                         UpdateBillboardContent(bb);
