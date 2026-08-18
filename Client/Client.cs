@@ -875,6 +875,10 @@ namespace StarTruckMP.StarTruckClient
                     }
                 }
 
+                if (gateId != currentDestinationGateId)
+                {
+                    StarTruckMP.Log.LogInfo($"DetectDestinationGates CHANGE: '{currentDestinationGateId}' -> '{gateId}' (nextSectorId='{nextSectorId}', waypointCount={waypointCount})");
+                }
                 currentDestinationGateId = gateId;
 
                 // Throttled diagnostics

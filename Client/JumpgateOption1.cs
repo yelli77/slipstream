@@ -250,8 +250,17 @@ namespace StarTruckMP.StarTruckClient
 
                     string driverPadded = entry.playerName.PadRight(18);
                     // Highlight the top-of-board entry (POS 1): 3x size, yellow.
+                    // NOTE: TMP's <mspace> fixes each character's advance width using the
+                    // point size in effect when the tag was opened - it does NOT recompute
+                    // when a nested <size> tag later changes the point size. Since the whole
+                    // table is wrapped in one <mspace=0.6em> opened at the base size, text
+                    // enlarged via a nested <size=300%> ends up with 3x wider glyphs stuffed
+                    // into the original (non-scaled) advance slots, causing overlap/cramping.
+                    // Fix: close the outer mspace, open a fresh one INSIDE the enlarged
+                    // <size> span (so 0.6em is now evaluated at the 300% point size), then
+                    // reopen the outer mspace afterwards so the DISTANCE column still lines up.
                     string driverCell = (pos == 1)
-                        ? $"<size=300%><color=#FFE600>{driverPadded}</color></size>"
+                        ? $"</mspace><size=300%><color=#FFE600><mspace=0.6em>{driverPadded}</mspace></color></size><mspace=0.6em>"
                         : driverPadded;
                     sb.AppendLine(FormatRow(pos.ToString(), driverCell, distText));
                     pos++;
