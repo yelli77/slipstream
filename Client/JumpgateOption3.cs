@@ -49,32 +49,8 @@ namespace StarTruckMP.StarTruckClient
         }
 
         // ─── Reflection caches ───
-        private static FieldInfo fi_entryGateId = null;
-        private static bool reflectionCached = false;
 
-        private static void CacheReflection()
-        {
-            if (reflectionCached) return;
-            reflectionCached = true;
-            try
-            {
-                fi_entryGateId = typeof(WarpGate).GetField("entryGateId",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-            }
-            catch { }
-        }
 
-        private static string GetEntryGateId(WarpGate gate)
-        {
-            if (gate == null) return "";
-            try
-            {
-                if (fi_entryGateId != null)
-                    return fi_entryGateId.GetValue(gate) as string ?? "";
-            }
-            catch { }
-            return "";
-        }
 
         /// <summary>
         /// Investigate SectorBillboard objects in the scene.
@@ -150,11 +126,14 @@ namespace StarTruckMP.StarTruckClient
             }
             catch { }
 
+            // Local player (via currentDestinationGateId OR proximity detection)
             try
             {
-                if (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
-                    && StarTruckClient.currentDestinationGateId == entryGateId
-                    && StarTruckClient.myTruck != null)
+                string localApproaching = JumpgateUtils.DetectLocalPlayerApproachingGate();
+                bool localGateMatch = (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
+                    && StarTruckClient.currentDestinationGateId == entryGateId)
+                    || (!string.IsNullOrEmpty(localApproaching) && localApproaching == entryGateId);
+                if (localGateMatch && StarTruckClient.myTruck != null)
                 {
                     Vector3 myPos = StarTruckClient.floatingOrigin != null
                         ? StarTruckClient.floatingOrigin.m_currentOrigin + StarTruckClient.myTruck.transform.position
@@ -447,7 +426,7 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                CacheReflection();
+                JumpgateUtils.CacheReflection();
                 InvestigateBillboards();
                 Cleanup();
 
@@ -473,7 +452,7 @@ namespace StarTruckMP.StarTruckClient
                     if (gateComp == null)
                         try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
 
-                    string entryId = GetEntryGateId(gateComp);
+                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
                     if (string.IsNullOrEmpty(entryId))
                     {
                         entryId = zone.gameObject.name;
@@ -530,7 +509,7 @@ namespace StarTruckMP.StarTruckClient
                     if (gateComp == null)
                         try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
 
-                    string entryId = GetEntryGateId(gateComp);
+                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
                     if (string.IsNullOrEmpty(entryId))
                     {
                         entryId = zone.gameObject.name;

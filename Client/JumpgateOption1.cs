@@ -50,48 +50,7 @@ namespace StarTruckMP.StarTruckClient
         private static FieldInfo fi_entryGateId;
         private static bool reflectionCached = false;
 
-        private static void CacheReflection()
-        {
-            if (reflectionCached) return;
-            reflectionCached = true;
-            try
-            {
-                var type = typeof(WarpGate);
-                fi_entryGateId = type.GetField("entryGateId",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (fi_entryGateId == null)
-                {
-                    // Try property
-                    var pi = type.GetProperty("entryGateId",
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (pi != null)
-                        StarTruckMP.Log.LogInfo("JumpgateOption1: entryGateId found as property");
-                }
-                StarTruckMP.Log.LogInfo($"JumpgateOption1: reflection cached, fi_entryGateId={fi_entryGateId != null}");
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"JumpgateOption1: reflection cache failed: {ex.Message}");
-            }
-        }
 
-        private static string GetEntryGateId(WarpGate gate)
-        {
-            if (gate == null) return null;
-            try
-            {
-                if (fi_entryGateId != null)
-                    return fi_entryGateId.GetValue(gate) as string;
-
-                // Fallback: property
-                var pi = gate.GetType().GetProperty("entryGateId",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (pi != null)
-                    return pi.GetValue(gate) as string;
-            }
-            catch { }
-            return null;
-        }
 
         /// <summary>
         /// Find a suitable source TextMeshProUGUI to clone from the scene.
@@ -120,7 +79,7 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                CacheReflection();
+                JumpgateUtils.CacheReflection();
                 Cleanup();
 
                 if (!StarTruckClient.client.IsConnected) return;
@@ -168,7 +127,7 @@ namespace StarTruckMP.StarTruckClient
                     if (gateComp == null)
                         try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
 
-                    string entryId = GetEntryGateId(gateComp);
+                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
                     if (string.IsNullOrEmpty(entryId))
                     {
                         // Fallback: use game object name
@@ -178,13 +137,10 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogInfo($"JumpgateOption1: using fallback entryId '{entryId}' for gate '{zone.gameObject.name}'");
                     }
 
-                    // Find all players heading to this gate
+                    // Find all players heading to this gate. Always build the board
+                    // even with 0 entries - a real airport departure board is always
+                    // there, it just shows nothing scheduled instead of vanishing.
                     var playerEntries = CollectPlayersForGate(entryId, zone.transform.position);
-                    if (playerEntries.Count == 0)
-                    {
-                        StarTruckMP.Log.LogInfo($"JumpgateOption1: no players heading to gate '{entryId}', skipping board.");
-                        continue;
-                    }
 
                     // Create the board
                     var board = CreateBoardForGate(entryId, zone.transform, playerEntries, sourceTMP);
@@ -233,12 +189,14 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"JumpgateOption1: playerList iteration error: {ex.Message}");
             }
 
-            // Local player
+            // Local player (via currentDestinationGateId OR proximity detection)
             try
             {
-                if (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
-                    && StarTruckClient.currentDestinationGateId == entryGateId
-                    && StarTruckClient.myTruck != null)
+                string localApproaching = JumpgateUtils.DetectLocalPlayerApproachingGate();
+                bool localGateMatch = (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
+                    && StarTruckClient.currentDestinationGateId == entryGateId)
+                    || (!string.IsNullOrEmpty(localApproaching) && localApproaching == entryGateId);
+                if (localGateMatch && StarTruckClient.myTruck != null)
                 {
                     Vector3 myPos = StarTruckClient.floatingOrigin != null
                         ? StarTruckClient.floatingOrigin.m_currentOrigin + StarTruckClient.myTruck.transform.position
@@ -267,6 +225,12 @@ namespace StarTruckMP.StarTruckClient
         {
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("=== DEPARTURE GATE ===");
+
+            if (entries.Count == 0)
+            {
+                sb.AppendLine("NO DEPARTURES SCHEDULED");
+                return sb.ToString();
+            }
 
             int pos = 1;
             foreach (var entry in entries)
@@ -456,7 +420,7 @@ namespace StarTruckMP.StarTruckClient
                     if (gateComp == null)
                         try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
 
-                    string entryId = GetEntryGateId(gateComp);
+                    string entryId = JumpgateUtils.GetEntryGateId(gateComp);
                     if (string.IsNullOrEmpty(entryId))
                     {
                         entryId = zone.gameObject.name;
