@@ -1,0 +1,513 @@
+# API dump of UnityEngine.UI.dll (144 types with members)
+# Generated via metadata reflection (dnfile) from the BepInEx Il2CppInterop-generated
+# assembly - property/method NAMES only, no parameter/return types decoded.
+# Use: grep -i '<keyword>' this file to find candidate native types/members,
+# then confirm exact signature via C# reflection (GetType().GetProperty/GetMethod) at runtime.
+
+### UnityEngine.UI.AnimationTriggers  : Il2CppSystem.Object
+  properties: disabledTrigger, highlightedTrigger, kDefaultDisabledAnimName, kDefaultHighlightedAnimName, kDefaultNormalAnimName, kDefaultPressedAnimName, kDefaultSelectedAnimName, m_DisabledTrigger, m_HighlightedTrigger, m_NormalTrigger, m_PressedTrigger, m_SelectedTrigger, normalTrigger, pressedTrigger, selectedTrigger
+
+### UnityEngine.UI.Button  : UnityEngine.UI.Selectable
+  properties: m_OnClick, onClick
+  methods:    OnFinishSubmit, OnPointerClick, OnSubmit, Press
+
+### UnityEngine.UI.ICanvasElement  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: transform
+  methods:    GraphicUpdateComplete, IsDestroyed, LayoutComplete, Rebuild
+
+### UnityEngine.UI.CanvasUpdateRegistry  : Il2CppSystem.Object
+  properties: instance, m_CanvasUpdateProfilerStrings, m_CullingUpdateProfilerString, m_GraphicRebuildQueue, m_LayoutRebuildQueue, m_PerformingGraphicUpdate, m_PerformingLayoutUpdate, s_Instance, s_SortLayoutFunction
+  methods:    CleanInvalidItems, DisableCanvasElementForRebuild, InternalDisableCanvasElementForGraphicRebuild, InternalDisableCanvasElementForLayoutRebuild, InternalRegisterCanvasElementForGraphicRebuild, InternalRegisterCanvasElementForLayoutRebuild, InternalUnRegisterCanvasElementForGraphicRebuild, InternalUnRegisterCanvasElementForLayoutRebuild, IsRebuildingGraphics, IsRebuildingLayout, ObjectValidForUpdate, ParentCount, PerformUpdate, RegisterCanvasElementForGraphicRebuild, RegisterCanvasElementForLayoutRebuild, SortLayoutList, TryRegisterCanvasElementForGraphicRebuild, TryRegisterCanvasElementForLayoutRebuild, UnRegisterCanvasElementForRebuild
+
+### UnityEngine.UI.ColorBlock  : System.ValueType
+  properties: colorMultiplier, defaultColorBlock, disabledColor, fadeDuration, highlightedColor, normalColor, pressedColor, selectedColor
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.UI.ClipperRegistry  : Il2CppSystem.Object
+  properties: instance, m_Clippers, s_Instance
+  methods:    Cull, Disable, Register, Unregister
+
+### UnityEngine.UI.Clipping  : Il2CppSystem.Object
+  methods:    FindCullAndClipWorldRect
+
+### UnityEngine.UI.IClipper  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    PerformClipping
+
+### UnityEngine.UI.IClippable  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: gameObject, rectTransform
+  methods:    Cull, RecalculateClipping, SetClipRect, SetClipSoftness
+
+### UnityEngine.UI.RectangularVertexClipper  : Il2CppSystem.Object
+  properties: m_CanvasCorners, m_WorldCorners
+  methods:    GetCanvasRect
+
+### UnityEngine.UI.DefaultControls  : Il2CppSystem.Object
+  properties: factory, kThickHeight, kThinHeight, kWidth, m_CurrentFactory, s_DefaultSelectableColor, s_ImageElementSize, s_PanelColor, s_TextColor, s_ThickElementSize, s_ThinElementSize
+  methods:    CreateButton, CreateDropdown, CreateImage, CreateInputField, CreatePanel, CreateRawImage, CreateScrollView, CreateScrollbar, CreateSlider, CreateText, CreateToggle, CreateUIElementRoot, CreateUIObject, SetDefaultColorTransitionValues, SetDefaultTextValues, SetLayerRecursively, SetParentAndAlign
+
+### UnityEngine.UI.Dropdown  : UnityEngine.UI.Selectable
+  properties: alphaFadeSpeed, captionImage, captionText, itemImage, itemText, kHighSortingLayer, m_AlphaFadeSpeed, m_AlphaTweenRunner, m_Blocker, m_CaptionImage, m_CaptionText, m_Dropdown, m_ItemImage, m_ItemText, m_Items, m_OnValueChanged, m_Options, m_Template, m_Value, onValueChanged, options, s_NoOptionData, template, validTemplate, value
+  methods:    AddItem, AddOptions, AlphaFadeList, Awake, ClearOptions, CreateBlocker, CreateDropdownList, CreateItem, DelayedDestroyDropdownList, DestroyBlocker, DestroyDropdownList, DestroyItem, GetOrAddComponent, Hide, ImmediateDestroyDropdownList, OnCancel, OnDisable, OnPointerClick, OnSelectItem, OnSubmit, RefreshShownValue, Set, SetAlpha, SetValueWithoutNotify, SetupTemplate, Show, Start
+
+### UnityEngine.UI.FontData  : Il2CppSystem.Object
+  properties: alignByGeometry, alignment, bestFit, defaultFontData, font, fontSize, fontStyle, horizontalOverflow, lineSpacing, m_AlignByGeometry, m_Alignment, m_BestFit, m_Font, m_FontSize, m_FontStyle, m_HorizontalOverflow, m_LineSpacing, m_MaxSize, m_MinSize, m_RichText, m_VerticalOverflow, maxSize, minSize, richText, verticalOverflow
+  methods:    UnityEngine_ISerializationCallbackReceiver_OnAfterDeserialize, UnityEngine_ISerializationCallbackReceiver_OnBeforeSerialize
+
+### UnityEngine.UI.FontUpdateTracker  : Il2CppSystem.Object
+  properties: m_Tracked
+  methods:    RebuildForFont, TrackText, UntrackText
+
+### UnityEngine.UI.Graphic  : UnityEngine.EventSystems.UIBehaviour
+  properties: _useLegacyMeshGeneration_k__BackingField, canvas, canvasRenderer, color, defaultGraphicMaterial, defaultMaterial, depth, m_CachedMesh, m_CachedUvs, m_Canvas, m_CanvasRenderer, m_Color, m_ColorTweenRunner, m_Material, m_MaterialDirty, m_OnDirtyLayoutCallback, m_OnDirtyMaterialCallback, m_OnDirtyVertsCallback, m_RaycastPadding, m_RaycastTarget, m_RaycastTargetCache, m_RectTransform, m_SkipLayoutUpdate, m_SkipMaterialUpdate, m_VertsDirty, mainTexture, material, materialForRendering, raycastPadding, raycastTarget, rectTransform, s_DefaultUI, s_Mesh, s_VertexHelper, s_WhiteTexture, useLegacyMeshGeneration, workerMesh
+  methods:    CacheCanvas, CreateColorFromAlpha, CrossFadeAlpha, CrossFadeColor, DoLegacyMeshGeneration, DoMeshGeneration, GetPixelAdjustedRect, GraphicUpdateComplete, LayoutComplete, OnBeforeTransformParentChanged, OnCanvasHierarchyChanged, OnCullingChanged, OnDestroy, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnFillVBO, OnPopulateMesh, OnRectTransformDimensionsChange, OnTransformParentChanged, PixelAdjustPoint, Raycast, Rebuild, RegisterDirtyLayoutCallback, RegisterDirtyMaterialCallback, RegisterDirtyVerticesCallback, SetAllDirty, SetLayoutDirty, SetMaterialDirty, SetNativeSize, SetRaycastDirty, SetVerticesDirty, UnityEngine_UI_ICanvasElement_get_transform, UnregisterDirtyLayoutCallback, UnregisterDirtyMaterialCallback, UnregisterDirtyVerticesCallback, UpdateGeometry, UpdateMaterial
+
+### UnityEngine.UI.GraphicRaycaster  : UnityEngine.EventSystems.BaseRaycaster
+  properties: blockingMask, blockingObjects, canvas, eventCamera, ignoreReversedGraphics, kNoEventMaskSet, m_BlockingMask, m_BlockingObjects, m_Canvas, m_IgnoreReversedGraphics, m_RaycastResults, renderOrderPriority, s_SortedGraphics, sortOrderPriority
+  methods:    Raycast
+
+### UnityEngine.UI.GraphicRegistry  : Il2CppSystem.Object
+  properties: instance, m_Graphics, m_RaycastableGraphics, s_EmptyList, s_Instance
+  methods:    DisableGraphicForCanvas, DisableRaycastGraphicForCanvas, GetGraphicsForCanvas, GetRaycastableGraphicsForCanvas, RegisterGraphicForCanvas, RegisterRaycastGraphicForCanvas, UnregisterGraphicForCanvas, UnregisterRaycastGraphicForCanvas
+
+### UnityEngine.UI.IGraphicEnabledDisabled  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnSiblingGraphicEnabledDisabled
+
+### UnityEngine.UI.Image  : UnityEngine.UI.MaskableGraphic
+  properties: activeSprite, alphaHitTestMinimumThreshold, defaultETC1GraphicMaterial, eventAlphaThreshold, fillAmount, fillCenter, fillClockwise, fillMethod, fillOrigin, flexibleHeight, flexibleWidth, hasBorder, layoutPriority, m_AlphaHitTestMinimumThreshold, m_CachedReferencePixelsPerUnit, m_FillAmount, m_FillCenter, m_FillClockwise, m_FillMethod, m_FillOrigin, m_OverrideSprite, m_PixelsPerUnitMultiplier, m_PreserveAspect, m_Sprite, m_Tracked, m_TrackedTexturelessImages, m_Type, m_UseSpriteMesh, mainTexture, material, minHeight, minWidth, multipliedPixelsPerUnit, overrideSprite, pixelsPerUnit, pixelsPerUnitMultiplier, preferredHeight, preferredWidth, preserveAspect, s_ETC1DefaultUI, s_Initialized, s_UVScratch, s_Uv, s_VertScratch, s_Xy, sprite, type, useSpriteMesh
+  methods:    AddQuad, CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, DisableSpriteOptimizations, GenerateFilledSprite, GenerateSimpleSprite, GenerateSlicedSprite, GenerateSprite, GenerateTiledSprite, GetAdjustedBorders, GetDrawingDimensions, IsRaycastLocationValid, MapCoordinate, OnAfterDeserialize, OnBeforeSerialize, OnCanvasHierarchyChanged, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnPopulateMesh, PreserveSpriteAspectRatio, RadialCut, RebuildImage, SetNativeSize, TrackImage, TrackSprite, UnTrackImage, UpdateMaterial
+
+### UnityEngine.UI.IMask  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: rectTransform
+  methods:    Enabled
+
+### UnityEngine.UI.IMaskable  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    RecalculateMasking
+
+### UnityEngine.UI.InputField  : UnityEngine.UI.Selectable
+  properties: asteriskChar, cachedInputTextGenerator, caretBlinkRate, caretColor, caretPosition, caretPositionInternal, caretRectTrans, caretSelectPositionInternal, caretWidth, characterLimit, characterValidation, clipboard, compositionString, contentType, customCaretColor, flexibleHeight, flexibleWidth, hasSelection, input, inputType, isFocused, kEmailSpecialCharacters, kHScrollSpeed, kOculusQuestDeviceModel, kSeparators, kVScrollSpeed, k_MaxTextLength, keyboardType, layoutPriority, lineType, m_AllowInput, m_AsteriskChar, m_BlinkCoroutine, m_BlinkStartTime, m_CachedInputRenderer, m_CaretBlinkRate, m_CaretColor, m_CaretPosition, m_CaretSelectPosition, m_CaretVisible, m_CaretWidth, m_CharacterLimit, m_CharacterValidation, m_ContentType, m_CursorVerts, m_CustomCaretColor, m_DragCoroutine, m_DragPositionOutOfBounds, m_DrawEnd, m_DrawStart, m_HasDoneFocusTransition, m_HideMobileInput, m_InputTextCache, m_InputType, m_IsCompositionActive, m_Keyboard, m_KeyboardType, m_LineType, m_Mesh, m_OnDidEndEdit, m_OnSubmit, m_OnValidateInput, m_OnValueChanged, m_OriginalText, m_Placeholder, m_PreventFontCallback, m_ProcessingEvent, m_ReadOnly, m_SelectionColor, m_ShouldActivateNextUpdate, m_ShouldActivateOnSelect, m_Text, m_TextComponent, m_TouchKeyboardAllowsInPlaceEditing, m_UpdateDrag, m_WaitForSecondsRealtime, m_WasCanceled, mesh, minHeight, minWidth, multiLine, onEndEdit, onSubmit, onValidateInput, onValueChange, onValueChanged, placeholder, preferredHeight, preferredWidth, readOnly, s_IsQuestDevice, selectionAnchorPosition, selectionColor, selectionFocusPosition, shouldActivateOnSelect, shouldHideMobileInput, text, textComponent, touchScreenKeyboard, wasCanceled
+  methods:    ActivateInputField, ActivateInputFieldInternal, Append, AssignPositioningIfNeeded, Backspace, CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, CaretBlink, ClampPos, CreateCursorVerts, DeactivateInputField, Delete, DetermineCharacterLine, DoStateTransition, EnforceContentType, EnforceTextHOverflow, FindtNextWordBegin, FindtPrevWordBegin, ForceLabelUpdate, ForwardSpace, GenerateCaret, GenerateHighlight, GetCharacterIndexFromPosition, GetLineEndPosition, GetLineStartPosition, GetSelectedString, GetUnclampedCharacterLineFromPosition, GraphicUpdateComplete, InPlaceEditing, InPlaceEditingChanged, Insert, IsSelectionVisible, IsValidChar, KeyPressed, LateUpdate, LayoutComplete, LineDownCharacterPosition, LineUpCharacterPosition, MarkGeometryAsDirty, MayDrag, MouseDragOutsideRect, MoveDown, MoveLeft, MoveRight, MoveTextEnd, MoveTextStart, MoveUp, OnBeginDrag, OnDeselect, OnDestroy, OnDisable, OnDrag, OnEnable, OnEndDrag, OnFillVBO, OnFocus, OnPointerClick, OnPointerDown, OnSelect, OnSubmit, OnUpdateSelected, ProcessEvent, Rebuild, ScreenToLocal, SelectAll, SendOnEndEdit, SendOnSubmit, SendOnValueChanged, SendOnValueChangedAndUpdateLabel, SetCaretActive, SetCaretVisible, SetDrawRangeToContainCaretPosition, SetText, SetTextWithoutNotify, SetToCustom, SetToCustomIfContentTypeIsNot, TouchScreenKeyboardShouldBeUsed, UnityEngine_UI_ICanvasElement_get_transform, UpdateCaretFromKeyboard, UpdateCaretMaterial, UpdateGeometry, UpdateLabel, UpdateTouchKeyboardFromEditChanges, Validate
+
+### UnityEngine.UI.AspectRatioFitter  : UnityEngine.EventSystems.UIBehaviour
+  properties: aspectMode, aspectRatio, m_AspectMode, m_AspectRatio, m_DelayedSetDirty, m_DoesParentExist, m_Rect, m_Tracker, rectTransform
+  methods:    DoesParentExists, GetParentSize, GetSizeDeltaToProduceSize, IsAspectModeValid, IsComponentValidOnObject, OnDisable, OnEnable, OnRectTransformDimensionsChange, OnTransformParentChanged, SetDirty, SetLayoutHorizontal, SetLayoutVertical, Start, Update, UpdateRect
+
+### UnityEngine.UI.CanvasScaler  : UnityEngine.EventSystems.UIBehaviour
+  properties: defaultSpriteDPI, dynamicPixelsPerUnit, fallbackScreenDPI, kLogBase, m_Canvas, m_DefaultSpriteDPI, m_DynamicPixelsPerUnit, m_FallbackScreenDPI, m_MatchWidthOrHeight, m_PhysicalUnit, m_PresetInfoIsWorld, m_PrevReferencePixelsPerUnit, m_PrevScaleFactor, m_ReferencePixelsPerUnit, m_ReferenceResolution, m_ScaleFactor, m_ScreenMatchMode, m_UiScaleMode, matchWidthOrHeight, physicalUnit, referencePixelsPerUnit, referenceResolution, scaleFactor, screenMatchMode, uiScaleMode
+  methods:    Canvas_preWillRenderCanvases, Handle, HandleConstantPhysicalSize, HandleConstantPixelSize, HandleScaleWithScreenSize, HandleWorldCanvas, OnDisable, OnEnable, SetReferencePixelsPerUnit, SetScaleFactor
+
+### UnityEngine.UI.ContentSizeFitter  : UnityEngine.EventSystems.UIBehaviour
+  properties: horizontalFit, m_HorizontalFit, m_Rect, m_Tracker, m_VerticalFit, rectTransform, verticalFit
+  methods:    HandleSelfFittingAlongAxis, OnDisable, OnEnable, OnRectTransformDimensionsChange, SetDirty, SetLayoutHorizontal, SetLayoutVertical
+
+### UnityEngine.UI.GridLayoutGroup  : UnityEngine.UI.LayoutGroup
+  properties: cellSize, constraint, constraintCount, m_CellSize, m_Constraint, m_ConstraintCount, m_Spacing, m_StartAxis, m_StartCorner, spacing, startAxis, startCorner
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, SetCellsAlongAxis, SetLayoutHorizontal, SetLayoutVertical
+
+### UnityEngine.UI.HorizontalLayoutGroup  : UnityEngine.UI.HorizontalOrVerticalLayoutGroup
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, SetLayoutHorizontal, SetLayoutVertical
+
+### UnityEngine.UI.HorizontalOrVerticalLayoutGroup  : UnityEngine.UI.LayoutGroup
+  properties: childControlHeight, childControlWidth, childForceExpandHeight, childForceExpandWidth, childScaleHeight, childScaleWidth, m_ChildControlHeight, m_ChildControlWidth, m_ChildForceExpandHeight, m_ChildForceExpandWidth, m_ChildScaleHeight, m_ChildScaleWidth, m_ReverseArrangement, m_Spacing, reverseArrangement, spacing
+  methods:    CalcAlongAxis, GetChildSizes, SetChildrenAlongAxis
+
+### UnityEngine.UI.ILayoutElement  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: flexibleHeight, flexibleWidth, layoutPriority, minHeight, minWidth, preferredHeight, preferredWidth
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical
+
+### UnityEngine.UI.ILayoutController  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    SetLayoutHorizontal, SetLayoutVertical
+
+### UnityEngine.UI.ILayoutIgnorer  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: ignoreLayout
+
+### UnityEngine.UI.LayoutElement  : UnityEngine.EventSystems.UIBehaviour
+  properties: flexibleHeight, flexibleWidth, ignoreLayout, layoutPriority, m_FlexibleHeight, m_FlexibleWidth, m_IgnoreLayout, m_LayoutPriority, m_MinHeight, m_MinWidth, m_PreferredHeight, m_PreferredWidth, minHeight, minWidth, preferredHeight, preferredWidth
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, OnBeforeTransformParentChanged, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnTransformParentChanged, SetDirty
+
+### UnityEngine.UI.LayoutGroup  : UnityEngine.EventSystems.UIBehaviour
+  properties: childAlignment, flexibleHeight, flexibleWidth, isRootLayoutGroup, layoutPriority, m_ChildAlignment, m_Padding, m_Rect, m_RectChildren, m_TotalFlexibleSize, m_TotalMinSize, m_TotalPreferredSize, m_Tracker, minHeight, minWidth, padding, preferredHeight, preferredWidth, rectChildren, rectTransform
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, DelayedSetDirty, GetAlignmentOnAxis, GetStartOffset, GetTotalFlexibleSize, GetTotalMinSize, GetTotalPreferredSize, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnRectTransformDimensionsChange, OnTransformChildrenChanged, SetChildAlongAxis, SetChildAlongAxisWithScale, SetDirty, SetLayoutHorizontal, SetLayoutInputForAxis, SetLayoutVertical, SetProperty
+
+### UnityEngine.UI.LayoutRebuilder  : Il2CppSystem.Object
+  properties: m_CachedHashFromTransform, m_ToRebuild, s_Rebuilders, transform
+  methods:    Clear, Equals, ForceRebuildLayoutImmediate, GetHashCode, GraphicUpdateComplete, Initialize, IsDestroyed, LayoutComplete, MarkLayoutForRebuild, MarkLayoutRootForRebuild, PerformLayoutCalculation, PerformLayoutControl, ReapplyDrivenProperties, Rebuild, StripDisabledBehavioursFromList, ToString, ValidController
+
+### UnityEngine.UI.LayoutUtility  : Il2CppSystem.Object
+  methods:    GetFlexibleHeight, GetFlexibleSize, GetFlexibleWidth, GetLayoutProperty, GetMinHeight, GetMinSize, GetMinWidth, GetPreferredHeight, GetPreferredSize, GetPreferredWidth
+
+### UnityEngine.UI.VerticalLayoutGroup  : UnityEngine.UI.HorizontalOrVerticalLayoutGroup
+  methods:    CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, SetLayoutHorizontal, SetLayoutVertical
+
+### UnityEngine.UI.Mask  : UnityEngine.EventSystems.UIBehaviour
+  properties: graphic, m_Graphic, m_MaskMaterial, m_RectTransform, m_ShowMaskGraphic, m_UnmaskMaterial, rectTransform, showMaskGraphic
+  methods:    GetModifiedMaterial, IsRaycastLocationValid, MaskEnabled, OnDisable, OnEnable, OnSiblingGraphicEnabledDisabled
+
+### UnityEngine.UI.MaskableGraphic  : UnityEngine.UI.Graphic
+  properties: isMaskingGraphic, m_Corners, m_IncludeForMasking, m_IsMaskingGraphic, m_MaskMaterial, m_Maskable, m_OnCullStateChanged, m_ParentMask, m_ShouldRecalculate, m_ShouldRecalculateStencil, m_StencilValue, maskable, onCullStateChanged, rootCanvasRect
+  methods:    Cull, GetModifiedMaterial, OnCanvasHierarchyChanged, OnDisable, OnEnable, OnTransformParentChanged, ParentMaskStateChanged, RecalculateClipping, RecalculateMasking, SetClipRect, SetClipSoftness, UnityEngine_UI_IClippable_get_gameObject, UpdateClipParent, UpdateCull
+
+### UnityEngine.UI.MaskUtilities  : Il2CppSystem.Object
+  methods:    FindRootSortOverrideCanvas, GetRectMaskForClippable, GetRectMasksForClip, GetStencilDepth, IsDescendantOrSelf, Notify2DMaskStateChanged, NotifyStencilStateChanged
+
+### UnityEngine.UI.IMaterialModifier  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    GetModifiedMaterial
+
+### UnityEngine.UI.Misc  : Il2CppSystem.Object
+  methods:    Destroy, DestroyImmediate
+
+### UnityEngine.UI.MultipleDisplayUtilities  : Il2CppSystem.Object
+  methods:    GetRelativeMousePositionForDrag, RelativeMouseAtScaled
+
+### UnityEngine.UI.Navigation  : Il2CppSystem.ValueType
+  properties: defaultNavigation, m_Mode, m_SelectOnDown, m_SelectOnLeft, m_SelectOnRight, m_SelectOnUp, m_WrapAround, mode, selectOnDown, selectOnLeft, selectOnRight, selectOnUp, wrapAround
+  methods:    Equals
+
+### UnityEngine.UI.RawImage  : UnityEngine.UI.MaskableGraphic
+  properties: m_Texture, m_UVRect, mainTexture, texture, uvRect
+  methods:    OnDidApplyAnimationProperties, OnPopulateMesh, SetNativeSize
+
+### UnityEngine.UI.RectMask2D  : UnityEngine.EventSystems.UIBehaviour
+  properties: Canvas, canvasRect, m_Canvas, m_ClipTargets, m_Clippers, m_Corners, m_ForceClip, m_LastClipRectCanvasSpace, m_MaskableTargets, m_Padding, m_RectTransform, m_ShouldRecalculateClipRects, m_Softness, m_VertexClipper, padding, rectTransform, rootCanvasRect, softness
+  methods:    AddClippable, IsRaycastLocationValid, OnCanvasHierarchyChanged, OnDestroy, OnDisable, OnEnable, OnTransformParentChanged, PerformClipping, RemoveClippable, UpdateClipSoftness
+
+### UnityEngine.UI.Scrollbar  : UnityEngine.UI.Selectable
+  properties: axis, direction, handleRect, isPointerDownAndNotDragging, m_ContainerRect, m_DelayedUpdateVisuals, m_Direction, m_HandleRect, m_NumberOfSteps, m_Offset, m_OnValueChanged, m_PointerDownRepeat, m_Size, m_Tracker, m_Value, numberOfSteps, onValueChanged, reverseValue, size, stepSize, value
+  methods:    ClickRepeat, DoUpdateDrag, FindSelectableOnDown, FindSelectableOnLeft, FindSelectableOnRight, FindSelectableOnUp, GraphicUpdateComplete, LayoutComplete, MayDrag, OnBeginDrag, OnDisable, OnDrag, OnEnable, OnInitializePotentialDrag, OnMove, OnPointerDown, OnPointerUp, OnRectTransformDimensionsChange, Rebuild, Set, SetDirection, SetValueWithoutNotify, UnityEngine_UI_ICanvasElement_get_transform, Update, UpdateCachedReferences, UpdateDrag, UpdateVisuals
+
+### UnityEngine.UI.ScrollRect  : UnityEngine.EventSystems.UIBehaviour
+  properties: content, decelerationRate, elasticity, flexibleHeight, flexibleWidth, hScrollingNeeded, horizontal, horizontalNormalizedPosition, horizontalScrollbar, horizontalScrollbarSpacing, horizontalScrollbarVisibility, inertia, layoutPriority, m_Content, m_ContentBounds, m_ContentStartPosition, m_Corners, m_DecelerationRate, m_Dragging, m_Elasticity, m_HSliderExpand, m_HSliderHeight, m_HasRebuiltLayout, m_Horizontal, m_HorizontalScrollbar, m_HorizontalScrollbarRect, m_HorizontalScrollbarSpacing, m_HorizontalScrollbarVisibility, m_Inertia, m_MovementType, m_OnValueChanged, m_PointerStartLocalCursor, m_PrevContentBounds, m_PrevPosition, m_PrevViewBounds, m_Rect, m_ScrollSensitivity, m_Scrolling, m_Tracker, m_VSliderExpand, m_VSliderWidth, m_Velocity, m_Vertical, m_VerticalScrollbar, m_VerticalScrollbarRect, m_VerticalScrollbarSpacing, m_VerticalScrollbarVisibility, m_ViewBounds, m_ViewRect, m_Viewport, minHeight, minWidth, movementType, normalizedPosition, onValueChanged, preferredHeight, preferredWidth, rectTransform, scrollSensitivity, vScrollingNeeded, velocity, vertical, verticalNormalizedPosition, verticalScrollbar, verticalScrollbarSpacing, verticalScrollbarVisibility, viewRect, viewport
+  methods:    AdjustBounds, CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, CalculateOffset, EnsureLayoutHasRebuilt, GetBounds, GraphicUpdateComplete, InternalCalculateOffset, InternalGetBounds, IsActive, LateUpdate, LayoutComplete, OnBeginDrag, OnDisable, OnDrag, OnEnable, OnEndDrag, OnInitializePotentialDrag, OnRectTransformDimensionsChange, OnScroll, Rebuild, RubberDelta, SetContentAnchoredPosition, SetDirty, SetDirtyCaching, SetHorizontalNormalizedPosition, SetLayoutHorizontal, SetLayoutVertical, SetNormalizedPosition, SetVerticalNormalizedPosition, StopMovement, UnityEngine_UI_ICanvasElement_get_transform, UpdateBounds, UpdateCachedData, UpdateOneScrollbarVisibility, UpdatePrevData, UpdateScrollbarLayout, UpdateScrollbarVisibility, UpdateScrollbars
+
+### UnityEngine.UI.Selectable  : UnityEngine.EventSystems.UIBehaviour
+  properties: _hasSelection_k__BackingField, _isPointerDown_k__BackingField, _isPointerInside_k__BackingField, allSelectableCount, allSelectables, allSelectablesArray, animationTriggers, animator, colors, currentSelectionState, hasSelection, image, interactable, isPointerDown, isPointerInside, m_AnimationTriggers, m_CanvasGroupCache, m_Colors, m_CurrentIndex, m_EnableCalled, m_GroupsAllowInteraction, m_Interactable, m_Navigation, m_SpriteState, m_TargetGraphic, m_Transition, navigation, s_SelectableCount, s_Selectables, spriteState, targetGraphic, transition
+  methods:    AllSelectablesNoAlloc, Awake, DoSpriteSwap, DoStateTransition, EvaluateAndTransitionToSelectionState, FindSelectable, FindSelectableOnDown, FindSelectableOnLeft, FindSelectableOnRight, FindSelectableOnUp, GetPointOnRectEdge, InstantClearState, IsHighlighted, IsInteractable, IsPressed, Navigate, OnApplicationFocus, OnCanvasGroupChanged, OnDeselect, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnMove, OnPointerDown, OnPointerEnter, OnPointerExit, OnPointerUp, OnSelect, OnSetProperty, OnTransformParentChanged, ParentGroupAllowsInteraction, Select, StartColorTween, TriggerAnimation
+
+### UnityEngine.UI.SetPropertyUtility  : Il2CppSystem.Object
+  methods:    SetClass, SetColor, SetStruct
+
+### UnityEngine.UI.Slider  : UnityEngine.UI.Selectable
+  properties: axis, direction, fillRect, handleRect, m_DelayedUpdateVisuals, m_Direction, m_FillContainerRect, m_FillImage, m_FillRect, m_FillTransform, m_HandleContainerRect, m_HandleRect, m_HandleTransform, m_MaxValue, m_MinValue, m_Offset, m_OnValueChanged, m_Tracker, m_Value, m_WholeNumbers, maxValue, minValue, normalizedValue, onValueChanged, reverseValue, stepSize, value, wholeNumbers
+  methods:    ClampValue, FindSelectableOnDown, FindSelectableOnLeft, FindSelectableOnRight, FindSelectableOnUp, GraphicUpdateComplete, LayoutComplete, MayDrag, OnDidApplyAnimationProperties, OnDisable, OnDrag, OnEnable, OnInitializePotentialDrag, OnMove, OnPointerDown, OnRectTransformDimensionsChange, Rebuild, Set, SetDirection, SetValueWithoutNotify, UnityEngine_UI_ICanvasElement_get_transform, Update, UpdateCachedReferences, UpdateDrag, UpdateVisuals
+
+### UnityEngine.UI.SpriteState  : Il2CppSystem.ValueType
+  properties: disabledSprite, highlightedSprite, m_DisabledSprite, m_HighlightedSprite, m_PressedSprite, m_SelectedSprite, pressedSprite, selectedSprite
+  methods:    Equals
+
+### UnityEngine.UI.StencilMaterial  : Il2CppSystem.Object
+  properties: m_List
+  methods:    Add, ClearAll, LogWarningWhenNotInBatchmode, Remove
+
+### UnityEngine.UI.Text  : UnityEngine.UI.MaskableGraphic
+  properties: alignByGeometry, alignment, cachedTextGenerator, cachedTextGeneratorForLayout, flexibleHeight, flexibleWidth, font, fontSize, fontStyle, horizontalOverflow, layoutPriority, lineSpacing, m_DisableFontTextureRebuiltCallback, m_FontData, m_TempVerts, m_Text, m_TextCache, m_TextCacheForLayout, mainTexture, minHeight, minWidth, pixelsPerUnit, preferredHeight, preferredWidth, resizeTextForBestFit, resizeTextMaxSize, resizeTextMinSize, s_DefaultText, supportRichText, text, verticalOverflow
+  methods:    AssignDefaultFont, AssignDefaultFontIfNecessary, CalculateLayoutInputHorizontal, CalculateLayoutInputVertical, FontTextureChanged, GetGenerationSettings, GetTextAnchorPivot, OnDisable, OnEnable, OnPopulateMesh, UpdateGeometry
+
+### UnityEngine.UI.Toggle  : UnityEngine.UI.Selectable
+  properties: graphic, group, isOn, m_Group, m_IsOn, onValueChanged, toggleTransition
+  methods:    GraphicUpdateComplete, InternalToggle, LayoutComplete, OnDestroy, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnPointerClick, OnSubmit, PlayEffect, Rebuild, Set, SetIsOnWithoutNotify, SetToggleGroup, Start, UnityEngine_UI_ICanvasElement_get_transform
+
+### UnityEngine.UI.ToggleGroup  : UnityEngine.EventSystems.UIBehaviour
+  properties: allowSwitchOff, m_AllowSwitchOff, m_Toggles
+  methods:    ActiveToggles, AnyTogglesOn, EnsureValidState, GetFirstActiveToggle, NotifyToggleOn, OnEnable, RegisterToggle, SetAllTogglesOff, Start, UnregisterToggle, ValidateToggleIsInGroup
+
+### UnityEngine.UI.ReflectionMethodsCache  : Il2CppSystem.Object
+  properties: Singleton, getRayIntersectionAll, getRayIntersectionAllNonAlloc, getRaycastNonAlloc, raycast2D, raycast3D, raycast3DAll, s_ReflectionMethodsCache
+
+### UnityEngine.UI.VertexHelper  : Il2CppSystem.Object
+  properties: currentIndexCount, currentVertCount, m_Colors, m_Indices, m_ListsInitalized, m_Normals, m_Positions, m_Tangents, m_Uv0S, m_Uv1S, m_Uv2S, m_Uv3S, s_DefaultNormal, s_DefaultTangent
+  methods:    AddTriangle, AddUIVertexQuad, AddUIVertexStream, AddUIVertexTriangleStream, AddVert, Clear, Dispose, FillMesh, GetUIVertexStream, InitializeListIfRequired, PopulateUIVertex, SetUIVertex
+
+### UnityEngine.UI.BaseVertexEffect  : Il2CppSystem.Object
+  methods:    ModifyVertices
+
+### UnityEngine.UI.BaseMeshEffect  : UnityEngine.EventSystems.UIBehaviour
+  properties: graphic, m_Graphic
+  methods:    ModifyMesh, OnDidApplyAnimationProperties, OnDisable, OnEnable
+
+### UnityEngine.UI.IVertexModifier  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    ModifyVertices
+
+### UnityEngine.UI.IMeshModifier  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    ModifyMesh
+
+### UnityEngine.UI.Outline  : UnityEngine.UI.Shadow
+  methods:    ModifyMesh
+
+### UnityEngine.UI.PositionAsUV1  : UnityEngine.UI.BaseMeshEffect
+  methods:    ModifyMesh
+
+### UnityEngine.UI.Shadow  : UnityEngine.UI.BaseMeshEffect
+  properties: effectColor, effectDistance, kMaxEffectDistance, m_EffectColor, m_EffectDistance, m_UseGraphicAlpha, useGraphicAlpha
+  methods:    ApplyShadow, ApplyShadowZeroAlloc, ModifyMesh
+
+### UnityEngine.UI.CoroutineTween.ITweenValue  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: duration, ignoreTimeScale
+  methods:    TweenValue, ValidTarget
+
+### UnityEngine.UI.CoroutineTween.ColorTween  : Il2CppSystem.ValueType
+  properties: duration, ignoreTimeScale, m_Duration, m_IgnoreTimeScale, m_StartColor, m_Target, m_TargetColor, m_TweenMode, startColor, targetColor, tweenMode
+  methods:    AddOnChangedCallback, GetDuration, GetIgnoreTimescale, TweenValue, ValidTarget
+
+### UnityEngine.UI.CoroutineTween.FloatTween  : Il2CppSystem.ValueType
+  properties: duration, ignoreTimeScale, m_Duration, m_IgnoreTimeScale, m_StartValue, m_Target, m_TargetValue, startValue, targetValue
+  methods:    AddOnChangedCallback, GetDuration, GetIgnoreTimescale, TweenValue, ValidTarget
+
+### UnityEngine.UIElements.PanelEventHandler  : UnityEngine.EventSystems.UIBehaviour
+  properties: eventSystem, m_Event, m_Panel, m_PointerEvent, m_Selecting, panel, s_Modifiers, selectableGameObject
+  methods:    LateUpdate, OnCancel, OnDeselect, OnDisable, OnElementBlur, OnElementFocus, OnEnable, OnMove, OnPanelDestroyed, OnPointerDown, OnPointerEnter, OnPointerExit, OnPointerMove, OnPointerUp, OnScroll, OnSelect, OnSubmit, ProcessImguiEvents, ProcessKeyboardEvent, ProcessTabEvent, ReadPointerData, RegisterCallbacks, SendEvent, SendKeyDownEvent, SendKeyUpEvent, SendTabEvent, UnregisterCallbacks, Update
+
+### UnityEngine.UIElements.PanelRaycaster  : UnityEngine.EventSystems.BaseRaycaster
+  properties: eventCamera, m_Panel, panel, renderOrderPriority, selectableGameObject, sortOrderPriority
+  methods:    ConvertFloatBitsToInt, OnPanelDestroyed, Raycast, RegisterCallbacks, UnregisterCallbacks
+
+### UnityEngine.EventSystems.AxisEventData  : UnityEngine.EventSystems.BaseEventData
+  properties: _moveDir_k__BackingField, _moveVector_k__BackingField, moveDir, moveVector
+
+### UnityEngine.EventSystems.AbstractEventData  : Il2CppSystem.Object
+  properties: m_Used, used
+  methods:    Reset, Use
+
+### UnityEngine.EventSystems.BaseEventData  : UnityEngine.EventSystems.AbstractEventData
+  properties: currentInputModule, m_EventSystem, selectedObject
+
+### UnityEngine.EventSystems.PointerEventData  : UnityEngine.EventSystems.BaseEventData
+  properties: _altitudeAngle_k__BackingField, _azimuthAngle_k__BackingField, _button_k__BackingField, _clickCount_k__BackingField, _clickTime_k__BackingField, _delta_k__BackingField, _dragging_k__BackingField, _eligibleForClick_k__BackingField, _fullyExited_k__BackingField, _lastPress_k__BackingField, _pointerClick_k__BackingField, _pointerCurrentRaycast_k__BackingField, _pointerDrag_k__BackingField, _pointerEnter_k__BackingField, _pointerId_k__BackingField, _pointerPressRaycast_k__BackingField, _position_k__BackingField, _pressPosition_k__BackingField, _pressure_k__BackingField, _radiusVariance_k__BackingField, _radius_k__BackingField, _rawPointerPress_k__BackingField, _reentered_k__BackingField, _scrollDelta_k__BackingField, _tangentialPressure_k__BackingField, _twist_k__BackingField, _useDragThreshold_k__BackingField, _worldNormal_k__BackingField, _worldPosition_k__BackingField, altitudeAngle, azimuthAngle, button, clickCount, clickTime, delta, dragging, eligibleForClick, enterEventCamera, fullyExited, hovered, lastPress, m_PointerPress, pointerClick, pointerCurrentRaycast, pointerDrag, pointerEnter, pointerId, pointerPress, pointerPressRaycast, position, pressEventCamera, pressPosition, pressure, radius, radiusVariance, rawPointerPress, reentered, scrollDelta, tangentialPressure, twist, useDragThreshold, worldNormal, worldPosition
+  methods:    IsPointerMoving, IsScrolling, ToString
+
+### UnityEngine.EventSystems.IPointerMoveHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerMove
+
+### UnityEngine.EventSystems.IPointerEnterHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerEnter
+
+### UnityEngine.EventSystems.IPointerExitHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerExit
+
+### UnityEngine.EventSystems.IPointerDownHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerDown
+
+### UnityEngine.EventSystems.IPointerUpHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerUp
+
+### UnityEngine.EventSystems.IPointerClickHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnPointerClick
+
+### UnityEngine.EventSystems.IBeginDragHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnBeginDrag
+
+### UnityEngine.EventSystems.IInitializePotentialDragHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnInitializePotentialDrag
+
+### UnityEngine.EventSystems.IDragHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnDrag
+
+### UnityEngine.EventSystems.IEndDragHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnEndDrag
+
+### UnityEngine.EventSystems.IDropHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnDrop
+
+### UnityEngine.EventSystems.IScrollHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnScroll
+
+### UnityEngine.EventSystems.IUpdateSelectedHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnUpdateSelected
+
+### UnityEngine.EventSystems.ISelectHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnSelect
+
+### UnityEngine.EventSystems.IDeselectHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnDeselect
+
+### UnityEngine.EventSystems.IMoveHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnMove
+
+### UnityEngine.EventSystems.ISubmitHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnSubmit
+
+### UnityEngine.EventSystems.ICancelHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnCancel
+
+### UnityEngine.EventSystems.EventSystem  : UnityEngine.EventSystems.UIBehaviour
+  properties: alreadySelecting, baseEventDataCache, createUIToolkitPanelGameObjectsOnStart, current, currentInputModule, currentSelectedGameObject, firstSelectedGameObject, isFocused, isUIToolkitActiveEventSystem, lastSelectedGameObject, m_CurrentInputModule, m_CurrentSelected, m_DragThreshold, m_DummyData, m_EventSystems, m_FirstSelected, m_HasFocus, m_SelectionGuard, m_SystemInputModules, m_sendNavigationEvents, pixelDragThreshold, s_RaycastComparer, s_UIToolkitOverride, sendNavigationEvents, sendUIToolkitEvents
+  methods:    ChangeEventModule, CreateUIToolkitPanelGameObject, IsPointerOverGameObject, OnApplicationFocus, OnDestroy, OnDisable, OnEnable, RaycastAll, RaycastComparer, SetSelectedGameObject, SetUITookitEventSystemOverride, Start, TickModules, ToString, Update, UpdateModules
+
+### UnityEngine.EventSystems.EventTrigger  : UnityEngine.MonoBehaviour
+  properties: delegates, m_Delegates, triggers
+  methods:    Execute, OnBeginDrag, OnCancel, OnDeselect, OnDrag, OnDrop, OnEndDrag, OnInitializePotentialDrag, OnMove, OnPointerClick, OnPointerDown, OnPointerEnter, OnPointerExit, OnPointerUp, OnScroll, OnSelect, OnSubmit, OnUpdateSelected
+
+### UnityEngine.EventSystems.ExecuteEvents  : Il2CppSystem.Object
+  properties: beginDragHandler, cancelHandler, deselectHandler, dragHandler, dropHandler, endDragHandler, initializePotentialDrag, moveHandler, pointerClickHandler, pointerDownHandler, pointerEnterHandler, pointerExitHandler, pointerMoveHandler, pointerUpHandler, s_BeginDragHandler, s_CancelHandler, s_DeselectHandler, s_DragHandler, s_DropHandler, s_EndDragHandler, s_InitializePotentialDragHandler, s_InternalTransformList, s_MoveHandler, s_PointerClickHandler, s_PointerDownHandler, s_PointerEnterHandler, s_PointerExitHandler, s_PointerMoveHandler, s_PointerUpHandler, s_ScrollHandler, s_SelectHandler, s_SubmitHandler, s_UpdateSelectedHandler, scrollHandler, selectHandler, submitHandler, updateSelectedHandler
+  methods:    CanHandleEvent, Execute, ExecuteHierarchy, GetEventChain, GetEventHandler, GetEventList, ShouldSendToComponent, ValidateEventData
+
+### UnityEngine.EventSystems.BaseInput  : UnityEngine.EventSystems.UIBehaviour
+  properties: compositionCursorPos, compositionString, imeCompositionMode, mousePosition, mousePresent, mouseScrollDelta, touchCount, touchSupported
+  methods:    GetAxisRaw, GetButtonDown, GetMouseButton, GetMouseButtonDown, GetMouseButtonUp, GetTouch
+
+### UnityEngine.EventSystems.BaseInputModule  : UnityEngine.EventSystems.UIBehaviour
+  properties: eventSystem, input, inputOverride, m_AxisEventData, m_BaseEventData, m_DefaultInput, m_EventSystem, m_InputOverride, m_RaycastResultCache, m_SendPointerHoverToParent, sendPointerHoverToParent
+  methods:    ActivateModule, ConvertUIToolkitPointerId, DeactivateModule, DetermineMoveDirection, FindCommonRoot, FindFirstRaycast, GetAxisEventData, GetBaseEventData, HandlePointerExitAndEnter, IsModuleSupported, IsPointerOverGameObject, OnDisable, OnEnable, Process, ShouldActivateModule, UpdateModule
+
+### UnityEngine.EventSystems.PointerInputModule  : UnityEngine.EventSystems.BaseInputModule
+  properties: kFakeTouchesId, kMouseLeftId, kMouseMiddleId, kMouseRightId, m_MouseState, m_PointerData
+  methods:    ClearSelection, CopyFromTo, DeselectIfSelectionChanged, GetLastPointerEventData, GetMousePointerEventData, GetPointerData, GetTouchPointerEventData, IsPointerOverGameObject, ProcessDrag, ProcessMove, RemovePointerData, ShouldStartDrag, StateForMouseButton, ToString
+
+### UnityEngine.EventSystems.StandaloneInputModule  : UnityEngine.EventSystems.PointerInputModule
+  properties: allowActivationOnMobileDevice, cancelButton, forceModuleActive, horizontalAxis, inputActionsPerSecond, inputMode, m_CancelButton, m_ConsecutiveMoveCount, m_CurrentFocusedGameObject, m_ForceModuleActive, m_HorizontalAxis, m_InputActionsPerSecond, m_InputPointerEvent, m_LastMousePosition, m_LastMoveVector, m_MousePosition, m_PrevActionTime, m_RepeatDelay, m_SubmitButton, m_VerticalAxis, repeatDelay, submitButton, verticalAxis
+  methods:    ActivateModule, DeactivateModule, ForceAutoSelect, GetCurrentFocusedGameObject, GetRawMoveVector, Process, ProcessMouseEvent, ProcessMousePress, ProcessTouchEvents, ProcessTouchPress, ReleaseMouse, SendMoveEventToSelectedObject, SendSubmitEventToSelectedObject, SendUpdateEventToSelectedObject, ShouldActivateModule, ShouldIgnoreEventsOnNoFocus, UpdateModule
+
+### UnityEngine.EventSystems.TouchInputModule  : UnityEngine.EventSystems.PointerInputModule
+  properties: allowActivationOnStandalone, forceModuleActive, m_ForceModuleActive, m_InputPointerEvent, m_LastMousePosition, m_MousePosition
+  methods:    DeactivateModule, FakeTouches, IsModuleSupported, Process, ProcessTouchEvents, ProcessTouchPress, ShouldActivateModule, ToString, UpdateModule, UseFakeInput
+
+### UnityEngine.EventSystems.RaycasterManager  : Il2CppSystem.Object
+  properties: s_Raycasters
+  methods:    AddRaycaster, GetRaycasters, RemoveRaycasters
+
+### UnityEngine.EventSystems.BaseRaycaster  : UnityEngine.EventSystems.UIBehaviour
+  properties: eventCamera, m_RootRaycaster, priority, renderOrderPriority, rootRaycaster, sortOrderPriority
+  methods:    OnCanvasHierarchyChanged, OnDisable, OnEnable, OnTransformParentChanged, Raycast, ToString
+
+### UnityEngine.EventSystems.Physics2DRaycaster  : UnityEngine.EventSystems.PhysicsRaycaster
+  properties: m_Hits
+  methods:    Raycast
+
+### UnityEngine.EventSystems.PhysicsRaycaster  : UnityEngine.EventSystems.BaseRaycaster
+  properties: depth, eventCamera, eventMask, finalEventMask, kNoEventMaskSet, m_EventCamera, m_EventMask, m_Hits, m_LastMaxRayIntersections, m_MaxRayIntersections, maxRayIntersections
+  methods:    ComputeRayAndDistance, Raycast
+
+### UnityEngine.EventSystems.RaycastResult  : Il2CppSystem.ValueType
+  properties: depth, displayIndex, distance, gameObject, index, isValid, m_GameObject, module, screenPosition, sortingGroupID, sortingGroupOrder, sortingLayer, sortingOrder, worldNormal, worldPosition
+  methods:    Clear, ToString
+
+### UnityEngine.EventSystems.UIBehaviour  : UnityEngine.MonoBehaviour
+  methods:    Awake, IsActive, IsDestroyed, OnBeforeTransformParentChanged, OnCanvasGroupChanged, OnCanvasHierarchyChanged, OnDestroy, OnDidApplyAnimationProperties, OnDisable, OnEnable, OnRectTransformDimensionsChange, OnTransformParentChanged, Start
+
+### UnityEditor.Rendering.Universal.MaterialAccess  : Il2CppSystem.Object
+  methods:    ReadMaterialRawRenderQueue
+
+### UnityEditor.Rendering.BuiltIn.ShaderGraph.MaterialAccess  : Il2CppSystem.Object
+  methods:    ReadMaterialRawRenderQueue
+
+### _PrivateImplementationDetails_  : Il2CppSystem.Object
+  properties: _1C3635C112D556F4C11A4FE6BDE6ED3F126C4B2B546811BDB64DE7BDED3A05CB
+
+### _OnFinishSubmit_d__9  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, _elapsedTime_5__3, _fadeTime_5__2
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### IFactoryControls  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    CreateGameObject
+
+### DefaultRuntimeFactory  : Il2CppSystem.Object
+  properties: Default
+  methods:    CreateGameObject
+
+### Resources  : Il2CppSystem.ValueType
+  properties: background, checkmark, dropdown, inputField, knob, mask, standard
+
+### DropdownItem  : UnityEngine.MonoBehaviour
+  properties: image, m_Image, m_RectTransform, m_Text, m_Toggle, rectTransform, text, toggle
+  methods:    OnCancel, OnPointerEnter
+
+### OptionData  : Il2CppSystem.Object
+  properties: image, m_Image, m_Text, text
+
+### OptionDataList  : Il2CppSystem.Object
+  properties: m_Options, options
+
+### __c__DisplayClass63_0  : Il2CppSystem.Object
+  properties: __4__this, item
+
+### _DelayedDestroyDropdownList_d__75  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, delay
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__27_0
+
+### OnValidateInput  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### _CaretBlink_d__170  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _MouseDragOutsideRect_d__192  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, eventData
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _DelayedSetDirty_d__56  : Il2CppSystem.Object
+  properties: __1__state, __2__current, rectTransform
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__10_0, __9__12_0, __9__12_1, __9__12_2, __9__12_3
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__3_0, __9__4_0, __9__4_1, __9__5_0, __9__6_0, __9__7_0, __9__7_1, __9__8_0
+
+### _ClickRepeat_d__58  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, camera, screenPosition
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### MatEntry  : Il2CppSystem.Object
+  properties: baseMat, colorMask, compareFunction, count, customMat, operation, readMask, stencilId, useAlphaClip, writeMask
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__13_0, __9__14_0
+
+### Raycast3DCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke
+
+### RaycastAllCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### GetRaycastNonAllocCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Raycast2DCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### GetRayIntersectionAllCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### GetRayIntersectionAllNonAllocCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### _Start_d__2  : Il2CppSystem.Object
+  properties: __1__state, __2__current, _elapsedTime_5__2, tweenInfo
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### PointerEvent  : Il2CppSystem.Object
+  properties: _altitudeAngle_k__BackingField, _azimuthAngle_k__BackingField, _button_k__BackingField, _clickCount_k__BackingField, _deltaPosition_k__BackingField, _deltaTime_k__BackingField, _isPrimary_k__BackingField, _localPosition_k__BackingField, _modifiers_k__BackingField, _pointerId_k__BackingField, _pointerType_k__BackingField, _position_k__BackingField, _pressedButtons_k__BackingField, _pressure_k__BackingField, _radiusVariance_k__BackingField, _radius_k__BackingField, _tangentialPressure_k__BackingField, _twist_k__BackingField, actionKey, altKey, altitudeAngle, azimuthAngle, button, clickCount, commandKey, ctrlKey, deltaPosition, deltaTime, isPrimary, localPosition, modifiers, pointerId, pointerType, position, pressedButtons, pressure, radius, radiusVariance, shiftKey, tangentialPressure, twist
+  methods:    Method_Internal_Static_Boolean_Int32_Int32_Int32_PDM_0, Read, SetPosition
+
+### FloatIntBits  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UIToolkitOverrideConfig  : Il2CppSystem.ValueType
+  properties: activeEventSystem, createPanelGameObjectsOnStart, sendEvents
+
+### __c__DisplayClass52_0  : Il2CppSystem.Object
+  properties: go
+
+### Entry  : Il2CppSystem.Object
+  properties: callback, eventID
+
+### ButtonState  : Il2CppSystem.Object
+  properties: button, eventData, m_Button, m_EventData
+
+### MouseState  : Il2CppSystem.Object
+  properties: m_TrackedButtons
+  methods:    AnyPressesThisFrame, AnyReleasesThisFrame, GetButtonState, SetButtonState
+
+### MouseButtonEventData  : Il2CppSystem.Object
+  properties: buttonData, buttonState
+  methods:    PressedThisFrame, ReleasedThisFrame
+
+### RaycastHitComparer  : Il2CppSystem.Object
+  properties: instance
+  methods:    Compare
+
+### ValueTypeNPrivateSealedUnique  : System.ValueType
+  methods:    BoxIl2CppObject

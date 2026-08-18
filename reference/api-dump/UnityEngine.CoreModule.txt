@@ -1,0 +1,1504 @@
+# API dump of UnityEngine.CoreModule.dll (417 types with members)
+# Generated via metadata reflection (dnfile) from the BepInEx Il2CppInterop-generated
+# assembly - property/method NAMES only, no parameter/return types decoded.
+# Use: grep -i '<keyword>' this file to find candidate native types/members,
+# then confirm exact signature via C# reflection (GetType().GetProperty/GetMethod) at runtime.
+
+### UnityEngineInternal.MathfInternal  : System.ValueType
+  properties: FloatMinDenormal, FloatMinNormal, IsFlushToZeroEnabled
+  methods:    BoxIl2CppObject
+
+### UnityEngineInternal.TypeInferenceRuleAttribute  : Il2CppSystem.Attribute
+  properties: _rule
+  methods:    ToString
+
+### Unity.Profiling.ProfilerCategory  : System.ValueType
+  properties: Ai, Animation, Any, Audio, Color, FileIO, GPU, Gui, Input, Internal, Lighting, Loading, Memory, Name, Network, Particles, Physics, Physics2D, Render, Scripts, Video, VirtualTexturing, Vr
+  methods:    BoxIl2CppObject, ToString, op_Implicit
+
+### Unity.Profiling.ProfilerMarker  : System.ValueType
+  properties: Handle
+  methods:    Auto, Begin, BoxIl2CppObject, End, GetName
+
+### Unity.Profiling.ProfilerRecorderSample  : System.ValueType
+  properties: Count, Value
+  methods:    BoxIl2CppObject
+
+### Unity.Profiling.ProfilerRecorder  : System.ValueType
+  properties: Capacity, Count, CurrentValue, CurrentValueAsDouble, DataType, IsRunning, LastValue, LastValueAsDouble, SharedRecorder, UnitType, Valid, WrappedAround
+  methods:    BoxIl2CppObject, CheckInitializedAndThrow, CheckInitializedWithParamsAndThrow, CollectFromAllThreads, Control, Control_Injected, CopyTo, CopyTo_List, CopyTo_List_Injected, CopyTo_Pointer, CopyTo_Pointer_Injected, Create, Create_Injected, Dispose, FilterToCurrentThread, GetCount, GetCount_Injected, GetCurrentValue, GetCurrentValueAsDouble, GetCurrentValueAsDouble_Injected, GetCurrentValue_Injected, GetLastValue, GetLastValueAsDouble, GetLastValueAsDouble_Injected, GetLastValue_Injected, GetRunning, GetRunning_Injected, GetSample, GetSampleInternal, GetSampleInternal_Injected, GetValid, GetValid_Injected, GetValueDataType, GetValueDataType_Injected, GetValueUnitType, GetValueUnitType_Injected, GetWrapped, GetWrapped_Injected, Reset, Start, StartNew, Stop, ToArray
+
+### Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderDescription  : System.ValueType
+  properties: Category, DataType, Flags, Name, NameUtf8, NameUtf8Len, UnitType
+  methods:    BoxIl2CppObject
+
+### Unity.Profiling.LowLevel.Unsafe.ProfilerRecorderHandle  : System.ValueType
+  properties: Valid
+  methods:    BoxIl2CppObject, Get, GetAvailable, GetByName, GetByName_Injected, GetByName_Unsafe, GetByName_Unsafe_Injected, GetByName__Unmanaged, GetByName__Unmanaged_Injected, GetDescription, GetDescriptionInternal, GetDescriptionInternal_Injected
+
+### Unity.Profiling.LowLevel.Unsafe.ProfilerCategoryDescription  : System.ValueType
+  properties: Name
+  methods:    BoxIl2CppObject
+
+### Unity.Profiling.LowLevel.Unsafe.ProfilerUnsafeUtility  : Il2CppSystem.Object
+  properties: Timestamp
+  methods:    BeginSample, BeginSampleWithMetadata, CreateCategory, CreateCategory_Unsafe, CreateCategory__Unmanaged, CreateCounterValue, CreateCounterValue_Unsafe, CreateCounterValue__Unmanaged, CreateFlow, CreateMarker, CreateMarker_Unsafe, CreateMarker__Unmanaged, EndSample, FlowEvent, FlushCounterValue, GetCategoryByName, GetCategoryByName_Unsafe, GetCategoryColor, GetCategoryColor_Injected, GetCategoryDescription, GetCategoryDescription_Injected, GetMarker, Internal_BeginWithObject, Internal_GetName, SetMarkerMetadata, SetMarkerMetadata_Unsafe, SetMarkerMetadata__Unmanaged, SingleSampleWithMetadata, Utf8ToString
+
+### Unity.Jobs.IJobExtensions  : Il2CppSystem.Object
+  methods:    Run, Schedule
+
+### Unity.Jobs.IJobForExtensions  : Il2CppSystem.Object
+  methods:    Run, Schedule, ScheduleParallel
+
+### Unity.Jobs.IJobParallelForExtensions  : Il2CppSystem.Object
+  methods:    Run, Schedule
+
+### Unity.Jobs.JobHandle  : System.ValueType
+  properties: IsCompleted
+  methods:    BoxIl2CppObject, CheckFenceIsDependencyOrDidSyncFence, CheckFenceIsDependencyOrDidSyncFence_Injected, CombineDependencies, CombineDependenciesInternal2, CombineDependenciesInternal2_Injected, CombineDependenciesInternal3, CombineDependenciesInternal3_Injected, CombineDependenciesInternalPtr, CombineDependenciesInternalPtr_Injected, Complete, CompleteAll, ScheduleBatchedJobs, ScheduleBatchedJobsAndComplete, ScheduleBatchedJobsAndCompleteAll, ScheduleBatchedJobsAndIsCompleted
+
+### Unity.Jobs.LowLevel.Unsafe.JobProducerTypeAttribute  : Il2CppSystem.Attribute
+  properties: ProducerType, _ProducerType_k__BackingField
+
+### Unity.Jobs.LowLevel.Unsafe.JobsUtility  : Il2CppSystem.Object
+  properties: IsExecutingJob, JobCompilerEnabled, JobDebuggerEnabled, JobWorkerCount, JobWorkerMaximumCount, PanicFunction
+  methods:    ClearSystemIds, CreateJobReflectionData, GetJobQueueWorkerThreadCount, GetJobRange, GetSystemIdCellPtr, GetSystemIdMappings, GetWorkStealingRange, InvokePanicFunction, PatchBufferMinMaxRanges, ResetJobWorkerCount, Schedule, ScheduleParallelFor, ScheduleParallelForDeferArraySize, ScheduleParallelForDeferArraySize_Injected, ScheduleParallelForTransform, ScheduleParallelForTransformReadOnly, ScheduleParallelForTransformReadOnly_Injected, ScheduleParallelForTransform_Injected, ScheduleParallelFor_Injected, Schedule_Injected, SetJobQueueMaximumActiveThreadCount
+
+### Unity.IO.LowLevel.Unsafe.AsyncReadManagerRequestMetric  : Il2CppSystem.ValueType
+  properties: AssetName, AssetTypeId, BatchReadCount, CurrentBytesRead, FileName, IsBatchRead, OffsetBytes, PriorityLevel, ReadType, RequestTimeMicroseconds, SizeBytes, State, Subsystem, TimeInQueueMicroseconds, TotalTimeMicroseconds, _AssetName_k__BackingField, _AssetTypeId_k__BackingField, _BatchReadCount_k__BackingField, _CurrentBytesRead_k__BackingField, _FileName_k__BackingField, _IsBatchRead_k__BackingField, _OffsetBytes_k__BackingField, _PriorityLevel_k__BackingField, _ReadType_k__BackingField, _RequestTimeMicroseconds_k__BackingField, _SizeBytes_k__BackingField, _State_k__BackingField, _Subsystem_k__BackingField, _TimeInQueueMicroseconds_k__BackingField, _TotalTimeMicroseconds_k__BackingField
+
+### Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetricsFilters  : Il2CppSystem.Object
+  properties: PriorityLevels, ReadTypes, States, Subsystems, TypeIDs
+  methods:    ClearFilters, RemovePriorityFilter, RemoveReadTypeFilter, RemoveStateFilter, RemoveSubsystemFilter, RemoveTypeIDFilter, SetPriorityFilter, SetReadTypeFilter, SetStateFilter, SetSubsystemFilter, SetTypeIDFilter
+
+### Unity.Collections.NativeLeakDetection  : Il2CppSystem.Object
+  properties: Mode, s_NativeLeakDetectionMode
+  methods:    Initialize
+
+### Unity.Collections.NativeArrayDispose  : System.ValueType
+  methods:    BoxIl2CppObject, Dispose
+
+### Unity.Collections.NativeArrayDisposeJob  : System.ValueType
+  methods:    BoxIl2CppObject, Execute
+
+### Unity.Collections.NativeSliceExtensions  : Il2CppSystem.Object
+  methods:    Slice
+
+### Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility  : Il2CppSystem.Object
+  methods:    CheckConvertArguments, ConvertExistingDataToNativeArray, GetUnsafeBufferPointerWithoutChecks, GetUnsafePtr, GetUnsafeReadOnlyPtr
+
+### Unity.Collections.LowLevel.Unsafe.NativeSliceUnsafeUtility  : Il2CppSystem.Object
+  methods:    ConvertExistingDataToNativeSlice, GetUnsafePtr, GetUnsafeReadOnlyPtr
+
+### Unity.Collections.LowLevel.Unsafe.UnsafeUtility  : Il2CppSystem.Object
+  methods:    AddressOf, AlignOf, ArrayElementAsRef, As, AsRef, CheckForLeaks, CopyObjectAddressToPtr, CopyPtrToStructure, CopyStructureToPtr, EnumEquals, EnumToInt, ForgiveLeaks, Free, FreeTracked, GetFieldOffset, GetFieldOffsetInClass, GetFieldOffsetInStruct, GetLeakDetectionMode, GetReasonForArrayNonBlittable, GetReasonForGenericListNonBlittable, GetReasonForTypeNonBlittable, GetReasonForTypeNonBlittableImpl, GetReasonForValueTypeNonBlittable, InternalCopyPtrToStructure, InternalCopyStructureToPtr, InternalEnumToInt, IsArrayBlittable, IsBlittable, IsBlittableValueType, IsGenericListBlittable, IsUnmanaged, IsValidAllocator, IsValidNativeContainerElementType, LeakErase, LeakRecord, LogError, Malloc, MallocTracked, MemClear, MemCmp, MemCpy, MemCpyReplicate, MemCpyStride, MemMove, MemSet, PinGCArrayAndGetDataAddress, PinGCObjectAndGetAddress, PinSystemArrayAndGetAddress, PinSystemObjectAndGetAddress, ReadArrayElement, ReadArrayElementWithStride, ReleaseGCObject, SetLeakDetectionMode, SizeOf, WriteArrayElement, WriteArrayElementWithStride
+
+### Unity.Burst.LowLevel.BurstCompilerService  : Il2CppSystem.Object
+  properties: IsInitialized
+  methods:    CompileAsyncDelegateMethod, GetAsyncCompiledAsyncDelegateMethod, GetCurrentExecutionMode, GetDisassembly, GetMethodSignature, GetOrCreateSharedMemory, LoadBurstLibrary, Log, SetCurrentExecutionMode
+
+### JetBrains.Annotations.UsedImplicitlyAttribute  : Il2CppSystem.Attribute
+  properties: TargetFlags, UseKindFlags, _TargetFlags_k__BackingField, _UseKindFlags_k__BackingField
+
+### UnityEngine.SortingLayer  : System.ValueType
+  properties: id, layers, name, value
+  methods:    BoxIl2CppObject, GetLayerValueFromID, GetLayerValueFromName, GetSortingLayerIDsInternal, IDToName, IsValid, NameToID
+
+### UnityEngine.Keyframe  : System.ValueType
+  properties: inTangent, inWeight, outTangent, outWeight, tangentMode, tangentModeInternal, time, value, weightedMode
+  methods:    BoxIl2CppObject
+
+### UnityEngine.AnimationCurve  : Il2CppSystem.Object
+  properties: Item, keys, length, m_Ptr, postWrapMode, preWrapMode
+  methods:    AddKey, AddKey_Internal, AddKey_Internal_Injected, Constant, EaseInOut, Equals, Evaluate, Finalize, GetHashCode, GetKey, GetKey_Injected, GetKeys, Internal_Create, Internal_Destroy, Internal_Equals, Linear, MoveKey, MoveKey_Injected, RemoveKey, SetKeys, SmoothTangents
+
+### UnityEngine.Application  : Il2CppSystem.Object
+  properties: OnAdvertisingIdentifierCallback, absoluteURL, backgroundLoadingPriority, buildGUID, cloudProjectId, companyName, consoleLogPath, dataPath, deepLinkActivated, focusChanged, genuine, genuineCheckAvailable, identifier, installMode, installerName, internetReachability, isBatchMode, isConsolePlatform, isEditor, isFocused, isHumanControllingUs, isLoadingLevel, isMobilePlatform, isPlayer, isPlaying, isShowingSplashScreen, isTestRun, levelCount, loadedLevel, loadedLevelName, lowMemory, persistentDataPath, platform, productName, quitting, runInBackground, s_LogCallbackHandler, s_LogCallbackHandlerThreaded, s_RegisterLogCallbackDeprecated, sandboxType, stackTraceLogType, streamedBytes, streamingAssetsPath, submitAnalytics, systemLanguage, targetFrameRate, temporaryCachePath, unityVersion, unityVersionMaj, unityVersionMin, unityVersionVer, unloading, version, wantsToQuit, webSecurityEnabled
+  methods:    BuildInvocationForArguments, CallLogCallback, CallLowMemory, CanStreamedLevelBeLoaded, CancelQuit, CaptureScreenshot, DontDestroyOnLoad, ExternalCall, ExternalEval, ForceCrash, GetBuildTags, GetStackTraceLogType, GetStreamProgressForLevel, GetValueForARGV, HasARGV, HasProLicense, HasUserAuthorization, Internal_ApplicationQuit, Internal_ApplicationUnload, Internal_ApplicationWantsToQuit, Internal_ExternalCall, InvokeDeepLinkActivated, InvokeFocusChanged, InvokeOnAdvertisingIdentifierCallback, InvokeOnBeforeRender, IsPlaying, LoadLevel, LoadLevelAdditive, LoadLevelAdditiveAsync, LoadLevelAsync, ObjectToJSString, OpenURL, Quit, RegisterLogCallback, RegisterLogCallbackThreaded, RequestAdvertisingIdentifierAsync, RequestUserAuthorization, SetBuildTags, SetLogCallbackDefined, SetStackTraceLogType, Unload, UnloadLevel, add_deepLinkActivated, add_focusChanged, add_logMessageReceived, add_logMessageReceivedThreaded, add_lowMemory, add_onBeforeRender, add_quitting, add_unloading, add_wantsToQuit, remove_deepLinkActivated, remove_focusChanged, remove_logMessageReceived, remove_logMessageReceivedThreaded, remove_lowMemory, remove_onBeforeRender, remove_quitting, remove_unloading, remove_wantsToQuit
+
+### UnityEngine.BootConfigData  : Il2CppSystem.Object
+  properties: m_Ptr
+  methods:    AddKey, Append, Get, GetValue, Set, WrapBootConfigData
+
+### UnityEngine.CachedAssetBundle  : Il2CppSystem.ValueType
+  properties: hash, m_Hash, m_Name, name
+
+### UnityEngine.Cache  : System.ValueType
+  properties: expirationDelay, handle, index, maximumAvailableStorageSpace, path, readOnly, ready, spaceFree, spaceOccupied, valid
+  methods:    BoxIl2CppObject, Cache_ClearCache, Cache_ClearCache_Expiration, Cache_GetCachingDiskSpaceUsed, Cache_GetExpirationDelay, Cache_GetIndex, Cache_GetMaximumDiskSpaceAvailable, Cache_GetPath, Cache_GetSpaceFree, Cache_IsReadonly, Cache_IsReady, Cache_IsValid, Cache_SetExpirationDelay, Cache_SetMaximumDiskSpaceAvailable, ClearCache, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Caching  : Il2CppSystem.Object
+  properties: cacheCount, compressionEnabled, currentCacheForWriting, currentCacheForWriting_Injected, defaultCache, defaultCache_Injected, expirationDelay, maximumAvailableDiskSpace, ready, spaceAvailable, spaceFree, spaceOccupied, spaceUsed
+  methods:    AddCache, AddCache_Injected, CleanCache, ClearAllCachedVersions, ClearCache, ClearCache_Int, ClearCachedVersion, ClearCachedVersionInternal, ClearCachedVersionInternal_Injected, ClearCachedVersions, ClearCachedVersions_Injected, ClearOtherCachedVersions, GetAllCachePaths, GetCacheAt, GetCacheAt_Injected, GetCacheByPath, GetCacheByPath_Injected, GetCachedVersions, GetVersionFromCache, IsVersionCached, IsVersionCached_Injected, MarkAsUsed, MarkAsUsed_Injected, MoveCacheAfter, MoveCacheAfter_Injected, MoveCacheBefore, MoveCacheBefore_Injected, RemoveCache, RemoveCache_Injected
+
+### UnityEngine.Camera  : UnityEngine.Behaviour
+  properties: PreviewCullingLayer, activeTexture, actualRenderingPath, allCameras, allCamerasCount, allowDynamicResolution, allowHDR, allowMSAA, areVRStereoViewMatricesWithinSingleCullTolerance, aspect, backgroundColor, backgroundColor_Injected, cameraToWorldMatrix, cameraToWorldMatrix_Injected, cameraType, clearFlags, clearStencilAfterLightingPass, commandBufferCount, cullingMask, cullingMatrix, cullingMatrix_Injected, current, depth, depthTextureMode, eventMask, farClipPlane, fieldOfView, focalLength, forceIntoRenderTexture, gateFit, layerCullDistances, layerCullSpherical, lensShift, lensShift_Injected, main, nearClipPlane, nonJitteredProjectionMatrix, nonJitteredProjectionMatrix_Injected, onPostRender, onPreCull, onPreRender, opaqueSortMode, orthographic, orthographicSize, overrideSceneCullingMask, pixelHeight, pixelRect, pixelRect_Injected, pixelWidth, previousViewProjectionMatrix, previousViewProjectionMatrix_Injected, projectionMatrix, projectionMatrixMode, projectionMatrix_Injected, rect, rect_Injected, renderingPath, scaledPixelHeight, scaledPixelWidth, scene, sceneCullingMask, sceneViewFilterMode, scene_Injected, sensorSize, sensorSize_Injected, skyboxMaterial, stereoActiveEye, stereoConvergence, stereoEnabled, stereoSeparation, stereoTargetEye, targetDisplay, targetTexture, transparencySortAxis, transparencySortAxis_Injected, transparencySortMode, useJitteredProjectionMatrixForTransparentRendering, useOcclusionCulling, usePhysicalProperties, velocity, velocity_Injected, worldToCameraMatrix, worldToCameraMatrix_Injected
+  methods:    AddCommandBuffer, AddCommandBufferAsync, AddCommandBufferAsyncImpl, AddCommandBufferImpl, CalculateFrustumCorners, CalculateFrustumCornersInternal, CalculateFrustumCornersInternal_Injected, CalculateObliqueMatrix, CalculateObliqueMatrix_Injected, CalculateProjectionMatrixFromPhysicalProperties, CalculateProjectionMatrixFromPhysicalPropertiesInternal, CalculateProjectionMatrixFromPhysicalPropertiesInternal_Injected, CopyFrom, CopyStereoDeviceProjectionMatrixToNonJittered, FieldOfViewToFocalLength, FireOnPostRender, FireOnPreCull, FireOnPreRender, FocalLengthToFieldOfView, GetAllCameras, GetAllCamerasCount, GetAllCamerasImpl, GetCameraBufferWarnings, GetCommandBuffers, GetCullingParameters_Internal, GetFilterMode, GetFrustumPlaneSizeAt, GetFrustumPlaneSizeAt_Injected, GetGateFittedFieldOfView, GetGateFittedLensShift, GetGateFittedLensShift_Injected, GetLayerCullDistances, GetLocalSpaceAim, GetLocalSpaceAim_Injected, GetStereoNonJitteredProjectionMatrix, GetStereoNonJitteredProjectionMatrix_Injected, GetStereoProjectionMatrix, GetStereoProjectionMatrix_Injected, GetStereoViewMatrix, GetStereoViewMatrix_Injected, HorizontalToVerticalFieldOfView, OnlyUsedForTesting1, OnlyUsedForTesting2, RemoveAllCommandBuffers, RemoveCommandBuffer, RemoveCommandBufferImpl, RemoveCommandBuffers, Render, RenderDontRestore, RenderToCubemap, RenderToCubemapEyeImpl, RenderToCubemapImpl, RenderWithShader, Reset, ResetAspect, ResetCullingMatrix, ResetProjectionMatrix, ResetReplacementShader, ResetStereoProjectionMatrices, ResetStereoViewMatrices, ResetTransparencySortSettings, ResetWorldToCameraMatrix, ScreenPointToRay, ScreenPointToRay_Injected, ScreenToViewportPoint, ScreenToViewportPoint_Injected, ScreenToWorldPoint, ScreenToWorldPoint_Injected, SetLayerCullDistances, SetReplacementShader, SetStereoProjectionMatrix, SetStereoProjectionMatrix_Injected, SetStereoViewMatrix, SetStereoViewMatrix_Injected, SetTargetBuffers, SetTargetBuffersImpl, SetTargetBuffersImpl_Injected, SetTargetBuffersMRTImpl, SetTargetBuffersMRTImpl_Injected, SetupCurrent, SubmitRenderRequests, SubmitRenderRequestsInternal, TryGetCullingParameters, VerticalToHorizontalFieldOfView, ViewportPointToRay, ViewportPointToRay_Injected, ViewportToScreenPoint, ViewportToScreenPoint_Injected, ViewportToWorldPoint, ViewportToWorldPoint_Injected, WorldToScreenPoint, WorldToScreenPoint_Injected, WorldToViewportPoint, WorldToViewportPoint_Injected
+
+### UnityEngine.CullingGroupEvent  : System.ValueType
+  properties: currentDistance, hasBecomeInvisible, hasBecomeVisible, index, isVisible, previousDistance, wasVisible
+  methods:    BoxIl2CppObject
+
+### UnityEngine.CullingGroup  : Il2CppSystem.Object
+  properties: enabled, m_OnStateChanged, m_Ptr, onStateChanged, targetCamera
+  methods:    Dispose, DisposeInternal, EraseSwapBack, Finalize, FinalizerFailure, GetDistance, Init, IsVisible, QueryIndices, SendEvents, SetBoundingDistances, SetBoundingSphereCount, SetBoundingSpheres, SetDistanceReferencePoint, SetDistanceReferencePoint_InternalTransform, SetDistanceReferencePoint_InternalVector3, SetDistanceReferencePoint_InternalVector3_Injected
+
+### UnityEngine.ReflectionProbe  : UnityEngine.Behaviour
+  properties: backgroundColor, backgroundColor_Injected, bakedTexture, blendDistance, bounds, bounds_Injected, boxProjection, center, center_Injected, clearFlags, cullingMask, customBakedTexture, defaultReflectionSet, defaultReflectionTexture, defaultTexture, defaultTextureHDRDecodeValues, defaultTextureHDRDecodeValues_Injected, farClipPlane, hdr, importance, intensity, maxBakedCubemapResolution, minBakedCubemapResolution, mode, nearClipPlane, realtimeTexture, reflectionProbeChanged, refreshMode, renderDynamicObjects, resolution, shadowDistance, size, size_Injected, texture, textureHDRDecodeValues, textureHDRDecodeValues_Injected, timeSlicingMode, type
+  methods:    BlendCubemap, CallReflectionProbeEvent, CallSetDefaultReflection, IsFinishedRendering, RenderProbe, Reset, ScheduleRender, UpdateCachedState, add_defaultReflectionSet, add_defaultReflectionTexture, add_reflectionProbeChanged, remove_defaultReflectionSet, remove_defaultReflectionTexture, remove_reflectionProbeChanged
+
+### UnityEngine.DebugLogHandler  : Il2CppSystem.Object
+  methods:    Internal_Log, Internal_LogException, LogException, LogFormat
+
+### UnityEngine.Debug  : Il2CppSystem.Object
+  properties: developerConsoleVisible, diagnosticSwitches, isDebugBuild, logger, s_DefaultLogger, s_Logger, unityLogger
+  methods:    Assert, AssertFormat, Break, CallOverridenDebugHandler, ClearDeveloperConsole, DebugBreak, DrawLine, DrawLine_Injected, DrawRay, ExtractStackTraceNoAlloc, GetDiagnosticSwitch, IsLoggingEnabled, Log, LogAssertion, LogAssertionFormat, LogError, LogErrorFormat, LogException, LogFormat, LogWarning, LogWarningFormat, OpenConsoleFile
+
+### UnityEngine.DiagnosticSwitch  : Il2CppSystem.Object
+  properties: defaultValue, description, enumInfo, flags, isSetToDefault, m_Ptr, maxValue, minValue, name, needsRestart, owningModule, persistentValue, value
+  methods:    GetScriptingPersistentValue, GetScriptingValue, SetScriptingValue
+
+### UnityEngine.Bounds  : System.ValueType
+  properties: center, extents, max, min, size
+  methods:    BoxIl2CppObject, ClosestPoint, ClosestPoint_Injected, Contains, Contains_Injected, Encapsulate, Equals, Expand, GetHashCode, IntersectRay, IntersectRayAABB, IntersectRayAABB_Injected, Intersects, SetMinMax, SqrDistance, SqrDistance_Injected, ToString, op_Equality, op_Inequality
+
+### UnityEngine.GeometryUtility  : Il2CppSystem.Object
+  methods:    CalculateBounds, CalculateFrustumPlanes, Internal_CalculateBounds, Internal_CalculateBounds_Injected, Internal_ExtractPlanes, Internal_ExtractPlanes_Injected, TestPlanesAABB, TestPlanesAABB_Injected, TryCreatePlaneFromPolygon
+
+### UnityEngine.Plane  : System.ValueType
+  properties: distance, flipped, normal, size
+  methods:    BoxIl2CppObject, ClosestPointOnPlane, Flip, GetDistanceToPoint, GetSide, Raycast, SameSide, Set3Points, SetNormalAndPosition, ToString, Translate
+
+### UnityEngine.Ray  : System.ValueType
+  properties: direction, origin
+  methods:    BoxIl2CppObject, GetPoint, ToString
+
+### UnityEngine.Ray2D  : System.ValueType
+  properties: direction, origin
+  methods:    BoxIl2CppObject, GetPoint, ToString
+
+### UnityEngine.Rect  : System.ValueType
+  properties: bottom, center, height, left, max, min, position, right, size, top, width, x, xMax, xMin, y, yMax, yMin, zero
+  methods:    BoxIl2CppObject, Contains, Equals, GetHashCode, MinMaxRect, NormalizedToPoint, OrderMinMax, Overlaps, PointToNormalized, Set, ToString, op_Equality, op_Inequality
+
+### UnityEngine.RectInt  : System.ValueType
+  properties: allPositionsWithin, center, height, max, min, position, size, width, x, xMax, xMin, y, yMax, yMin
+  methods:    BoxIl2CppObject, ClampToBounds, Contains, Equals, Overlaps, SetMinMax, ToString
+
+### UnityEngine.RectOffset  : Il2CppSystem.Object
+  properties: bottom, horizontal, left, m_Ptr, m_SourceStyle, right, top, vertical
+  methods:    Add, Add_Injected, Destroy, Finalize, InternalCreate, InternalDestroy, Remove, Remove_Injected, ToString
+
+### UnityEngine.LightingSettings  : UnityEngine.Object
+  properties: bakedGI, realtimeEnvironmentLighting, realtimeGI
+  methods:    Internal_Create, LightingSettingsDontStripMe
+
+### UnityEngine.Gizmos  : Il2CppSystem.Object
+  properties: color, color_Injected, exposure, matrix, matrix_Injected, probeSize
+  methods:    DrawCube, DrawCube_Injected, DrawFrustum, DrawFrustum_Injected, DrawGUITexture, DrawGUITexture_Injected, DrawIcon, DrawIcon_Injected, DrawLine, DrawLine_Injected, DrawMesh, DrawMesh_Injected, DrawRay, DrawSphere, DrawSphere_Injected, DrawWireCube, DrawWireCube_Injected, DrawWireMesh, DrawWireMesh_Injected, DrawWireSphere, DrawWireSphere_Injected
+
+### UnityEngine.BeforeRenderOrderAttribute  : Il2CppSystem.Attribute
+  properties: _order_k__BackingField, order
+
+### UnityEngine.BeforeRenderHelper  : Il2CppSystem.Object
+  properties: s_OrderBlocks
+  methods:    GetUpdateOrder, Invoke, RegisterCallback, UnregisterCallback
+
+### UnityEngine.CustomRenderTextureManager  : Il2CppSystem.Object
+  properties: initializeTriggered, textureLoaded, textureUnloaded, updateTriggered
+  methods:    GetAllCustomRenderTextures, InvokeOnTextureLoaded_Internal, InvokeOnTextureUnloaded_Internal, InvokeTriggerInitialize, InvokeTriggerUpdate, add_initializeTriggered, add_textureLoaded, add_textureUnloaded, remove_initializeTriggered, remove_textureLoaded, remove_textureUnloaded
+
+### UnityEngine.Display  : Il2CppSystem.Object
+  properties: _mainDisplay, active, activeEditorGameViewTarget, colorBuffer, depthBuffer, displays, m_ActiveEditorGameViewTarget, main, nativeDisplay, onDisplaysUpdated, renderingHeight, renderingWidth, requiresBlitToBackbuffer, requiresSrgbBlitToBackbuffer, systemHeight, systemWidth
+  methods:    Activate, ActivateDisplayImpl, FireDisplaysUpdated, GetActiveImpl, GetRenderingBuffersImpl, GetRenderingExtImpl, GetSystemExtImpl, MultiDisplayLicense, RecreateDisplayList, RelativeMouseAt, RelativeMouseAtImpl, RequiresBlitToBackbufferImpl, RequiresSrgbBlitToBackbufferImpl, SetParams, SetParamsImpl, SetRenderingResolution, SetRenderingResolutionImpl, add_onDisplaysUpdated, remove_onDisplaysUpdated
+
+### UnityEngine.RefreshRate  : System.ValueType
+  properties: value
+  methods:    BoxIl2CppObject, Equals
+
+### UnityEngine.DisplayInfo  : Il2CppSystem.ValueType
+  properties: handle, height, name, refreshRate, width, workArea
+  methods:    Equals
+
+### UnityEngine.Screen  : Il2CppSystem.Object
+  properties: autorotateToLandscapeLeft, autorotateToLandscapeRight, autorotateToPortrait, autorotateToPortraitUpsideDown, brightness, currentResolution, currentResolution_Injected, cutouts, dpi, fullScreen, fullScreenMode, height, lockCursor, mainWindowDisplayInfo, mainWindowPosition, orientation, resolutions, safeArea, safeArea_Injected, sleepTimeout, width
+  methods:    GetDisplayLayout, GetDisplayLayoutImpl, GetMainWindowDisplayInfo, GetMainWindowDisplayInfo_Injected, GetMainWindowPosition, GetMainWindowPosition_Injected, GetScreenOrientation, IsOrientationEnabled, MoveMainWindowImpl, MoveMainWindowImpl_Injected, MoveMainWindowTo, RequestOrientation, SetOrientationEnabled, SetResolution
+
+### UnityEngine.RenderBuffer  : System.ValueType
+  properties: loadAction, storeAction
+  methods:    BoxIl2CppObject, GetLoadAction, GetLoadAction_Injected, GetNativeRenderBufferPtr, GetNativeRenderBufferPtr_Injected, GetStoreAction, GetStoreAction_Injected, SetLoadAction, SetLoadAction_Injected, SetStoreAction, SetStoreAction_Injected
+
+### UnityEngine.Graphics  : Il2CppSystem.Object
+  properties: activeColorBuffer, activeColorGamut, activeDepthBuffer, activeTier, kMaxDrawMeshInstanceCount, minOpenGLESVersion, preserveFramebufferAlpha, s_RenderInstancedDataLayouts
+  methods:    Blit, Blit2, Blit3, Blit4, Blit4_Injected, Blit5, Blit5_Injected, BlitMultiTap, CheckLoadActionValid, CheckStoreActionValid, ClearRandomWriteTargets, ConvertTexture, ConvertTexture_Full, ConvertTexture_Slice, CopyBuffer, CopyBufferImpl, CopyTexture, CopyTexture_Full, CopyTexture_Region, CopyTexture_Slice, CopyTexture_Slice_AllMips, CreateAsyncGraphicsFence, CreateGPUFenceImpl, CreateGraphicsFence, DrawMesh, DrawMeshInstanced, DrawMeshInstancedIndirect, DrawMeshInstancedProcedural, DrawMeshNow, DrawProcedural, DrawProceduralIndirect, DrawProceduralIndirectNow, DrawProceduralNow, DrawTexture, DrawTextureImpl, ExecuteCommandBuffer, ExecuteCommandBufferAsync, GetActiveColorBuffer, GetActiveColorBuffer_Injected, GetActiveColorGamut, GetActiveDepthBuffer, GetActiveDepthBuffer_Injected, GetCachedRenderInstancedDataLayout, GetMinOpenGLESVersion, GetPreserveFramebufferAlpha, Internal_BlitMaterial5, Internal_BlitMaterial6, Internal_BlitMultiTap4, Internal_BlitMultiTap5, Internal_DrawMesh, Internal_DrawMeshInstanced, Internal_DrawMeshInstancedIndirect, Internal_DrawMeshInstancedIndirectGraphicsBuffer, Internal_DrawMeshInstancedIndirectGraphicsBuffer_Injected, Internal_DrawMeshInstancedIndirect_Injected, Internal_DrawMeshInstancedProcedural, Internal_DrawMeshInstancedProcedural_Injected, Internal_DrawMeshNow1, Internal_DrawMeshNow1_Injected, Internal_DrawMeshNow2, Internal_DrawMeshNow2_Injected, Internal_DrawMesh_Injected, Internal_DrawProcedural, Internal_DrawProceduralIndexed, Internal_DrawProceduralIndexedIndirect, Internal_DrawProceduralIndexedIndirectGraphicsBuffer, Internal_DrawProceduralIndexedIndirectGraphicsBuffer_Injected, Internal_DrawProceduralIndexedIndirectNow, Internal_DrawProceduralIndexedIndirectNowGraphicsBuffer, Internal_DrawProceduralIndexedIndirect_Injected, Internal_DrawProceduralIndexedNow, Internal_DrawProceduralIndexed_Injected, Internal_DrawProceduralIndirect, Internal_DrawProceduralIndirectGraphicsBuffer, Internal_DrawProceduralIndirectGraphicsBuffer_Injected, Internal_DrawProceduralIndirectNow, Internal_DrawProceduralIndirectNowGraphicsBuffer, Internal_DrawProceduralIndirect_Injected, Internal_DrawProceduralNow, Internal_DrawProcedural_Injected, Internal_DrawTexture, Internal_GetMaxDrawMeshInstanceCount, Internal_RenderMesh, Internal_RenderMeshIndirect, Internal_RenderMeshIndirect_Injected, Internal_RenderMeshInstanced, Internal_RenderMeshInstanced_Injected, Internal_RenderMeshPrimitives, Internal_RenderMeshPrimitives_Injected, Internal_RenderMesh_Injected, Internal_RenderPrimitives, Internal_RenderPrimitivesIndexed, Internal_RenderPrimitivesIndexedIndirect, Internal_RenderPrimitivesIndexedIndirect_Injected, Internal_RenderPrimitivesIndexed_Injected, Internal_RenderPrimitivesIndirect, Internal_RenderPrimitivesIndirect_Injected, Internal_RenderPrimitives_Injected, Internal_SetMRTFullSetup, Internal_SetMRTFullSetup_Injected, Internal_SetMRTSimple, Internal_SetMRTSimple_Injected, Internal_SetNullRT, Internal_SetRTSimple, Internal_SetRTSimple_Injected, Internal_SetRandomWriteTargetBuffer, Internal_SetRandomWriteTargetGraphicsBuffer, Internal_SetRandomWriteTargetRT, RenderMesh, RenderMeshIndirect, RenderMeshInstanced, RenderMeshPrimitives, RenderPrimitives, RenderPrimitivesIndexed, RenderPrimitivesIndexedIndirect, RenderPrimitivesIndirect, SetRandomWriteTarget, SetRenderTarget, SetRenderTargetImpl, ValidateCopyBuffer, WaitOnAsyncGraphicsFence, WaitOnGPUFenceImpl
+
+### UnityEngine.GL  : Il2CppSystem.Object
+  properties: invertCulling, modelview, sRGBWrite, wireframe
+  methods:    Begin, Clear, ClearWithSkybox, Color, End, Flush, GLClear, GLClear_Injected, GLIssuePluginEvent, GLLoadPixelMatrixScript, GetGPUProjectionMatrix, GetGPUProjectionMatrix_Injected, GetWorldViewMatrix, GetWorldViewMatrix_Injected, ImmediateColor, InvalidateState, IssuePluginEvent, LoadIdentity, LoadOrtho, LoadPixelMatrix, LoadProjectionMatrix, LoadProjectionMatrix_Injected, MultMatrix, MultMatrix_Injected, MultiTexCoord, MultiTexCoord2, MultiTexCoord3, PopMatrix, PushMatrix, RenderTargetBarrier, SetRevertBackfacing, SetViewMatrix, SetViewMatrix_Injected, TexCoord, TexCoord2, TexCoord3, Vertex, Vertex3, Vertices, Viewport, Viewport_Injected
+
+### UnityEngine.ScalableBufferManager  : Il2CppSystem.Object
+  properties: heightScaleFactor, widthScaleFactor
+  methods:    ResizeBuffers
+
+### UnityEngine.LightmapData  : Il2CppSystem.Object
+  properties: lightmapColor, lightmapDir, lightmapLight, m_Dir, m_Light, m_ShadowMask, shadowMask
+
+### UnityEngine.LightmapSettings  : UnityEngine.Object
+  properties: bakedColorSpace, lightProbes, lightmaps, lightmapsMode, lightmapsModeLegacy
+  methods:    Reset
+
+### UnityEngine.LightProbes  : UnityEngine.Object
+  properties: bakedProbes, cellCount, coefficients, count, needsRetetrahedralization, positions, tetrahedralizationCompleted
+  methods:    AreLightProbesAllowed, CalculateInterpolatedLightAndOcclusionProbes, CalculateInterpolatedLightAndOcclusionProbes_Internal, GetCount, GetInterpolatedLightProbe, GetInterpolatedProbe, GetInterpolatedProbe_Injected, Internal_CallNeedsRetetrahedralizationFunction, Internal_CallTetrahedralizationCompletedFunction, Tetrahedralize, TetrahedralizeAsync, add_needsRetetrahedralization, add_tetrahedralizationCompleted, remove_needsRetetrahedralization, remove_tetrahedralizationCompleted
+
+### UnityEngine.Resolution  : System.ValueType
+  properties: height, refreshRate, width
+  methods:    BoxIl2CppObject, ToString
+
+### UnityEngine.RenderParams  : Il2CppSystem.ValueType
+  properties: _camera_k__BackingField, _layer_k__BackingField, _lightProbeProxyVolume_k__BackingField, _lightProbeUsage_k__BackingField, _matProps_k__BackingField, _material_k__BackingField, _motionVectorMode_k__BackingField, _receiveShadows_k__BackingField, _reflectionProbeUsage_k__BackingField, _rendererPriority_k__BackingField, _renderingLayerMask_k__BackingField, _shadowCastingMode_k__BackingField, _worldBounds_k__BackingField, camera, layer, lightProbeProxyVolume, lightProbeUsage, matProps, material, motionVectorMode, receiveShadows, reflectionProbeUsage, rendererPriority, renderingLayerMask, shadowCastingMode, worldBounds
+
+### UnityEngine.RenderInstancedDataLayout  : System.ValueType
+  properties: offsetObjectToWorld, offsetPrevObjectToWorld, offsetRenderingLayerMask, size
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Internal_DrawTextureArguments  : Il2CppSystem.ValueType
+  properties: borderWidths, bottomBorder, bottomBorderColor, color, cornerRadiuses, leftBorder, leftBorderColor, mat, pass, rightBorder, rightBorderColor, screenRect, smoothCorners, sourceRect, texture, topBorder, topBorderColor
+
+### UnityEngine.QualitySettings  : UnityEngine.Object
+  properties: INTERNAL_renderPipeline, activeColorSpace, anisotropicFiltering, antiAliasing, asyncUploadBufferSize, asyncUploadPersistentBuffer, asyncUploadTimeSlice, billboardsFaceCameraPosition, blendWeights, currentLevel, desiredColorSpace, lodBias, masterTextureLimit, maxQueuedFrames, maximumLODLevel, names, particleRaycastBudget, pixelLightCount, realtimeGICPUUsage, realtimeReflectionProbes, renderPipeline, resolutionScalingFixedDPIFactor, shadowCascade2Split, shadowCascade4Split, shadowCascade4Split_Injected, shadowCascades, shadowDistance, shadowNearPlaneOffset, shadowProjection, shadowResolution, shadowmaskMode, shadows, skinWeights, softParticles, softVegetation, streamingMipmapsActive, streamingMipmapsAddAllCameras, streamingMipmapsMaxFileIORequests, streamingMipmapsMaxLevelReduction, streamingMipmapsMemoryBudget, streamingMipmapsRenderersPerFrame, vSyncCount
+  methods:    DecreaseLevel, GetQualityLevel, GetQualitySettings, GetRenderPipelineAssetAt, IncreaseLevel, InternalGetRenderPipelineAssetAt, SetLODSettings, SetQualityLevel
+
+### UnityEngine.TrailRenderer  : UnityEngine.Renderer
+  properties: alignment, autodestruct, colorGradient, emitting, endColor, endColor_Injected, endWidth, generateLightingData, minVertexDistance, numCapVertices, numCornerVertices, numPositions, positionCount, shadowBias, startColor, startColor_Injected, startWidth, textureMode, time, widthCurve, widthMultiplier
+  methods:    AddPosition, AddPosition_Injected, AddPositions, AddPositionsWithNativeContainer, BakeMesh, Clear, GetColorGradientCopy, GetPosition, GetPosition_Injected, GetPositions, GetPositionsWithNativeContainer, GetVisiblePositions, GetVisiblePositionsWithNativeContainer, GetWidthCurveCopy, SetColorGradient, SetPosition, SetPosition_Injected, SetPositions, SetPositionsWithNativeContainer, SetWidthCurve
+
+### UnityEngine.LineRenderer  : UnityEngine.Renderer
+  properties: alignment, colorGradient, endColor, endColor_Injected, endWidth, generateLightingData, loop, numCapVertices, numCornerVertices, numPositions, positionCount, shadowBias, startColor, startColor_Injected, startWidth, textureMode, useWorldSpace, widthCurve, widthMultiplier
+  methods:    BakeMesh, GetColorGradientCopy, GetPosition, GetPosition_Injected, GetPositions, GetPositionsWithNativeContainer, GetWidthCurveCopy, SetColorGradient, SetColors, SetPosition, SetPosition_Injected, SetPositions, SetPositionsWithNativeContainer, SetVertexCount, SetWidth, SetWidthCurve, Simplify
+
+### UnityEngine.MaterialPropertyBlock  : Il2CppSystem.Object
+  properties: isEmpty, m_Ptr
+  methods:    AddColor, AddFloat, AddMatrix, AddTexture, AddVector, Clear, CopyProbeOcclusionArrayFrom, CopySHCoefficientArraysFrom, CreateImpl, DestroyImpl, Dispose, ExtractFloatArray, ExtractFloatArrayImpl, ExtractMatrixArray, ExtractMatrixArrayImpl, ExtractVectorArray, ExtractVectorArrayImpl, Finalize, GetColor, GetColorImpl, GetColorImpl_Injected, GetFloat, GetFloatArray, GetFloatArrayCountImpl, GetFloatArrayImpl, GetFloatImpl, GetInt, GetIntImpl, GetInteger, GetMatrix, GetMatrixArray, GetMatrixArrayCountImpl, GetMatrixArrayImpl, GetMatrixImpl, GetMatrixImpl_Injected, GetTexture, GetTextureImpl, GetVector, GetVectorArray, GetVectorArrayCountImpl, GetVectorArrayImpl, GetVectorImpl, GetVectorImpl_Injected, HasBuffer, HasBufferImpl, HasColor, HasConstantBuffer, HasConstantBufferImpl, HasFloat, HasFloatImpl, HasInt, HasIntImpl, HasInteger, HasMatrix, HasMatrixImpl, HasProperty, HasPropertyImpl, HasTexture, HasTextureImpl, HasVector, HasVectorImpl, Internal_CopyProbeOcclusionArrayFrom, Internal_CopySHCoefficientArraysFrom, SetBuffer, SetBufferImpl, SetColor, SetColorImpl, SetColorImpl_Injected, SetConstantBuffer, SetConstantBufferImpl, SetConstantGraphicsBufferImpl, SetFloat, SetFloatArray, SetFloatArrayImpl, SetFloatImpl, SetGraphicsBufferImpl, SetInt, SetIntImpl, SetInteger, SetMatrix, SetMatrixArray, SetMatrixArrayImpl, SetMatrixImpl, SetMatrixImpl_Injected, SetRenderTextureImpl, SetTexture, SetTextureImpl, SetVector, SetVectorArray, SetVectorArrayImpl, SetVectorImpl, SetVectorImpl_Injected
+
+### UnityEngine.Renderer  : UnityEngine.Component
+  properties: allowOcclusionWhenDynamic, bounds, bounds_Injected, castShadows, enabled, forceRenderingOff, isPartOfStaticBatch, isVisible, lightProbeProxyVolumeOverride, lightProbeUsage, lightmapIndex, lightmapScaleOffset, localBounds, localBounds_Injected, localToWorldMatrix, localToWorldMatrix_Injected, material, materials, motionVectorGenerationMode, motionVectors, probeAnchor, rayTracingMode, realtimeLightmapIndex, realtimeLightmapScaleOffset, receiveShadows, reflectionProbeUsage, rendererPriority, renderingLayerMask, shadowCastingMode, sharedMaterial, sharedMaterials, sortingGroupID, sortingGroupOrder, sortingLayerID, sortingLayerName, sortingOrder, staticBatchIndex, staticBatchRootTransform, staticShadowCaster, useLightProbes, worldToLocalMatrix, worldToLocalMatrix_Injected
+  methods:    CopyMaterialArray, CopySharedMaterialArray, GetClosestReflectionProbes, GetClosestReflectionProbesInternal, GetIsStaticShadowCaster, GetLightmapIndex, GetLightmapST, GetLightmapST_Injected, GetMaterial, GetMaterialArray, GetMaterialCount, GetMaterials, GetPropertyBlock, GetSharedMaterial, GetSharedMaterialArray, GetSharedMaterials, HasPropertyBlock, Internal_GetPropertyBlock, Internal_GetPropertyBlockMaterialIndex, Internal_SetPropertyBlock, Internal_SetPropertyBlockMaterialIndex, ResetBounds, ResetLocalBounds, SetIsStaticShadowCaster, SetLightmapIndex, SetLightmapST, SetLightmapST_Injected, SetMaterial, SetMaterialArray, SetPropertyBlock, SetStaticBatchInfo, SetStaticLightmapST, SetStaticLightmapST_Injected
+
+### UnityEngine.RenderSettings  : UnityEngine.Object
+  properties: ambientEquatorColor, ambientEquatorColor_Injected, ambientGroundColor, ambientGroundColor_Injected, ambientIntensity, ambientLight, ambientLight_Injected, ambientMode, ambientProbe, ambientProbe_Injected, ambientSkyColor, ambientSkyColor_Injected, ambientSkyboxAmount, customReflection, defaultReflection, defaultReflectionMode, defaultReflectionResolution, flareFadeSpeed, flareStrength, fog, fogColor, fogColor_Injected, fogDensity, fogEndDistance, fogMode, fogStartDistance, haloStrength, reflectionBounces, reflectionIntensity, skybox, subtractiveShadowColor, subtractiveShadowColor_Injected, sun
+  methods:    GetRenderSettings, Reset
+
+### UnityEngine.Shader  : UnityEngine.Object
+  properties: disableBatching, enabledGlobalKeywords, globalKeywords, globalMaximumLOD, globalRenderPipeline, globalShaderHardwareTier, isSupported, keywordSpace, keywordSpace_Injected, maximumChunksOverride, maximumLOD, passCount, renderQueue, subshaderCount
+  methods:    CheckPropertyIndex, DisableKeyword, DisableKeywordFast, DisableKeywordFast_Injected, EnableKeyword, EnableKeywordFast, EnableKeywordFast_Injected, ExtractGlobalFloatArray, ExtractGlobalFloatArrayImpl, ExtractGlobalMatrixArray, ExtractGlobalMatrixArrayImpl, ExtractGlobalVectorArray, ExtractGlobalVectorArrayImpl, Find, FindBuiltin, FindPassTagValue, FindPropertyIndex, FindSubshaderTagValue, FindTextureStack, FindTextureStackImpl, GetAllGlobalKeywords, GetDependency, GetEnabledGlobalKeywords, GetGlobalColor, GetGlobalFloat, GetGlobalFloatArray, GetGlobalFloatArrayCountImpl, GetGlobalFloatArrayImpl, GetGlobalFloatImpl, GetGlobalInt, GetGlobalIntImpl, GetGlobalInteger, GetGlobalMatrix, GetGlobalMatrixArray, GetGlobalMatrixArrayCountImpl, GetGlobalMatrixArrayImpl, GetGlobalMatrixImpl, GetGlobalMatrixImpl_Injected, GetGlobalTexture, GetGlobalTextureImpl, GetGlobalVector, GetGlobalVectorArray, GetGlobalVectorArrayCountImpl, GetGlobalVectorArrayImpl, GetGlobalVectorImpl, GetGlobalVectorImpl_Injected, GetPassCountInSubshader, GetPropertyAttributes, GetPropertyCount, GetPropertyDefaultFloatValue, GetPropertyDefaultIntValue, GetPropertyDefaultValue, GetPropertyDefaultValue_Injected, GetPropertyDefaultVectorValue, GetPropertyDescription, GetPropertyFlags, GetPropertyName, GetPropertyNameId, GetPropertyRangeLimits, GetPropertyTextureDefaultName, GetPropertyTextureDimension, GetPropertyType, IDToTag, Internal_FindPassTagValue, Internal_FindPassTagValueInSubShader, Internal_FindSubshaderTagValue, IsKeywordEnabled, IsKeywordEnabledFast, IsKeywordEnabledFast_Injected, PropertyToID, SetGlobalBuffer, SetGlobalBufferImpl, SetGlobalColor, SetGlobalConstantBuffer, SetGlobalConstantBufferImpl, SetGlobalConstantGraphicsBufferImpl, SetGlobalFloat, SetGlobalFloatArray, SetGlobalFloatArrayImpl, SetGlobalFloatImpl, SetGlobalGraphicsBufferImpl, SetGlobalInt, SetGlobalIntImpl, SetGlobalInteger, SetGlobalMatrix, SetGlobalMatrixArray, SetGlobalMatrixArrayImpl, SetGlobalMatrixImpl, SetGlobalMatrixImpl_Injected, SetGlobalRenderTextureImpl, SetGlobalTexture, SetGlobalTextureImpl, SetGlobalVector, SetGlobalVectorArray, SetGlobalVectorArrayImpl, SetGlobalVectorImpl, SetGlobalVectorImpl_Injected, SetKeyword, SetKeywordFast, SetKeywordFast_Injected, TagToID, WarmupAllShaders
+
+### UnityEngine.Material  : UnityEngine.Object
+  properties: color, doubleSidedGI, enableInstancing, enabledKeywords, globalIlluminationFlags, mainTexture, mainTextureOffset, mainTextureScale, passCount, rawRenderQueue, renderQueue, shader, shaderKeywords
+  methods:    ComputeCRC, CopyMatchingPropertiesFromMaterial, CopyPropertiesFromMaterial, Create, CreateWithMaterial, CreateWithShader, CreateWithString, DisableKeyword, DisableLocalKeyword, DisableLocalKeyword_Injected, EnableKeyword, EnableLocalKeyword, EnableLocalKeyword_Injected, ExtractColorArray, ExtractColorArrayImpl, ExtractFloatArray, ExtractFloatArrayImpl, ExtractMatrixArray, ExtractMatrixArrayImpl, ExtractVectorArray, ExtractVectorArrayImpl, FindPass, GetColor, GetColorArray, GetColorArrayCountImpl, GetColorArrayImpl, GetColorImpl, GetColorImpl_Injected, GetDefaultLineMaterial, GetDefaultMaterial, GetDefaultParticleMaterial, GetEnabledKeywords, GetFirstPropertyNameIdByAttribute, GetFloat, GetFloatArray, GetFloatArrayCountImpl, GetFloatArrayImpl, GetFloatImpl, GetInt, GetIntImpl, GetInteger, GetMatrix, GetMatrixArray, GetMatrixArrayCountImpl, GetMatrixArrayImpl, GetMatrixImpl, GetMatrixImpl_Injected, GetPassName, GetShaderKeywords, GetShaderPassEnabled, GetTag, GetTagImpl, GetTexture, GetTextureImpl, GetTextureOffset, GetTexturePropertyNameIDs, GetTexturePropertyNameIDsInternal, GetTexturePropertyNames, GetTexturePropertyNamesInternal, GetTextureScale, GetTextureScaleAndOffsetImpl, GetTextureScaleAndOffsetImpl_Injected, GetVector, GetVectorArray, GetVectorArrayCountImpl, GetVectorArrayImpl, HasBuffer, HasBufferImpl, HasColor, HasConstantBuffer, HasConstantBufferImpl, HasFloat, HasFloatImpl, HasInt, HasIntImpl, HasInteger, HasMatrix, HasMatrixImpl, HasProperty, HasTexture, HasTextureImpl, HasVector, HasVectorImpl, IsKeywordEnabled, IsLocalKeywordEnabled, IsLocalKeywordEnabled_Injected, Lerp, SetBuffer, SetBufferImpl, SetColor, SetColorArray, SetColorArrayImpl, SetColorImpl, SetColorImpl_Injected, SetConstantBuffer, SetConstantBufferImpl, SetConstantGraphicsBufferImpl, SetEnabledKeywords, SetFloat, SetFloatArray, SetFloatArrayImpl, SetFloatImpl, SetGraphicsBufferImpl, SetInt, SetIntImpl, SetInteger, SetKeyword, SetLocalKeyword, SetLocalKeyword_Injected, SetMatrix, SetMatrixArray, SetMatrixArrayImpl, SetMatrixImpl, SetMatrixImpl_Injected, SetOverrideTag, SetPass, SetRenderTextureImpl, SetShaderKeywords, SetShaderPassEnabled, SetTexture, SetTextureImpl, SetTextureOffset, SetTextureOffsetImpl, SetTextureOffsetImpl_Injected, SetTextureScale, SetTextureScaleImpl, SetTextureScaleImpl_Injected, SetVector, SetVectorArray, SetVectorArrayImpl
+
+### UnityEngine.GraphicsBuffer  : Il2CppSystem.Object
+  properties: count, m_Ptr, name, stride, target
+  methods:    CopyCount, CopyCountCC, CopyCountCG, CopyCountGC, CopyCountGG, DestroyBuffer, Dispose, Finalize, GetData, GetNativeBufferPtr, InitBuffer, InternalGetData, InternalSetData, InternalSetNativeData, IsValid, IsValidBuffer, IsVertexIndexOrCopyOnly, Release, RequiresCompute, SetCounterValue, SetData, SetName
+
+### UnityEngine.Light  : UnityEngine.Behaviour
+  properties: attenuate, bakedIndex, bakingOutput, bakingOutput_Injected, bounceIntensity, boundingSphereOverride, boundingSphereOverride_Injected, color, colorTemperature, color_Injected, commandBufferCount, cookie, cookieSize, cullingMask, flare, innerSpotAngle, intensity, layerShadowCullDistances, lightShadowCasterMode, m_BakedIndex, pixelLightCount, range, renderMode, renderingLayerMask, shadowBias, shadowConstantBias, shadowCustomResolution, shadowMatrixOverride, shadowMatrixOverride_Injected, shadowNearPlane, shadowNormalBias, shadowObjectSizeBias, shadowResolution, shadowSoftness, shadowSoftnessFade, shadowStrength, shadows, shape, spotAngle, type, useBoundingSphereOverride, useColorTemperature, useShadowMatrixOverride, useViewFrustumForShadowCasterCull
+  methods:    AddCommandBuffer, AddCommandBufferAsync, GetCommandBuffers, GetLights, RemoveAllCommandBuffers, RemoveCommandBuffer, RemoveCommandBuffers, Reset
+
+### UnityEngine.MeshFilter  : UnityEngine.Component
+  properties: mesh, sharedMesh
+  methods:    DontStripMeshFilter
+
+### UnityEngine.LightProbeProxyVolume  : UnityEngine.Behaviour
+  properties: boundingBoxMode, boundsGlobal, boundsGlobal_Injected, dataFormat, gridResolutionX, gridResolutionY, gridResolutionZ, isFeatureSupported, originCustom, originCustom_Injected, probeDensity, probePositionMode, qualityMode, refreshMode, resolutionMode, sizeCustom, sizeCustom_Injected
+  methods:    SetDirtyFlag, Update
+
+### UnityEngine.SkinnedMeshRenderer  : UnityEngine.Renderer
+  properties: bones, forceMatrixRecalculationPerRender, quality, rootBone, sharedMesh, skinnedMotionVectors, updateWhenOffscreen, vertexBufferTarget
+  methods:    BakeMesh, GetBlendShapeWeight, GetPreviousVertexBuffer, GetPreviousVertexBufferImpl, GetVertexBuffer, GetVertexBufferImpl, SetBlendShapeWeight
+
+### UnityEngine.MeshRenderer  : UnityEngine.Renderer
+  properties: additionalVertexStreams, enlightenVertexStream, subMeshStartIndex
+  methods:    DontStripMeshRenderer
+
+### UnityEngine.LOD  : Il2CppSystem.ValueType
+  properties: fadeTransitionWidth, renderers, screenRelativeTransitionHeight
+
+### UnityEngine.LODGroup  : UnityEngine.Component
+  properties: animateCrossFading, crossFadeAnimationDuration, enabled, fadeMode, localReferencePoint, localReferencePoint_Injected, lodCount, size, worldReferencePoint, worldReferencePoint_Injected
+  methods:    ForceLOD, GetLODs, RecalculateBounds, SetLODS, SetLODs
+
+### UnityEngine.Mesh  : UnityEngine.Object
+  properties: bindposes, blendShapeCount, boneWeights, bounds, bounds_Injected, canAccess, colors, colors32, indexBufferTarget, indexFormat, isReadable, normals, subMeshCount, tangents, triangles, uv, uv2, uv3, uv4, uv5, uv6, uv7, uv8, vertexAttributeCount, vertexBufferCount, vertexBufferTarget, vertexCount, vertices
+  methods:    AcquireReadOnlyMeshData, AddBlendShapeFrame, AllocateWritableMeshData, ApplyAndDisposeWritableMeshData, CheckCanAccessSubmesh, CheckCanAccessSubmeshIndices, CheckCanAccessSubmeshTriangles, CheckIndicesArrayRange, Clear, ClearBlendShapes, ClearImpl, CombineMeshes, CombineMeshesImpl, DefaultDimensionForChannel, FromInstanceID, GetAllBoneWeights, GetAllBoneWeightsArray, GetAllBoneWeightsArraySize, GetAllocArrayFromChannel, GetAllocArrayFromChannelImpl, GetArrayFromChannelImpl, GetBaseVertex, GetBaseVertexImpl, GetBindposeCount, GetBindposes, GetBindposesNonAllocImpl, GetBlendShapeFrameCount, GetBlendShapeFrameVertices, GetBlendShapeFrameWeight, GetBlendShapeIndex, GetBlendShapeName, GetBoneWeights, GetBoneWeightsImpl, GetBoneWeightsNonAllocImpl, GetBonesPerVertex, GetBonesPerVertexArray, GetColors, GetIndexBuffer, GetIndexBufferImpl, GetIndexCount, GetIndexCountImpl, GetIndexStart, GetIndexStartImpl, GetIndices, GetIndicesImpl, GetIndicesNonAllocImpl, GetIndicesNonAllocImpl16, GetListForChannel, GetNativeIndexBufferPtr, GetNativeVertexBufferPtr, GetNormals, GetSubMesh, GetSubMesh_Injected, GetTangents, GetTopology, GetTopologyImpl, GetTotalIndexCount, GetTriangles, GetTrianglesCountImpl, GetTrianglesImpl, GetTrianglesNonAllocImpl, GetTrianglesNonAllocImpl16, GetUVChannel, GetUVDistributionMetric, GetUVs, GetUVsImpl, GetVertexAttribute, GetVertexAttributeCountImpl, GetVertexAttributeDimension, GetVertexAttributeFormat, GetVertexAttributeOffset, GetVertexAttributeStream, GetVertexAttribute_Injected, GetVertexAttributes, GetVertexAttributesAlloc, GetVertexAttributesArray, GetVertexAttributesList, GetVertexBuffer, GetVertexBufferImpl, GetVertexBufferStride, GetVertices, HasBoneWeights, HasVertexAttribute, InternalSetBoneWeights, InternalSetIndexBufferData, InternalSetIndexBufferDataFromArray, InternalSetVertexBufferData, InternalSetVertexBufferDataFromArray, Internal_Create, MarkDynamic, MarkDynamicImpl, MarkModified, Optimize, OptimizeImpl, OptimizeIndexBuffers, OptimizeIndexBuffersImpl, OptimizeReorderVertexBuffer, OptimizeReorderVertexBufferImpl, PrintErrorCantAccessChannel, PrintErrorCantAccessIndices, RecalculateBounds, RecalculateBoundsImpl, RecalculateNormals, RecalculateNormalsImpl, RecalculateTangents, RecalculateTangentsImpl, RecalculateUVDistributionMetric, RecalculateUVDistributionMetricImpl, RecalculateUVDistributionMetrics, RecalculateUVDistributionMetricsImpl, SetAllSubMeshesAtOnceFromArray, SetAllSubMeshesAtOnceFromNativeArray, SetArrayForChannel, SetArrayForChannelImpl, SetBoneWeights, SetBoneWeightsImpl, SetColors, SetIndexBufferData, SetIndexBufferParams, SetIndices, SetIndicesImpl, SetIndicesNativeArrayImpl, SetListForChannel, SetNativeArrayForChannelImpl, SetNormals, SetSizedArrayForChannel, SetSizedNativeArrayForChannel, SetSubMesh, SetSubMesh_Injected, SetSubMeshes, SetTangents, SetTriangles, SetTrianglesImpl, SetUVs, SetUvsImpl, SetVertexBufferData, SetVertexBufferParams, SetVertexBufferParamsFromArray, SetVertexBufferParamsFromPtr, SetVertices, UploadMeshData, UploadMeshDataImpl
+
+### UnityEngine.BoneWeight  : System.ValueType
+  properties: boneIndex0, boneIndex1, boneIndex2, boneIndex3, weight0, weight1, weight2, weight3
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.BoneWeight1  : System.ValueType
+  properties: boneIndex, weight
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.CombineInstance  : System.ValueType
+  properties: lightmapScaleOffset, mesh, realtimeLightmapScaleOffset, subMeshIndex, transform
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Texture  : UnityEngine.Object
+  properties: GenerateAllMips, activeTextureColorSpace, allowThreadedTextureCreation, anisoLevel, anisotropicFiltering, currentTextureMemory, desiredTextureMemory, dimension, filterMode, graphicsFormat, height, isDataSRGB, isNativeTexture, isReadable, masterTextureLimit, mipMapBias, mipmapCount, nonStreamingTextureCount, nonStreamingTextureMemory, streamingMipmapUploadCount, streamingRendererCount, streamingTextureCount, streamingTextureDiscardUnusedMips, streamingTextureForceLoadAll, streamingTextureLoadingCount, streamingTexturePendingLoadCount, targetTextureMemory, texelSize, texelSize_Injected, totalTextureMemory, updateCount, width, wrapMode, wrapModeU, wrapModeV, wrapModeW
+  methods:    CreateNativeArrayLengthOverflowException, CreateNonReadableException, GetDataHeight, GetDataWidth, GetDimension, GetNativeTextureID, GetNativeTexturePtr, GetPixelDataOffset, GetPixelDataSize, GetTextureColorSpace, IncrementUpdateCount, Internal_GetActiveTextureColorSpace, Internal_GetStoredColorSpace, SetGlobalAnisotropicFilteringLimits, SetStreamingTextureMaterialDebugProperties, ValidateFormat
+
+### UnityEngine.Texture2D  : UnityEngine.Texture
+  properties: blackTexture, calculatedMipmapLevel, desiredMipmapLevel, format, grayTexture, ignoreMipmapLimit, isPreProcessed, isReadable, linearGrayTexture, loadAllMips, loadedMipmapLevel, loadingMipmapLevel, minimumMipmapLevel, normalTexture, redTexture, requestedMipmapLevel, streamingMipmaps, streamingMipmapsPriority, streamingMipmapsPriorityMax, streamingMipmapsPriorityMin, vtOnly, whiteTexture
+  methods:    Apply, ApplyImpl, ClearMinimumMipmapLevel, ClearRequestedMipmapLevel, Compress, CreateExternalTexture, GenerateAtlas, GenerateAtlasImpl, GetPixel, GetPixelBilinear, GetPixelBilinearImpl, GetPixelBilinearImpl_Injected, GetPixelData, GetPixelImpl, GetPixelImpl_Injected, GetPixels, GetPixels32, GetRawImageDataSize, GetRawTextureData, GetWritableImageData, Internal_Create, Internal_CreateImpl, IsRequestedMipmapLevelLoaded, LoadRawTextureData, LoadRawTextureDataImpl, LoadRawTextureDataImplArray, PackTextures, ReadPixels, ReadPixelsImpl, ReadPixelsImpl_Injected, Reinitialize, ReinitializeImpl, ReinitializeWithFormatImpl, Resize, SetAllPixels32, SetBlockOfPixels32, SetPixel, SetPixelData, SetPixelDataImpl, SetPixelDataImplArray, SetPixelImpl, SetPixelImpl_Injected, SetPixels, SetPixels32, SetPixelsImpl, UpdateExternalTexture, ValidateFormat
+
+### UnityEngine.Cubemap  : UnityEngine.Texture
+  properties: desiredMipmapLevel, format, isPreProcessed, isReadable, loadAllMips, loadedMipmapLevel, loadingMipmapLevel, requestedMipmapLevel, streamingMipmaps, streamingMipmapsPriority
+  methods:    Apply, ApplyImpl, ClearRequestedMipmapLevel, CreateExternalTexture, GetPixel, GetPixelData, GetPixelImpl, GetPixelImpl_Injected, GetPixels, GetWritableImageData, Internal_Create, Internal_CreateImpl, IsRequestedMipmapLevelLoaded, SetPixel, SetPixelData, SetPixelDataImpl, SetPixelDataImplArray, SetPixelImpl, SetPixelImpl_Injected, SetPixels, SmoothEdges, UpdateExternalTexture, ValidateFormat, ValidateIsNotCrunched
+
+### UnityEngine.Texture3D  : UnityEngine.Texture
+  properties: depth, format, isReadable
+  methods:    Apply, ApplyImpl, CreateExternalTexture, GetImageDataPointer, GetPixel, GetPixelBilinear, GetPixelBilinearImpl, GetPixelBilinearImpl_Injected, GetPixelData, GetPixelImpl, GetPixelImpl_Injected, GetPixels, GetPixels32, Internal_Create, Internal_CreateImpl, SetPixel, SetPixelData, SetPixelDataImpl, SetPixelDataImplArray, SetPixelImpl, SetPixelImpl_Injected, SetPixels, SetPixels32, UpdateExternalTexture, ValidateIsNotCrunched
+
+### UnityEngine.Texture2DArray  : UnityEngine.Texture
+  properties: allSlices, depth, format, isReadable
+  methods:    Apply, ApplyImpl, GetImageDataPointer, GetPixelData, GetPixels, GetPixels32, Internal_Create, Internal_CreateImpl, SetPixelData, SetPixelDataImpl, SetPixelDataImplArray, SetPixels, SetPixels32, ValidateFormat, ValidateIsNotCrunched
+
+### UnityEngine.CubemapArray  : UnityEngine.Texture
+  properties: cubemapCount, format, isReadable
+  methods:    Apply, ApplyImpl, GetImageDataPointer, GetPixelData, GetPixels, GetPixels32, Internal_Create, Internal_CreateImpl, SetPixelData, SetPixelDataImpl, SetPixelDataImplArray, SetPixels, SetPixels32, ValidateIsNotCrunched
+
+### UnityEngine.RenderTexture  : UnityEngine.Texture
+  properties: active, antiAliasing, autoGenerateMips, bindTextureMS, colorBuffer, depth, depthBuffer, depthStencilFormat, descriptor, dimension, enableRandomWrite, enabled, format, graphicsFormat, height, isCubemap, isPowerOfTwo, isVolume, memorylessMode, sRGB, stencilFormat, useDynamicScale, useMipMap, volumeDepth, vrUsage, width
+  methods:    ConvertToEquirect, Create, DiscardContents, GenerateMips, GetActive, GetColorBuffer, GetColorBuffer_Injected, GetCompatibleFormat, GetDefaultColorFormat, GetDefaultDepthStencilFormat, GetDepthBuffer, GetDepthBuffer_Injected, GetDepthStencilFormatLegacy, GetDescriptor, GetDescriptor_Injected, GetIsPowerOfTwo, GetNativeDepthBufferPtr, GetTemporary, GetTemporaryImpl, GetTemporary_Internal, GetTemporary_Internal_Injected, GetTexelOffset, Initialize, Internal_Create, IsCreated, MarkRestoreExpected, Release, ReleaseTemporary, ResolveAA, ResolveAATo, ResolveAntiAliasedSurface, SetActive, SetGlobalShaderProperty, SetMipMapCount, SetRenderTextureDescriptor, SetRenderTextureDescriptor_Injected, SetSRGBReadWrite, SetShadowSamplingMode, SupportsStencil, ValidateRenderTextureDesc
+
+### UnityEngine.CustomRenderTexture  : UnityEngine.RenderTexture
+  properties: cubemapFaceMask, doubleBuffered, initializationColor, initializationColor_Injected, initializationMaterial, initializationMode, initializationSource, initializationTexture, material, shaderPass, updateMode, updatePeriod, updateZoneSpace, wrapUpdateZones
+  methods:    ClearUpdateZones, EnsureDoubleBufferConsistency, GetDoubleBufferRenderTexture, GetUpdateZones, GetUpdateZonesInternal, Initialize, Internal_CreateCustomRenderTexture, SetUpdateZones, SetUpdateZonesInternal, TriggerInitialization, TriggerUpdate, Update
+
+### UnityEngine.RenderTextureDescriptor  : System.ValueType
+  properties: autoGenerateMips, bindMS, colorFormat, createdFromScript, depthBufferBits, depthStencilFormat, dimension, enableRandomWrite, flags, graphicsFormat, height, memoryless, mipCount, msaaSamples, sRGB, shadowSamplingMode, stencilFormat, useDynamicScale, useMipMap, volumeDepth, vrUsage, width
+  methods:    BoxIl2CppObject, SetOrClearRenderTextureCreationFlag
+
+### UnityEngine.Hash128  : System.ValueType
+  properties: isValid, kConst
+  methods:    Append, BoxIl2CppObject, CompareTo, Compute, ComputeFromArray, ComputeFromPtr, ComputeFromString, Equals, GetHashCode, Hash128ToStringImpl, Hash128ToStringImpl_Injected, Parse, Parse_Injected, Rot64, ShortEnd, ShortHash4, ToString, op_Equality, op_GreaterThan, op_Inequality, op_LessThan
+
+### UnityEngine.HashUtilities  : Il2CppSystem.Object
+  methods:    AppendHash, ComputeHash128, QuantisedMatrixHash, QuantisedVectorHash
+
+### UnityEngine.HashUnsafeUtilities  : Il2CppSystem.Object
+  methods:    ComputeHash128
+
+### UnityEngine.SpookyHash  : Il2CppSystem.Object
+  properties: AllowUnalignedRead
+  methods:    AttemptDetectAllowUnalignedRead, End, EndPartial, Hash, Mix, Rot64, Short, ShortEnd, ShortMix, memset
+
+### UnityEngine.Cursor  : Il2CppSystem.Object
+  properties: lockState, visible
+  methods:    SetCursor, SetCursor_Injected
+
+### UnityEngine.ILogger  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: logEnabled, logHandler
+  methods:    IsLogTypeAllowed, Log, LogError, LogException, LogFormat
+
+### UnityEngine.ILogHandler  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    LogException, LogFormat
+
+### UnityEngine.Logger  : Il2CppSystem.Object
+  properties: _filterLogType_k__BackingField, _logEnabled_k__BackingField, _logHandler_k__BackingField, filterLogType, logEnabled, logHandler
+  methods:    GetString, IsLogTypeAllowed, Log, LogError, LogException, LogFormat, LogWarning
+
+### UnityEngine.UnityLogWriter  : Il2CppSystem.IO.TextWriter
+  properties: Encoding
+  methods:    Init, Write, WriteStringToUnityLog, WriteStringToUnityLogImpl
+
+### UnityEngine.Color  : System.ValueType
+  properties: Item, black, blue, clear, cyan, gamma, gray, grayscale, green, grey, linear, magenta, maxColorComponent, red, white, yellow
+  methods:    AlphaMultiplied, BoxIl2CppObject, Equals, GetHashCode, HSVToRGB, Lerp, LerpUnclamped, RGBMultiplied, RGBToHSV, RGBToHSVHelper, ToString, op_Addition, op_Division, op_Equality, op_Implicit, op_Inequality, op_Multiply, op_Subtraction
+
+### UnityEngine.Color32  : System.ValueType
+  properties: Item
+  methods:    BoxIl2CppObject, InternalEquals, Lerp, LerpUnclamped, ToString, op_Implicit
+
+### UnityEngine.ColorUtility  : Il2CppSystem.Object
+  methods:    DoTryParseHtmlColor, ToHtmlStringRGB, ToHtmlStringRGBA, TryParseHtmlString
+
+### UnityEngine.Gradient  : Il2CppSystem.Object
+  properties: alphaKeys, colorKeys, m_Ptr, mode
+  methods:    Cleanup, Equals, Evaluate, Evaluate_Injected, Finalize, GetHashCode, Init, Internal_Equals, SetKeys
+
+### UnityEngine.Matrix4x4  : System.ValueType
+  properties: Item, decomposeProjection, determinant, identity, identityMatrix, inverse, isIdentity, lossyScale, rotation, transpose, zero, zeroMatrix
+  methods:    BoxIl2CppObject, DecomposeProjection, DecomposeProjection_Injected, Determinant, Equals, Frustum, Frustum_Injected, GetColumn, GetDeterminant, GetDeterminant_Injected, GetHashCode, GetLossyScale, GetLossyScale_Injected, GetPosition, GetRotation, GetRotation_Injected, GetRow, Inverse, Inverse3DAffine, Inverse3DAffine_Injected, Inverse_Injected, IsIdentity, IsIdentity_Injected, LookAt, LookAt_Injected, MultiplyPoint, MultiplyPoint3x4, MultiplyVector, Ortho, Ortho_Injected, Perspective, Perspective_Injected, Rotate, Scale, SetColumn, SetRow, SetTRS, TRS, TRS_Injected, ToString, TransformPlane, Translate, Transpose, Transpose_Injected, ValidTRS, ValidTRS_Injected, op_Equality, op_Inequality, op_Multiply
+
+### UnityEngine.Vector3  : System.ValueType
+  properties: Item, back, backVector, down, downVector, forward, forwardVector, fwd, kEpsilon, kEpsilonNormalSqrt, left, leftVector, magnitude, negativeInfinity, negativeInfinityVector, normalized, one, oneVector, positiveInfinity, positiveInfinityVector, right, rightVector, sqrMagnitude, up, upVector, zero, zeroVector
+  methods:    Angle, AngleBetween, BoxIl2CppObject, ClampMagnitude, Cross, Distance, Dot, Equals, Exclude, GetHashCode, Lerp, LerpUnclamped, Magnitude, Max, Min, MoveTowards, Normalize, OrthoNormalize, OrthoNormalize2, OrthoNormalize3, Project, ProjectOnPlane, Reflect, RotateTowards, RotateTowards_Injected, Scale, Set, SignedAngle, Slerp, SlerpUnclamped, SlerpUnclamped_Injected, Slerp_Injected, SmoothDamp, SqrMagnitude, ToString, op_Addition, op_Division, op_Equality, op_Inequality, op_Multiply, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.Quaternion  : System.ValueType
+  properties: Item, eulerAngles, identity, identityQuaternion, kEpsilon, normalized
+  methods:    Angle, AngleAxis, AngleAxis_Injected, AxisAngle, BoxIl2CppObject, Dot, Equals, Euler, EulerAngles, EulerRotation, FromToRotation, FromToRotation_Injected, GetHashCode, Internal_FromEulerRad, Internal_FromEulerRad_Injected, Internal_MakePositive, Internal_ToAxisAngleRad, Internal_ToAxisAngleRad_Injected, Internal_ToEulerRad, Internal_ToEulerRad_Injected, Inverse, Inverse_Injected, IsEqualUsingDot, Lerp, LerpUnclamped, LerpUnclamped_Injected, Lerp_Injected, LookRotation, LookRotation_Injected, Normalize, RotateTowards, Set, SetAxisAngle, SetEulerAngles, SetEulerRotation, SetFromToRotation, SetLookRotation, Slerp, SlerpUnclamped, SlerpUnclamped_Injected, Slerp_Injected, ToAngleAxis, ToAxisAngle, ToEuler, ToEulerAngles, ToString, op_Equality, op_Inequality, op_Multiply
+
+### UnityEngine.Mathf  : System.ValueType
+  properties: Deg2Rad, Epsilon, Infinity, NegativeInfinity, PI, Rad2Deg
+  methods:    Abs, Acos, Approximately, Asin, Atan, Atan2, BoxIl2CppObject, Ceil, CeilToInt, Clamp, Clamp01, ClosestPowerOfTwo, CorrelatedColorTemperatureToRGB, CorrelatedColorTemperatureToRGB_Injected, Cos, DeltaAngle, Exp, FloatToHalf, Floor, FloorToInt, Gamma, GammaToLinearSpace, HalfToFloat, InverseLerp, IsPowerOfTwo, Lerp, LerpAngle, LerpUnclamped, LineIntersection, LineSegmentIntersection, LinearToGammaSpace, Log, Log10, Max, Min, MoveTowards, MoveTowardsAngle, NextPowerOfTwo, PerlinNoise, PingPong, Pow, RandomToLong, Repeat, Round, RoundToInt, Sign, Sin, SmoothDamp, SmoothDampAngle, SmoothStep, Sqrt, Tan
+
+### UnityEngine.Vector2  : System.ValueType
+  properties: Item, down, downVector, kEpsilon, kEpsilonNormalSqrt, left, leftVector, magnitude, negativeInfinity, negativeInfinityVector, normalized, one, oneVector, positiveInfinity, positiveInfinityVector, right, rightVector, sqrMagnitude, up, upVector, zero, zeroVector
+  methods:    Angle, BoxIl2CppObject, ClampMagnitude, Distance, Dot, Equals, GetHashCode, Lerp, LerpUnclamped, Max, Min, MoveTowards, Normalize, Perpendicular, Reflect, Scale, Set, SignedAngle, SmoothDamp, SqrMagnitude, ToString, op_Addition, op_Division, op_Equality, op_Implicit, op_Inequality, op_Multiply, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.Vector2Int  : System.ValueType
+  properties: Item, down, left, magnitude, one, right, s_Down, s_Left, s_One, s_Right, s_Up, s_Zero, sqrMagnitude, up, x, y, zero
+  methods:    BoxIl2CppObject, CeilToInt, Clamp, Distance, Equals, FloorToInt, GetHashCode, Max, Min, RoundToInt, Scale, Set, ToString, op_Addition, op_Division, op_Equality, op_Explicit, op_Implicit, op_Inequality, op_Multiply, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.Vector3Int  : System.ValueType
+  properties: Item, back, down, forward, left, magnitude, one, right, s_Back, s_Down, s_Forward, s_Left, s_One, s_Right, s_Up, s_Zero, sqrMagnitude, up, x, y, z, zero
+  methods:    BoxIl2CppObject, CeilToInt, Clamp, Distance, Equals, FloorToInt, GetHashCode, Max, Min, RoundToInt, Scale, Set, ToString, op_Addition, op_Division, op_Equality, op_Explicit, op_Implicit, op_Inequality, op_Multiply, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.Vector4  : System.ValueType
+  properties: Item, kEpsilon, magnitude, negativeInfinity, negativeInfinityVector, normalized, one, oneVector, positiveInfinity, positiveInfinityVector, sqrMagnitude, zero, zeroVector
+  methods:    BoxIl2CppObject, Distance, Dot, Equals, GetHashCode, Lerp, LerpUnclamped, Magnitude, Max, Min, MoveTowards, Normalize, Project, Scale, Set, SqrMagnitude, ToString, op_Addition, op_Division, op_Equality, op_Implicit, op_Inequality, op_Multiply, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.IPlayerEditorConnectionNative  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    DisconnectAll, Initialize, IsConnected, Poll, RegisterInternal, SendMessage, TrySendMessage, UnregisterInternal
+
+### UnityEngine.PlayerConnectionInternal  : Il2CppSystem.Object
+  methods:    DisconnectAll, Initialize, IsConnected, PollInternal, RegisterInternal, SendMessage, TrySendMessage, UnityEngine_IPlayerEditorConnectionNative_DisconnectAll, UnityEngine_IPlayerEditorConnectionNative_Initialize, UnityEngine_IPlayerEditorConnectionNative_IsConnected, UnityEngine_IPlayerEditorConnectionNative_Poll, UnityEngine_IPlayerEditorConnectionNative_RegisterInternal, UnityEngine_IPlayerEditorConnectionNative_SendMessage, UnityEngine_IPlayerEditorConnectionNative_TrySendMessage, UnityEngine_IPlayerEditorConnectionNative_UnregisterInternal, UnregisterInternal
+
+### UnityEngine.PlayerPrefs  : Il2CppSystem.Object
+  methods:    DeleteAll, DeleteKey, GetFloat, GetInt, GetString, HasKey, Save, SetFloat, SetInt, SetString, TrySetFloat, TrySetInt, TrySetSetString
+
+### UnityEngine.RangeAttribute  : UnityEngine.PropertyAttribute
+  properties: max, min
+
+### UnityEngine.TextAreaAttribute  : UnityEngine.PropertyAttribute
+  properties: maxLines, minLines
+
+### UnityEngine.ColorUsageAttribute  : UnityEngine.PropertyAttribute
+  properties: hdr, maxBrightness, maxExposureValue, minBrightness, minExposureValue, showAlpha
+
+### UnityEngine.PropertyNameUtils  : Il2CppSystem.Object
+  methods:    PropertyNameFromString, PropertyNameFromString_Injected
+
+### UnityEngine.PropertyName  : System.ValueType
+  methods:    BoxIl2CppObject, Equals, GetHashCode, IsNullOrEmpty, ToString, op_Equality, op_Implicit, op_Inequality
+
+### UnityEngine.Random  : Il2CppSystem.Object
+  properties: insideUnitCircle, insideUnitSphere, insideUnitSphere_Injected, onUnitSphere, onUnitSphere_Injected, rotation, rotationUniform, rotationUniform_Injected, rotation_Injected, seed, state, state_Injected, value
+  methods:    ColorHSV, GetRandomUnitCircle, InitState, RandomRange, RandomRangeInt, Range
+
+### UnityEngine.ResourceRequest  : UnityEngine.AsyncOperation
+  properties: asset, m_Path, m_Type
+  methods:    GetResult
+
+### UnityEngine.ResourcesAPIInternal  : Il2CppSystem.Object
+  methods:    FindObjectsOfTypeAll, FindShaderByName, Load, LoadAll, LoadAsyncInternal, UnloadAsset
+
+### UnityEngine.ResourcesAPI  : Il2CppSystem.Object
+  properties: ActiveAPI, _overrideAPI_k__BackingField, overrideAPI, s_DefaultAPI
+  methods:    FindObjectsOfTypeAll, FindShaderByName, Load, LoadAll, LoadAsync, UnloadAsset
+
+### UnityEngine.Resources  : Il2CppSystem.Object
+  methods:    ConvertObjects, FindObjectsOfTypeAll, GetBuiltinResource, InstanceIDToObject, InstanceIDToObjectList, Load, LoadAll, LoadAsync, UnloadAsset, UnloadAssetImplResourceManager, UnloadUnusedAssets
+
+### UnityEngine.AsyncOperation  : UnityEngine.YieldInstruction
+  properties: allowSceneActivation, isDone, m_Ptr, m_completeCallback, priority, progress
+  methods:    Finalize, InternalDestroy, InvokeCompletionEvent, add_completed, remove_completed
+
+### UnityEngine.AttributeHelperEngine  : Il2CppSystem.Object
+  properties: _disallowMultipleComponentArray, _executeInEditModeArray, _requireComponentArray
+  methods:    CheckIsEditorScript, GetCustomAttributeOfType, GetDefaultExecutionOrderFor, GetExecuteMode, GetParentTypeDisallowingMultipleInclusion, GetRequiredComponents
+
+### UnityEngine.RequireComponent  : Il2CppSystem.Attribute
+  properties: m_Type0, m_Type1, m_Type2
+
+### UnityEngine.AddComponentMenu  : Il2CppSystem.Attribute
+  properties: componentMenu, componentOrder, m_AddComponentMenu, m_Ordering
+
+### UnityEngine.CreateAssetMenuAttribute  : Il2CppSystem.Attribute
+  properties: _fileName_k__BackingField, _menuName_k__BackingField, _order_k__BackingField, fileName, menuName, order
+
+### UnityEngine.ContextMenu  : Il2CppSystem.Attribute
+  properties: menuItem, priority, validate
+
+### UnityEngine.HelpURLAttribute  : Il2CppSystem.Attribute
+  properties: URL, m_Dispatcher, m_DispatchingFieldName, m_Url
+
+### UnityEngine.DefaultExecutionOrder  : Il2CppSystem.Attribute
+  properties: m_Order, order
+
+### UnityEngine.Behaviour  : UnityEngine.Component
+  properties: enabled, isActiveAndEnabled
+
+### UnityEngine.Component  : UnityEngine.Object
+  properties: gameObject, tag, transform
+  methods:    BroadcastMessage, CompareTag, GetComponent, GetComponentFastPath, GetComponentInChildren, GetComponentInParent, GetComponents, GetComponentsForListInternal, GetComponentsInChildren, GetComponentsInParent, SendMessage, SendMessageUpwards, TryGetComponent
+
+### UnityEngine.Coroutine  : UnityEngine.YieldInstruction
+  properties: m_Ptr
+  methods:    Finalize, ReleaseCoroutine
+
+### UnityEngine.SetupCoroutine  : Il2CppSystem.Object
+  methods:    InvokeMember, InvokeMoveNext, InvokeStatic
+
+### UnityEngine.CustomYieldInstruction  : Il2CppSystem.Object
+  properties: Current, keepWaiting
+  methods:    MoveNext, Reset
+
+### UnityEngine.GameObject  : UnityEngine.Object
+  properties: active, activeInHierarchy, activeSelf, gameObject, isStatic, isStaticBatchable, layer, scene, sceneCullingMask, scene_Injected, tag, transform
+  methods:    AddComponent, AddComponentInternal, BroadcastMessage, CompareTag, CreatePrimitive, Find, FindGameObjectWithTag, FindGameObjectsWithTag, FindWithTag, GetComponent, GetComponentByName, GetComponentFastPath, GetComponentInChildren, GetComponentInParent, GetComponents, GetComponentsInChildren, GetComponentsInParent, GetComponentsInternal, Internal_AddComponentWithType, Internal_CreateGameObject, SendMessage, SendMessageUpwards, SetActive, SetActiveRecursively, TryGetComponent, TryGetComponentFastPath, TryGetComponentInternal
+
+### UnityEngine.LayerMask  : System.ValueType
+  properties: value
+  methods:    BoxIl2CppObject, GetMask, LayerToName, NameToLayer, op_Implicit
+
+### UnityEngine.ManagedStreamHelpers  : Il2CppSystem.Object
+  methods:    ManagedStreamLength, ManagedStreamRead, ManagedStreamSeek, ValidateLoadFromStream
+
+### UnityEngine.MonoBehaviour  : UnityEngine.Behaviour
+  properties: useGUILayout
+  methods:    CancelInvoke, GetScriptClassName, Internal_CancelInvokeAll, Internal_IsInvokingAll, Invoke, InvokeDelayed, InvokeRepeating, IsInvoking, IsObjectMonoBehaviour, StartCoroutine, StartCoroutineManaged, StartCoroutineManaged2, StartCoroutine_Auto, StopAllCoroutines, StopCoroutine, StopCoroutineFromEnumeratorManaged, StopCoroutineManaged, print
+
+### UnityEngine.NoAllocHelpers  : Il2CppSystem.Object
+  methods:    EnsureListElemCount, ExtractArrayFromList, ExtractArrayFromListT, Internal_ResizeList, ResizeList, SafeLength
+
+### UnityEngine.RangeInt  : System.ValueType
+  properties: end
+  methods:    BoxIl2CppObject
+
+### UnityEngine.RuntimeInitializeOnLoadMethodAttribute  : UnityEngine.Scripting.PreserveAttribute
+  properties: loadType, m_LoadType
+
+### UnityEngine.ScriptableObject  : UnityEngine.Object
+  methods:    CreateInstance, CreateScriptableObject, CreateScriptableObjectInstanceFromName, CreateScriptableObjectInstanceFromType, ResetAndApplyDefaultInstances, SetDirty
+
+### UnityEngine.StackTraceUtility  : Il2CppSystem.Object
+  properties: projectFolder
+  methods:    ExtractFormattedStackTrace, ExtractStackTrace, ExtractStringFromException, ExtractStringFromExceptionInternal, SetProjectFolder
+
+### UnityEngine.TextAsset  : UnityEngine.Object
+  properties: bytes, dataSize, text
+  methods:    DecodeString, GetData, GetDataPtr, GetDataSize, GetPreview, GetPreviewBytes, Internal_CreateInstance, ToString
+
+### UnityEngine.TrackedReference  : Il2CppSystem.Object
+  properties: m_Ptr
+  methods:    Equals, GetHashCode, op_Equality, op_Implicit, op_Inequality
+
+### UnityEngine.Object  : Il2CppSystem.Object
+  properties: OffsetOfInstanceIDInCPlusPlusObject, cloneDestroyedMessage, hideFlags, m_CachedPtr, name, objectIsNullMessage
+  methods:    CheckNullArgument, CompareBaseObjects, CurrentThreadIsMainThread, Destroy, DestroyImmediate, DestroyObject, DoesObjectWithInstanceIDExist, DontDestroyOnLoad, EnsureRunningOnMainThread, Equals, FindAnyObjectByType, FindFirstObjectByType, FindObjectFromInstanceID, FindObjectOfType, FindObjectsByType, FindObjectsOfType, FindObjectsOfTypeAll, FindObjectsOfTypeIncludingAssets, FindSceneObjectsOfType, ForceLoadFromInstanceID, GetCachedPtr, GetHashCode, GetInstanceID, GetName, GetOffsetOfInstanceIDInCPlusPlusObject, Instantiate, Internal_CloneSingle, Internal_CloneSingleWithParent, Internal_InstantiateSingle, Internal_InstantiateSingleWithParent, Internal_InstantiateSingleWithParent_Injected, Internal_InstantiateSingle_Injected, IsNativeObjectAlive, IsPersistent, SetName, ToString, op_Equality, op_Implicit, op_Inequality
+
+### UnityEngine.UnitySynchronizationContext  : Il2CppSystem.Threading.SynchronizationContext
+  properties: m_AsyncWorkQueue, m_CurrentFrameWork, m_MainThreadID, m_TrackedCount
+  methods:    CreateCopy, Exec, ExecutePendingTasks, ExecuteTasks, HasPendingTasks, InitializeSynchronizationContext, OperationCompleted, OperationStarted, Post, Send
+
+### UnityEngine.WaitForSecondsRealtime  : UnityEngine.CustomYieldInstruction
+  properties: _waitTime_k__BackingField, keepWaiting, m_WaitUntilTime, waitTime
+  methods:    Reset
+
+### UnityEngine.WaitUntil  : UnityEngine.CustomYieldInstruction
+  properties: keepWaiting, m_Predicate
+
+### UnityEngine.WaitWhile  : UnityEngine.CustomYieldInstruction
+  properties: keepWaiting, m_Predicate
+
+### UnityEngine.ISerializationCallbackReceiver  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnAfterDeserialize, OnBeforeSerialize
+
+### UnityEngine.ComputeBuffer  : Il2CppSystem.Object
+  properties: count, m_Ptr, name, stride, usage
+  methods:    BeginBufferWrite, BeginWrite, CopyCount, DestroyBuffer, Dispose, EndBufferWrite, EndWrite, Finalize, GetData, GetNativeBufferPtr, InitBuffer, InternalGetData, InternalSetData, InternalSetNativeData, IsValid, IsValidBuffer, Release, SetCounterValue, SetData, SetName
+
+### UnityEngine.ComputeShader  : UnityEngine.Object
+  properties: enabledKeywords, keywordSpace, keywordSpace_Injected, shaderKeywords
+  methods:    DisableKeyword, DisableLocalKeyword, DisableLocalKeyword_Injected, Dispatch, DispatchIndirect, EnableKeyword, EnableLocalKeyword, EnableLocalKeyword_Injected, FindKernel, GetEnabledKeywords, GetKernelThreadGroupSizes, GetShaderKeywords, HasKernel, Internal_DispatchIndirect, Internal_DispatchIndirectGraphicsBuffer, Internal_SetBuffer, Internal_SetGraphicsBuffer, IsKeywordEnabled, IsLocalKeywordEnabled, IsLocalKeywordEnabled_Injected, IsSupported, SetBool, SetBuffer, SetConstantBuffer, SetConstantComputeBuffer, SetConstantGraphicsBuffer, SetEnabledKeywords, SetFloat, SetFloatArray, SetFloats, SetInt, SetIntArray, SetInts, SetKeyword, SetLocalKeyword, SetLocalKeyword_Injected, SetMatrix, SetMatrixArray, SetMatrix_Injected, SetRenderTexture, SetShaderKeywords, SetTexture, SetTextureFromGlobal, SetVector, SetVectorArray, SetVector_Injected
+
+### UnityEngine.SystemInfo  : Il2CppSystem.Object
+  properties: batteryLevel, batteryStatus, computeSubGroupSize, constantBufferOffsetAlignment, copyTextureSupport, deviceModel, deviceName, deviceType, deviceUniqueIdentifier, graphicsDeviceID, graphicsDeviceName, graphicsDeviceType, graphicsDeviceVendor, graphicsDeviceVendorID, graphicsDeviceVersion, graphicsMemorySize, graphicsMultiThreaded, graphicsPixelFillrate, graphicsShaderLevel, graphicsUVStartsAtTop, hasDynamicUniformArrayIndexingInFragmentShaders, hasHiddenSurfaceRemovalOnGPU, hasMipMaxLevel, hdrDisplaySupportFlags, maxAnisotropyLevel, maxComputeBufferInputsCompute, maxComputeBufferInputsDomain, maxComputeBufferInputsFragment, maxComputeBufferInputsGeometry, maxComputeBufferInputsHull, maxComputeBufferInputsVertex, maxComputeWorkGroupSize, maxComputeWorkGroupSizeX, maxComputeWorkGroupSizeY, maxComputeWorkGroupSizeZ, maxCubemapSize, maxGraphicsBufferSize, maxRenderTextureSize, maxTexture3DSize, maxTextureArraySlices, maxTextureSize, minConstantBufferOffsetAlignment, npotSupport, operatingSystem, operatingSystemFamily, processorCount, processorFrequency, processorType, renderingThreadingMode, supportedRandomWriteTargetCount, supportedRenderTargetCount, supports2DArrayTextures, supports32bitsIndexBuffer, supports3DRenderTextures, supports3DTextures, supportsAccelerometer, supportsAnisotropicFilter, supportsAsyncCompute, supportsAsyncGPUReadback, supportsAudio, supportsCompressed3DTextures, supportsComputeShaders, supportsConservativeRaster, supportsCubemapArrayTextures, supportsGPUFence, supportsGeometryShaders, supportsGpuRecorder, supportsGraphicsFence, supportsGyroscope, supportsHardwareQuadTopology, supportsImageEffects, supportsInstancing, supportsLocationService, supportsMipStreaming, supportsMotionVectors, supportsMultisampleAutoResolve, supportsMultisampleResolveDepth, supportsMultisampled2DArrayTextures, supportsMultisampledTextures, supportsMultiview, supportsRawShadowDepthSampling, supportsRayTracing, supportsRenderTargetArrayIndexFromVertexShader, supportsRenderTextures, supportsRenderToCubemap, supportsSeparatedRenderTargetsBlend, supportsSetConstantBuffer, supportsShadows, supportsSparseTextures, supportsStencil, supportsStoreAndResolveAction, supportsTessellationShaders, supportsTextureWrapMirrorOnce, supportsVertexPrograms, supportsVibration, systemMemorySize, usesLoadStoreActions, usesReversedZBuffer
+  methods:    GetBatteryLevel, GetBatteryStatus, GetCompatibleFormat, GetComputeSubGroupSize, GetCopyTextureSupport, GetDeviceModel, GetDeviceName, GetDeviceType, GetDeviceUniqueIdentifier, GetGraphicsDeviceID, GetGraphicsDeviceName, GetGraphicsDeviceType, GetGraphicsDeviceVendor, GetGraphicsDeviceVendorID, GetGraphicsDeviceVersion, GetGraphicsFormat, GetGraphicsMemorySize, GetGraphicsMultiThreaded, GetGraphicsShaderLevel, GetGraphicsUVStartsAtTop, GetHDRDisplaySupportFlags, GetMaxAnisotropyLevel, GetMaxComputeWorkGroupSize, GetMaxComputeWorkGroupSizeX, GetMaxComputeWorkGroupSizeY, GetMaxComputeWorkGroupSizeZ, GetMaxCubemapSize, GetMaxRenderTextureSize, GetMaxTexture3DSize, GetMaxTextureArraySlices, GetMaxTextureSize, GetNPOTSupport, GetOperatingSystem, GetOperatingSystemFamily, GetPhysicalMemoryMB, GetProcessorCount, GetProcessorFrequencyMHz, GetProcessorType, GetRenderTextureSupportedMSAASampleCount, GetRenderTextureSupportedMSAASampleCount_Injected, GetRenderingThreadingMode, HasDynamicUniformArrayIndexingInFragmentShaders, HasHiddenSurfaceRemovalOnGPU, HasMipMaxLevel, HasRenderTextureNative, IsFormatSupported, IsGyroAvailable, IsValidEnumValue, MaxComputeBufferInputsCompute, MaxComputeBufferInputsDomain, MaxComputeBufferInputsFragment, MaxComputeBufferInputsGeometry, MaxComputeBufferInputsHull, MaxComputeBufferInputsVertex, MaxGraphicsBufferSize, MinConstantBufferOffsetAlignment, SupportedRandomWriteTargetCount, SupportedRenderTargetCount, Supports2DArrayTextures, Supports32bitsIndexBuffer, Supports3DRenderTextures, Supports3DTextures, SupportsAccelerometer, SupportsAnisotropicFilter, SupportsAsyncCompute, SupportsAsyncGPUReadback, SupportsAudio, SupportsBlendingOnRenderTextureFormat, SupportsBlendingOnRenderTextureFormatNative, SupportsCompressed3DTextures, SupportsComputeShaders, SupportsConservativeRaster, SupportsCubemapArrayTextures, SupportsGPUFence, SupportsGeometryShaders, SupportsGpuRecorder, SupportsHardwareQuadTopology, SupportsInstancing, SupportsLocationService, SupportsMipStreaming, SupportsMotionVectors, SupportsMultisampleAutoResolve, SupportsMultisampleResolveDepth, SupportsMultisampled2DArrayTextures, SupportsMultisampledTextures, SupportsMultiview, SupportsRandomWriteOnRenderTextureFormat, SupportsRandomWriteOnRenderTextureFormatNative, SupportsRawShadowDepthSampling, SupportsRayTracing, SupportsRenderTargetArrayIndexFromVertexShader, SupportsRenderTextureFormat, SupportsSeparatedRenderTargetsBlend, SupportsSetConstantBuffer, SupportsShadows, SupportsSparseTextures, SupportsStoreAndResolveAction, SupportsTessellationShaders, SupportsTextureFormat, SupportsTextureFormatNative, SupportsTextureWrapMirrorOnce, SupportsVertexAttributeFormat, SupportsVertexAttributeFormatNative, SupportsVibration, UsesLoadStoreActions, UsesReversedZBuffer
+
+### UnityEngine.SystemClock  : Il2CppSystem.Object
+  properties: now, s_Epoch
+  methods:    ToUnixTimeMilliseconds, ToUnixTimeSeconds
+
+### UnityEngine.Time  : Il2CppSystem.Object
+  properties: captureDeltaTime, captureFramerate, deltaTime, fixedDeltaTime, fixedTime, fixedTimeAsDouble, fixedUnscaledDeltaTime, fixedUnscaledTime, fixedUnscaledTimeAsDouble, frameCount, inFixedTimeStep, maximumDeltaTime, maximumParticleDeltaTime, realtimeSinceStartup, realtimeSinceStartupAsDouble, renderedFrameCount, smoothDeltaTime, time, timeAsDouble, timeScale, timeSinceLevelLoad, timeSinceLevelLoadAsDouble, unscaledDeltaTime, unscaledTime, unscaledTimeAsDouble
+
+### UnityEngine.TouchScreenKeyboard  : Il2CppSystem.Object
+  properties: _disableInPlaceEditing_k__BackingField, active, area, area_Injected, canGetSelection, canSetSelection, characterLimit, disableInPlaceEditing, done, hideInput, isInPlaceEditingAllowed, isRequiredToForceOpen, isSupported, m_Ptr, selection, status, targetDisplay, text, type, visible, wasCanceled
+  methods:    Destroy, Finalize, GetDone, GetSelection, GetWasCanceled, Internal_Destroy, IsRequiredToForceOpen, Open, SetSelection, TouchScreenKeyboard_InternalConstructorHelper
+
+### UnityEngine.DrivenRectTransformTracker  : System.ValueType
+  methods:    Add, BoxIl2CppObject, CanRecordModifications, Clear
+
+### UnityEngine.RectTransform  : UnityEngine.Transform
+  properties: anchorMax, anchorMax_Injected, anchorMin, anchorMin_Injected, anchoredPosition, anchoredPosition3D, anchoredPosition_Injected, drivenByObject, drivenProperties, offsetMax, offsetMin, pivot, pivot_Injected, reapplyDrivenProperties, rect, rect_Injected, sizeDelta, sizeDelta_Injected
+  methods:    ForceUpdateRectTransforms, GetLocalCorners, GetParentSize, GetRectInParentSpace, GetWorldCorners, SendReapplyDrivenProperties, SetInsetAndSizeFromParentEdge, SetSizeWithCurrentAnchors, add_reapplyDrivenProperties, remove_reapplyDrivenProperties
+
+### UnityEngine.Transform  : UnityEngine.Component
+  properties: childCount, constrainProportionsScale, eulerAngles, forward, hasChanged, hierarchyCapacity, hierarchyCount, localEulerAngles, localPosition, localPosition_Injected, localRotation, localRotation_Injected, localScale, localScale_Injected, localToWorldMatrix, localToWorldMatrix_Injected, lossyScale, lossyScale_Injected, parent, parentInternal, position, position_Injected, right, root, rotation, rotationOrder, rotation_Injected, up, worldToLocalMatrix, worldToLocalMatrix_Injected
+  methods:    DetachChildren, Find, FindChild, FindRelativeTransformWithPath, GetChild, GetChildCount, GetEnumerator, GetLocalEulerAngles, GetLocalEulerAngles_Injected, GetLocalPositionAndRotation, GetParent, GetPositionAndRotation, GetRoot, GetRotationOrderInternal, GetSiblingIndex, Internal_LookAt, Internal_LookAt_Injected, InverseTransformDirection, InverseTransformDirection_Injected, InverseTransformPoint, InverseTransformPoint_Injected, InverseTransformVector, InverseTransformVector_Injected, IsChildOf, IsConstrainProportionsScale, IsNonUniformScaleTransform, LookAt, MoveAfterSibling, Rotate, RotateAround, RotateAroundInternal, RotateAroundInternal_Injected, RotateAroundLocal, RotateAroundLocal_Injected, RotateAround_Injected, SendTransformChangedScale, SetAsFirstSibling, SetAsLastSibling, SetConstrainProportionsScale, SetLocalEulerAngles, SetLocalEulerAngles_Injected, SetLocalEulerHint, SetLocalEulerHint_Injected, SetLocalPositionAndRotation, SetLocalPositionAndRotation_Injected, SetParent, SetPositionAndRotation, SetPositionAndRotation_Injected, SetRotationOrderInternal, SetSiblingIndex, TransformDirection, TransformDirection_Injected, TransformPoint, TransformPoint_Injected, TransformVector, TransformVector_Injected, Translate, internal_getHierarchyCapacity, internal_getHierarchyCount, internal_setHierarchyCapacity
+
+### UnityEngine.SpriteRenderer  : UnityEngine.Renderer
+  properties: adaptiveModeThreshold, color, color_Injected, drawMode, flipX, flipY, m_SpriteChangeEvent, maskInteraction, shouldSupportTiling, size, size_Injected, sprite, spriteSortPoint, tileMode
+  methods:    GetSpriteBounds, Internal_GetSpriteBounds, Internal_GetSpriteBounds_Injected, InvokeSpriteChanged, RegisterSpriteChangeCallback, UnregisterSpriteChangeCallback
+
+### UnityEngine.Sprite  : UnityEngine.Object
+  properties: associatedAlphaSplitTexture, border, border_Injected, bounds, bounds_Injected, packed, packingMode, packingRotation, pivot, pivot_Injected, pixelsPerUnit, rect, rect_Injected, spriteAtlasTextureScale, texture, textureRect, textureRectOffset, triangles, uv, vertices
+  methods:    Create, CreateSprite, CreateSpriteWithoutTextureScripting, CreateSpriteWithoutTextureScripting_Injected, CreateSprite_Injected, GetInnerUVs, GetInnerUVs_Injected, GetOuterUVs, GetOuterUVs_Injected, GetPacked, GetPackingMode, GetPackingRotation, GetPadding, GetPadding_Injected, GetPhysicsShape, GetPhysicsShapeCount, GetPhysicsShapeImpl, GetPhysicsShapePointCount, GetSecondaryTexture, GetTextureRect, GetTextureRectOffset, GetTextureRectOffset_Injected, GetTextureRect_Injected, Internal_GetPhysicsShapePointCount, OverrideGeometry, OverridePhysicsShape, OverridePhysicsShapeCount
+
+### UnityEngine._Scripting.APIUpdating.APIUpdaterRuntimeHelpers  : Il2CppSystem.Object
+  methods:    GetMovedFromAttributeDataForType, GetObsoleteTypeRedirection
+
+### UnityEngine.Sprites.DataUtility  : Il2CppSystem.Object
+  methods:    GetInnerUV, GetMinSize, GetOuterUV, GetPadding
+
+### UnityEngine.U2D.SpriteBone  : Il2CppSystem.ValueType
+  properties: color, guid, length, m_Color, m_Guid, m_Length, m_Name, m_ParentId, m_Position, m_Rotation, name, parentId, position, rotation
+
+### UnityEngine.U2D.SpriteChannelInfo  : System.ValueType
+  properties: buffer, count, offset, stride
+  methods:    BoxIl2CppObject
+
+### UnityEngine.U2D.SpriteDataAccessExtensions  : Il2CppSystem.Object
+  methods:    CheckAttributeTypeMatchesAndThrow, GetBindPoseInfo, GetBindPoseInfo_Injected, GetBindPoses, GetBoneInfo, GetBones, GetChannelInfo, GetChannelInfo_Injected, GetIndices, GetIndicesInfo, GetIndicesInfo_Injected, GetPrimaryVertexStreamSize, GetVertexAttribute, GetVertexCount, HasVertexAttribute, SetBindPoseData, SetBindPoses, SetBoneData, SetBones, SetChannelData, SetIndices, SetIndicesData, SetVertexAttribute, SetVertexCount
+
+### UnityEngine.U2D.SpriteAtlasManager  : Il2CppSystem.Object
+  properties: atlasRegistered, atlasRequested
+  methods:    PostRegisteredAtlas, Register, RequestAtlas, add_atlasRegistered, remove_atlasRegistered
+
+### UnityEngine.U2D.SpriteAtlas  : UnityEngine.Object
+  properties: isVariant, spriteCount, tag
+  methods:    CanBindTo, GetSprite, GetSprites, GetSpritesScripting, GetSpritesWithNameScripting
+
+### UnityEngine.Profiling.Profiler  : Il2CppSystem.Object
+  properties: areaCount, enableAllocationCallstacks, enableBinaryLog, enabled, logFile, maxNumberOfSamplesPerFrame, maxUsedMemory, supported, usedHeapSize, usedHeapSizeLong
+  methods:    AddFramesFromFile, AddFramesFromFile_Internal, BeginSample, BeginSampleImpl, BeginThreadProfiling, BeginThreadProfilingInternal, EmitFrameMetaData, EmitSessionMetaData, EndSample, EndThreadProfiling, GetAllCategories, GetAllocatedMemoryForGraphicsDriver, GetAreaEnabled, GetCategoriesCount, GetMonoHeapSize, GetMonoHeapSizeLong, GetMonoUsedSize, GetMonoUsedSizeLong, GetRuntimeMemorySize, GetRuntimeMemorySizeLong, GetTempAllocatorSize, GetTotalAllocatedMemory, GetTotalAllocatedMemoryLong, GetTotalFragmentationInfo, GetTotalReservedMemory, GetTotalReservedMemoryLong, GetTotalUnusedReservedMemory, GetTotalUnusedReservedMemoryLong, InternalGetTotalFragmentationInfo, Internal_EmitGlobalMetaData_Array, Internal_EmitGlobalMetaData_Native, Internal_IsCategoryEnabled, Internal_SetCategoryEnabled, IsCategoryEnabled, SetAreaEnabled, SetCategoryEnabled, SetTempAllocatorRequestedSize, ValidateArguments
+
+### UnityEngine.Profiling.Sampler  : Il2CppSystem.Object
+  properties: isValid, m_Ptr, name, s_InvalidSampler
+  methods:    Get, GetNames, GetRecorder
+
+### UnityEngine.Profiling.CustomSampler  : UnityEngine.Profiling.Sampler
+  properties: s_InvalidCustomSampler
+  methods:    Begin, Create, End
+
+### UnityEngine.Profiling.Experimental.DebugScreenCapture  : Il2CppSystem.ValueType
+  properties: _height_k__BackingField, _imageFormat_k__BackingField, _rawImageDataReference_k__BackingField, _width_k__BackingField, height, imageFormat, rawImageDataReference, width
+
+### UnityEngine.Profiling.Memory.Experimental.MetaData  : Il2CppSystem.Object
+  properties: content, platform
+
+### UnityEngine.Profiling.Memory.Experimental.MemoryProfiler  : Il2CppSystem.Object
+  properties: createMetaData, m_SaveScreenshotToDisk, m_SnapshotFinished
+  methods:    FinalizeSnapshot, PrepareMetadata, SaveScreenshotToDisk, StartOperation, WriteIntToByteArray, WriteStringToByteArray, add_createMetaData, remove_createMetaData
+
+### UnityEngine.Jobs.IJobParallelForTransformExtensions  : Il2CppSystem.Object
+  methods:    RunReadOnly, Schedule, ScheduleReadOnly
+
+### UnityEngine.Jobs.TransformAccess  : System.ValueType
+  properties: isValid, localPosition, localRotation, localScale, localToWorldMatrix, position, rotation, worldToLocalMatrix
+  methods:    BoxIl2CppObject, CheckHierarchyValid, CheckWriteAccess, GetLocalPosition, GetLocalPositionAndRotation, GetLocalPositionAndRotation_Internal, GetLocalRotation, GetLocalScale, GetLocalToWorldMatrix, GetPosition, GetPositionAndRotation, GetPositionAndRotation_Internal, GetRotation, GetWorldToLocalMatrix, MarkReadOnly, MarkReadWrite, SetLocalPosition, SetLocalPositionAndRotation, SetLocalPositionAndRotation_Internal, SetLocalRotation, SetLocalScale, SetPosition, SetPositionAndRotation, SetPositionAndRotation_Internal, SetRotation
+
+### UnityEngine.Jobs.TransformAccessArray  : System.ValueType
+  properties: Item, capacity, isCreated, length
+  methods:    Add, Allocate, BoxIl2CppObject, Create, DestroyTransformAccessArray, Dispose, GetCapacity, GetLength, GetSortedToUserIndex, GetSortedTransformAccess, GetTransform, GetTransformAccessArrayForSchedule, RemoveAtSwapBack, SetCapacity, SetTransform, SetTransforms
+
+### UnityEngine.Windows.Speech.PhraseRecognitionSystem  : Il2CppSystem.Object
+  properties: OnError, OnStatusChanged, Status, isSupported
+  methods:    PhraseRecognitionSystem_InvokeErrorEvent, PhraseRecognitionSystem_InvokeStatusChangedEvent, Restart, Shutdown, add_OnError, add_OnStatusChanged, remove_OnError, remove_OnStatusChanged
+
+### UnityEngine.Windows.Speech.PhraseRecognizer  : Il2CppSystem.Object
+  properties: IsRunning, OnPhraseRecognized, m_Recognizer
+  methods:    CreateFromGrammarFile, CreateFromKeywords, Destroy, DestroyThreaded, Dispose, Finalize, InvokePhraseRecognizedEvent, IsRunning_Internal, MarshalSemanticMeaning, Start, Start_Internal, Stop, Stop_Internal, add_OnPhraseRecognized, remove_OnPhraseRecognized
+
+### UnityEngine.Windows.Speech.DictationRecognizer  : Il2CppSystem.Object
+  properties: AutoSilenceTimeoutSeconds, DictationComplete, DictationError, DictationHypothesis, DictationResult, InitialSilenceTimeoutSeconds, Status, m_Recognizer
+  methods:    Create, Destroy, DestroyThreaded, DictationRecognizer_InvokeCompletedEvent, DictationRecognizer_InvokeErrorEvent, DictationRecognizer_InvokeHypothesisGeneratedEvent, DictationRecognizer_InvokeResultGeneratedEvent, Dispose, Finalize, GetAutoSilenceTimeoutSeconds, GetInitialSilenceTimeoutSeconds, GetStatus, SetAutoSilenceTimeoutSeconds, SetInitialSilenceTimeoutSeconds, Start, Stop, add_DictationComplete, add_DictationError, add_DictationHypothesis, add_DictationResult, remove_DictationComplete, remove_DictationError, remove_DictationHypothesis, remove_DictationResult
+
+### UnityEngine.Windows.Speech.SemanticMeaning  : Il2CppSystem.ValueType
+  properties: key, values
+
+### UnityEngine.Windows.Speech.PhraseRecognizedEventArgs  : Il2CppSystem.ValueType
+  properties: confidence, phraseDuration, phraseStartTime, semanticMeanings, text
+
+### UnityEngine.Windows.WebCam.PhotoCapture  : Il2CppSystem.Object
+  properties: HR_SUCCESS, SupportedResolutions, m_NativePtr
+  methods:    CapturePhotoToDisk_Internal, CapturePhotoToMemory_Internal, CreateAsync, Dispose, DisposeThreaded_Internal, Dispose_Internal, Finalize, GetSupportedResolutions_Internal, GetUnsafePointerToVideoDeviceController, Instantiate_Internal, InvokeOnCapturedPhotoToDiskDelegate, InvokeOnCapturedPhotoToMemoryDelegate, InvokeOnCreatedResourceDelegate, InvokeOnPhotoModeStartedDelegate, InvokeOnPhotoModeStoppedDelegate, MakeCaptureResult, StopPhotoModeAsync, TakePhotoAsync
+
+### UnityEngine.Windows.WebCam.PhotoCaptureFrame  : Il2CppSystem.Object
+  properties: _dataLength_k__BackingField, _hasLocationData_k__BackingField, _pixelFormat_k__BackingField, dataLength, hasLocationData, m_NativePtr, pixelFormat
+  methods:    Cleanup, CopyRawImageDataIntoBuffer, CopyRawImageDataIntoBuffer_Internal, Dispose, Dispose_Internal, Finalize, GetCameraToWorldMatrix, GetCameraToWorldMatrix_Injected, GetCapturePixelFormat, GetDataLength, GetHasLocationData, GetProjection, GetProjection_Injected, GetUnsafePointerToBuffer, TryGetCameraToWorldMatrix, TryGetProjectionMatrix, UploadImageDataToTexture, UploadImageDataToTexture_Internal
+
+### UnityEngine.Windows.WebCam.VideoCapture  : Il2CppSystem.Object
+  properties: HR_SUCCESS, IsRecording, SupportedResolutions, m_NativePtr
+  methods:    CreateAsync, Dispose, DisposeThreaded_Internal, Dispose_Internal, Finalize, GetSupportedFrameRatesForResolution, GetSupportedFrameRatesForResolution_Internal, GetSupportedResolutions_Internal, GetUnsafePointerToVideoDeviceController, Instantiate_Internal, InvokeOnCreatedVideoCaptureResourceDelegate, InvokeOnStartedRecordingVideoToDiskDelegate, InvokeOnStoppedRecordingVideoToDiskDelegate, InvokeOnVideoModeStartedDelegate, InvokeOnVideoModeStoppedDelegate, MakeCaptureResult, StartRecordingAsync, StartRecordingVideoToDisk_Internal, StopRecordingAsync, StopVideoModeAsync
+
+### UnityEngine.Events.ArgumentCache  : Il2CppSystem.Object
+  properties: boolArgument, floatArgument, intArgument, m_BoolArgument, m_FloatArgument, m_IntArgument, m_ObjectArgument, m_ObjectArgumentAssemblyTypeName, m_StringArgument, stringArgument, unityObjectArgument, unityObjectArgumentAssemblyTypeName
+  methods:    OnAfterDeserialize, OnBeforeSerialize
+
+### UnityEngine.Events.BaseInvokableCall  : Il2CppSystem.Object
+  methods:    AllowInvoke, Find, Invoke, ThrowOnInvalidArg
+
+### UnityEngine.Events.InvokableCall  : UnityEngine.Events.BaseInvokableCall
+  properties: Delegate
+  methods:    Find, Invoke, add_Delegate, remove_Delegate
+
+### UnityEngine.Events.PersistentCall  : Il2CppSystem.Object
+  properties: arguments, callState, m_Arguments, m_CallState, m_MethodName, m_Mode, m_Target, m_TargetAssemblyTypeName, methodName, mode, target, targetAssemblyTypeName
+  methods:    GetObjectCall, GetRuntimeCall, IsValid, OnAfterDeserialize, OnBeforeSerialize, RegisterPersistentListener, UnregisterPersistentListener
+
+### UnityEngine.Events.PersistentCallGroup  : Il2CppSystem.Object
+  properties: Count, m_Calls
+  methods:    AddListener, Clear, GetListener, GetListeners, Initialize, RegisterBoolPersistentListener, RegisterEventPersistentListener, RegisterFloatPersistentListener, RegisterIntPersistentListener, RegisterObjectPersistentListener, RegisterStringPersistentListener, RegisterVoidPersistentListener, RemoveListener, RemoveListeners, UnregisterPersistentListener
+
+### UnityEngine.Events.InvokableCallList  : Il2CppSystem.Object
+  properties: Count, m_ExecutingCalls, m_NeedsUpdate, m_PersistentCalls, m_RuntimeCalls
+  methods:    AddListener, AddPersistentInvokableCall, Clear, ClearPersistent, PrepareInvoke, RemoveListener
+
+### UnityEngine.Events.UnityEventBase  : Il2CppSystem.Object
+  properties: m_Calls, m_CallsDirty, m_PersistentCalls
+  methods:    AddCall, AddListener, DirtyPersistentCalls, FindMethod, FindMethod_Impl, GetDelegate, GetPersistentEventCount, GetPersistentListenerState, GetPersistentMethodName, GetPersistentTarget, GetValidMethodInfo, Invoke, PrepareInvoke, RebuildPersistentCallsIfNeeded, RemoveAllListeners, RemoveListener, SetPersistentListenerState, ToString, UnityEngine_ISerializationCallbackReceiver_OnAfterDeserialize, UnityEngine_ISerializationCallbackReceiver_OnBeforeSerialize
+
+### UnityEngine.Events.UnityAction  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### UnityEngine.Events.UnityEvent  : UnityEngine.Events.UnityEventBase
+  properties: m_InvokeArray
+  methods:    AddListener, FindMethod_Impl, GetDelegate, Invoke, RemoveListener
+
+### UnityEngine.Serialization.FormerlySerializedAsAttribute  : Il2CppSystem.Attribute
+  properties: m_oldName, oldName
+
+### UnityEngine.Scripting.APIUpdating.MovedFromAttributeData  : Il2CppSystem.ValueType
+  properties: assembly, assemblyHasChanged, autoUdpateAPI, classHasChanged, className, nameSpace, nameSpaceHasChanged
+  methods:    Set
+
+### UnityEngine.Scripting.APIUpdating.MovedFromAttribute  : Il2CppSystem.Attribute
+  properties: AffectsAPIUpdater, IsInDifferentAssembly, data
+
+### UnityEngine.SceneManagement.Scene  : System.ValueType
+  properties: buildIndex, dirtyID, guid, handle, isDirty, isLoaded, isSubScene, loadingState, name, path, rootCount
+  methods:    BoxIl2CppObject, Equals, GetBuildIndexInternal, GetDirtyID, GetGUIDInternal, GetHashCode, GetIsDirtyInternal, GetIsLoadedInternal, GetLoadingStateInternal, GetNameInternal, GetPathInternal, GetRootCountInternal, GetRootGameObjects, GetRootGameObjectsInternal, IsSubScene, IsValid, IsValidInternal, SetIsSubScene, SetNameInternal, op_Equality, op_Inequality
+
+### UnityEngine.SceneManagement.SceneManagerAPIInternal  : Il2CppSystem.Object
+  methods:    GetNumScenesInBuildSettings, GetSceneByBuildIndex, GetSceneByBuildIndex_Injected, LoadSceneAsyncNameIndexInternal, LoadSceneAsyncNameIndexInternal_Injected, UnloadSceneNameIndexInternal
+
+### UnityEngine.SceneManagement.SceneManagerAPI  : Il2CppSystem.Object
+  properties: ActiveAPI, _overrideAPI_k__BackingField, overrideAPI, s_DefaultAPI
+  methods:    GetNumScenesInBuildSettings, GetSceneByBuildIndex, LoadFirstScene, LoadSceneAsyncByNameOrIndex, UnloadSceneAsyncByNameOrIndex
+
+### UnityEngine.SceneManagement.SceneManager  : Il2CppSystem.Object
+  properties: activeSceneChanged, s_AllowLoadScene, sceneCount, sceneCountInBuildSettings, sceneLoaded, sceneUnloaded
+  methods:    CreateScene, CreateScene_Injected, GetActiveScene, GetActiveScene_Injected, GetAllScenes, GetSceneAt, GetSceneAt_Injected, GetSceneByBuildIndex, GetSceneByName, GetSceneByName_Injected, GetSceneByPath, GetSceneByPath_Injected, Internal_ActiveSceneChanged, Internal_SceneLoaded, Internal_SceneUnloaded, LoadFirstScene_Internal, LoadScene, LoadSceneAsync, LoadSceneAsyncNameIndexInternal, MergeScenes, MergeScenes_Injected, MoveGameObjectToScene, MoveGameObjectToScene_Injected, SetActiveScene, SetActiveScene_Injected, UnloadScene, UnloadSceneAsync, UnloadSceneAsyncInternal, UnloadSceneAsyncInternal_Injected, UnloadSceneInternal, UnloadSceneInternal_Injected, UnloadSceneNameIndexInternal, add_activeSceneChanged, add_sceneLoaded, add_sceneUnloaded, remove_activeSceneChanged, remove_sceneLoaded, remove_sceneUnloaded
+
+### UnityEngine.SceneManagement.LoadSceneParameters  : System.ValueType
+  properties: loadSceneMode, localPhysicsMode
+  methods:    BoxIl2CppObject
+
+### UnityEngine.SceneManagement.CreateSceneParameters  : System.ValueType
+  properties: localPhysicsMode
+  methods:    BoxIl2CppObject
+
+### UnityEngine.LowLevel.PlayerLoopSystemInternal  : Il2CppSystem.ValueType
+  properties: loopConditionFunction, numSubSystems, type, updateDelegate, updateFunction
+
+### UnityEngine.LowLevel.PlayerLoopSystem  : Il2CppSystem.ValueType
+  properties: loopConditionFunction, subSystemList, type, updateDelegate, updateFunction
+  methods:    ToString
+
+### UnityEngine.Networking.PlayerConnection.MessageEventArgs  : Il2CppSystem.Object
+  properties: data, playerId
+
+### UnityEngine.Networking.PlayerConnection.IEditorPlayerConnection  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    Register, RegisterConnection, RegisterDisconnection, Send
+
+### UnityEngine.Networking.PlayerConnection.PlayerConnection  : UnityEngine.ScriptableObject
+  properties: connectionNative, instance, isConnected, m_IsInitilized, m_PlayerEditorConnectionEvents, m_connectedPlayers, s_Instance
+  methods:    BlockUntilRecvMsg, ConnectedCallbackInternal, CreateInstance, DisconnectAll, DisconnectedCallback, GetConnectionNativeApi, MessageCallbackInternal, OnEnable, Register, RegisterConnection, RegisterDisconnection, Send, TrySend, Unregister, UnregisterConnection, UnregisterDisconnection
+
+### UnityEngine.Networking.PlayerConnection.PlayerEditorConnectionEvents  : Il2CppSystem.Object
+  properties: connectionEvent, disconnectionEvent, messageTypeSubscribers
+  methods:    AddAndCreate, InvokeMessageIdSubscribers, UnregisterManagedCallback
+
+### UnityEngine.Internal.DefaultValueAttribute  : Il2CppSystem.Attribute
+  properties: DefaultValue, Value
+  methods:    Equals, GetHashCode
+
+### UnityEngine.Rendering.AsyncGPUReadbackRequest  : System.ValueType
+  properties: depth, done, hasError, height, layerCount, layerDataSize, width
+  methods:    BoxIl2CppObject, GetData, GetDataRaw, GetDataRaw_Injected, GetDepth, GetDepth_Injected, GetHeight, GetHeight_Injected, GetLayerCount, GetLayerCount_Injected, GetLayerDataSize, GetLayerDataSize_Injected, GetWidth, GetWidth_Injected, HasError, HasError_Injected, IsDone, IsDone_Injected, SetScriptingCallback, SetScriptingCallback_Injected, Update, Update_Injected, WaitForCompletion, WaitForCompletion_Injected
+
+### UnityEngine.Rendering.AsyncRequestNativeArrayData  : System.ValueType
+  methods:    BoxIl2CppObject, CreateAndCheckAccess
+
+### UnityEngine.Rendering.AsyncGPUReadback  : Il2CppSystem.Object
+  methods:    Request, RequestIntoNativeArray, RequestIntoNativeSlice, Request_Internal_ComputeBuffer_1, Request_Internal_ComputeBuffer_1_Injected, Request_Internal_ComputeBuffer_2, Request_Internal_ComputeBuffer_2_Injected, Request_Internal_GraphicsBuffer_1, Request_Internal_GraphicsBuffer_1_Injected, Request_Internal_GraphicsBuffer_2, Request_Internal_GraphicsBuffer_2_Injected, Request_Internal_Texture_1, Request_Internal_Texture_1_Injected, Request_Internal_Texture_2, Request_Internal_Texture_2_Injected, Request_Internal_Texture_3, Request_Internal_Texture_3_Injected, Request_Internal_Texture_4, Request_Internal_Texture_4_Injected, ValidateFormat, WaitAllRequests
+
+### UnityEngine.Rendering.SubMeshDescriptor  : System.ValueType
+  properties: baseVertex, bounds, firstVertex, indexCount, indexStart, topology, vertexCount
+  methods:    BoxIl2CppObject, ToString
+
+### UnityEngine.Rendering.VertexAttributeDescriptor  : System.ValueType
+  properties: attribute, dimension, format, stream
+  methods:    BoxIl2CppObject, Equals, GetHashCode, ToString, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.RenderTargetIdentifier  : System.ValueType
+  properties: AllDepthSlices
+  methods:    BoxIl2CppObject, Equals, GetHashCode, ToString, op_Equality, op_Implicit, op_Inequality
+
+### UnityEngine.Rendering.ReflectionProbeBlendInfo  : Il2CppSystem.ValueType
+  properties: probe, weight
+
+### UnityEngine.Rendering.GraphicsFence  : System.ValueType
+  properties: passed
+  methods:    BoxIl2CppObject, GetPlatformNotSupportedVersion, GetVersionNumber, HasFencePassed_Internal, InitPostAllocation, IsFencePending, TranslateSynchronizationStageToFlags, Validate
+
+### UnityEngine.Rendering.GraphicsSettings  : UnityEngine.Object
+  properties: INTERNAL_currentRenderPipeline, INTERNAL_defaultRenderPipeline, allConfiguredRenderPipelines, cameraRelativeLightCulling, cameraRelativeShadowCulling, currentRenderPipeline, defaultRenderPipeline, defaultRenderingLayerMask, disableBuiltinCustomRenderTextureUpdate, lightsUseColorTemperature, lightsUseLinearIntensity, logWhenShaderIsCompiled, realtimeDirectRectangularAreaLights, renderPipelineAsset, transparencySortAxis, transparencySortAxis_Injected, transparencySortMode, useScriptableRenderPipelineBatching, videoShadersIncludeMode
+  methods:    GetAllConfiguredRenderPipelines, GetCustomShader, GetGraphicsSettings, GetSettingsForRenderPipeline, GetShaderMode, HasShaderDefine, RegisterRenderPipeline, RegisterRenderPipelineSettings, SetCustomShader, SetShaderMode, UnregisterRenderPipeline, UnregisterRenderPipelineSettings
+
+### UnityEngine.Rendering.OnDemandRendering  : Il2CppSystem.Object
+  properties: effectiveRenderFrameRate, m_RenderFrameInterval, renderFrameInterval, willCurrentFrameRender
+  methods:    GetEffectiveRenderFrameRate, GetRenderFrameInterval
+
+### UnityEngine.Rendering.CommandBuffer  : Il2CppSystem.Object
+  properties: m_Ptr, name, sizeInBytes
+  methods:    BeginSample, BeginSample_CustomSampler, Blit, Blit_Identifier, Blit_Identifier_Injected, Blit_Texture, Blit_Texture_Injected, BuildRayTracingAccelerationStructure, Clear, ClearRandomWriteTargets, ClearRenderTarget, ClearRenderTarget_Injected, ConvertTexture, ConvertTexture_Internal, ConvertTexture_Internal_Injected, CopyBuffer, CopyBufferImpl, CopyCounterValue, CopyCounterValueCC, CopyCounterValueCG, CopyCounterValueGC, CopyCounterValueGG, CopyTexture, CopyTexture_Internal, CreateAsyncGraphicsFence, CreateGPUFence, CreateGPUFence_Internal, CreateGraphicsFence, DisableComputeKeyword, DisableComputeKeyword_Injected, DisableGlobalKeyword, DisableGlobalKeyword_Injected, DisableKeyword, DisableMaterialKeyword, DisableMaterialKeyword_Injected, DisableScissorRect, DisableShaderKeyword, DispatchCompute, DispatchRays, Dispose, DrawMesh, DrawMeshInstanced, DrawMeshInstancedIndirect, DrawMeshInstancedProcedural, DrawOcclusionMesh, DrawProcedural, DrawProceduralIndirect, DrawRenderer, DrawRendererList, EnableComputeKeyword, EnableComputeKeyword_Injected, EnableGlobalKeyword, EnableGlobalKeyword_Injected, EnableKeyword, EnableMaterialKeyword, EnableMaterialKeyword_Injected, EnableScissorRect, EnableScissorRect_Injected, EnableShaderKeyword, EndSample, EndSample_CustomSampler, Finalize, GenerateMips, GetTemporaryRT, GetTemporaryRTArray, GetTemporaryRTWithDescriptor, GetTemporaryRTWithDescriptor_Injected, IncrementUpdateCount, IncrementUpdateCount_Injected, InitBuffer, InternalSetComputeBufferCounterValue, InternalSetComputeBufferData, InternalSetComputeBufferNativeData, InternalSetGraphicsBufferCounterValue, InternalSetGraphicsBufferData, InternalSetGraphicsBufferNativeData, Internal_BuildRayTracingAccelerationStructure, Internal_BuildRayTracingAccelerationStructure_Injected, Internal_DispatchCompute, Internal_DispatchComputeIndirect, Internal_DispatchComputeIndirectGraphicsBuffer, Internal_DispatchRays, Internal_DrawMesh, Internal_DrawMeshInstanced, Internal_DrawMeshInstancedIndirect, Internal_DrawMeshInstancedIndirectGraphicsBuffer, Internal_DrawMeshInstancedProcedural, Internal_DrawMesh_Injected, Internal_DrawOcclusionMesh, Internal_DrawOcclusionMesh_Injected, Internal_DrawProcedural, Internal_DrawProceduralIndexed, Internal_DrawProceduralIndexedIndirect, Internal_DrawProceduralIndexedIndirectGraphicsBuffer, Internal_DrawProceduralIndexedIndirectGraphicsBuffer_Injected, Internal_DrawProceduralIndexedIndirect_Injected, Internal_DrawProceduralIndexed_Injected, Internal_DrawProceduralIndirect, Internal_DrawProceduralIndirectGraphicsBuffer, Internal_DrawProceduralIndirectGraphicsBuffer_Injected, Internal_DrawProceduralIndirect_Injected, Internal_DrawProcedural_Injected, Internal_DrawRenderer, Internal_DrawRendererList, Internal_DrawRendererList_Injected, Internal_GenerateMips, Internal_GenerateMips_Injected, Internal_ProcessVTFeedback, Internal_ProcessVTFeedback_Injected, Internal_RequestAsyncReadback_1, Internal_RequestAsyncReadback_2, Internal_RequestAsyncReadback_3, Internal_RequestAsyncReadback_4, Internal_RequestAsyncReadback_5, Internal_RequestAsyncReadback_6, Internal_RequestAsyncReadback_7, Internal_RequestAsyncReadback_8, Internal_RequestAsyncReadback_9, Internal_ResolveAntiAliasedSurface, Internal_SetComputeBufferParam, Internal_SetComputeConstantComputeBufferParam, Internal_SetComputeConstantGraphicsBufferParam, Internal_SetComputeFloats, Internal_SetComputeGraphicsBufferParam, Internal_SetComputeInts, Internal_SetComputeTextureParam, Internal_SetRayTracingAccelerationStructure, Internal_SetRayTracingBufferParam, Internal_SetRayTracingConstantComputeBufferParam, Internal_SetRayTracingConstantGraphicsBufferParam, Internal_SetRayTracingFloatParam, Internal_SetRayTracingFloats, Internal_SetRayTracingIntParam, Internal_SetRayTracingInts, Internal_SetRayTracingMatrixArrayParam, Internal_SetRayTracingMatrixParam, Internal_SetRayTracingMatrixParam_Injected, Internal_SetRayTracingTextureParam, Internal_SetRayTracingVectorArrayParam, Internal_SetRayTracingVectorParam, Internal_SetRayTracingVectorParam_Injected, Internal_SetSinglePassStereo, IssuePluginCustomBlit, IssuePluginCustomBlitInternal, IssuePluginCustomTextureUpdate, IssuePluginCustomTextureUpdateInternal, IssuePluginCustomTextureUpdateV1, IssuePluginCustomTextureUpdateV2, IssuePluginEvent, IssuePluginEventAndData, IssuePluginEventAndDataInternal, IssuePluginEventInternal, MarkLateLatchMatrixShaderPropertyID, ProcessVTFeedback, Release, ReleaseBuffer, ReleaseTemporaryRT, RequestAsyncReadback, RequestAsyncReadbackIntoNativeArray, RequestAsyncReadbackIntoNativeSlice, ResolveAntiAliasedSurface, SetBufferCounterValue, SetBufferData, SetComputeBufferCounterValue, SetComputeBufferData, SetComputeBufferParam, SetComputeConstantBufferParam, SetComputeFloatParam, SetComputeFloatParams, SetComputeIntParam, SetComputeIntParams, SetComputeKeyword, SetComputeKeyword_Injected, SetComputeMatrixArrayParam, SetComputeMatrixParam, SetComputeMatrixParam_Injected, SetComputeTextureParam, SetComputeVectorArrayParam, SetComputeVectorParam, SetComputeVectorParam_Injected, SetExecutionFlags, SetGlobalBuffer, SetGlobalBufferInternal, SetGlobalColor, SetGlobalColor_Injected, SetGlobalConstantBuffer, SetGlobalConstantBufferInternal, SetGlobalConstantGraphicsBufferInternal, SetGlobalDepthBias, SetGlobalFloat, SetGlobalFloatArray, SetGlobalFloatArrayListImpl, SetGlobalGraphicsBufferInternal, SetGlobalInt, SetGlobalInteger, SetGlobalKeyword, SetGlobalKeyword_Injected, SetGlobalMatrix, SetGlobalMatrixArray, SetGlobalMatrixArrayListImpl, SetGlobalMatrix_Injected, SetGlobalTexture, SetGlobalTexture_Impl, SetGlobalVector, SetGlobalVectorArray, SetGlobalVectorArrayListImpl, SetGlobalVector_Injected, SetInstanceMultiplier, SetInvertCulling, SetKeyword, SetLateLatchProjectionMatrices, SetMaterialKeyword, SetMaterialKeyword_Injected, SetProjectionMatrix, SetProjectionMatrix_Injected, SetRandomWriteTarget, SetRandomWriteTarget_Buffer, SetRandomWriteTarget_GraphicsBuffer, SetRandomWriteTarget_Texture, SetRayTracingAccelerationStructure, SetRayTracingBufferParam, SetRayTracingConstantBufferParam, SetRayTracingFloatParam, SetRayTracingFloatParams, SetRayTracingIntParam, SetRayTracingIntParams, SetRayTracingMatrixArrayParam, SetRayTracingMatrixParam, SetRayTracingShaderPass, SetRayTracingTextureParam, SetRayTracingVectorArrayParam, SetRayTracingVectorParam, SetRenderTarget, SetRenderTargetColorDepthSubtarget, SetRenderTargetColorDepthSubtarget_Injected, SetRenderTargetColorDepth_Internal, SetRenderTargetColorDepth_Internal_Injected, SetRenderTargetMultiSubtarget, SetRenderTargetMultiSubtarget_Injected, SetRenderTargetMulti_Internal, SetRenderTargetMulti_Internal_Injected, SetRenderTargetSingle_Internal, SetRenderTargetSingle_Internal_Injected, SetShadowSamplingMode, SetShadowSamplingMode_Impl, SetSinglePassStereo, SetViewMatrix, SetViewMatrix_Injected, SetViewProjectionMatrices, SetViewProjectionMatrices_Injected, SetViewport, SetViewport_Injected, SetWireframe, UnmarkLateLatchMatrix, ValidateAgainstExecutionFlags, WaitAllAsyncReadbackRequests, WaitOnAsyncGraphicsFence, WaitOnGPUFence, WaitOnGPUFence_Internal
+
+### UnityEngine.Rendering.CommandBufferExtensions  : Il2CppSystem.Object
+  methods:    Internal_SwitchIntoFastMemory, Internal_SwitchOutOfFastMemory, SwitchIntoFastMemory, SwitchOutOfFastMemory
+
+### UnityEngine.Rendering.SplashScreen  : Il2CppSystem.Object
+  properties: isFinished
+  methods:    Begin, BeginSplashScreenFade, CancelSplashScreen, Draw, SetTime, Stop
+
+### UnityEngine.Rendering.SphericalHarmonicsL2  : System.ValueType
+  properties: Item
+  methods:    AddAmbientLight, AddAmbientLight_Injected, AddDirectionalLight, AddDirectionalLightInternal, AddDirectionalLightInternal_Injected, BoxIl2CppObject, Clear, Equals, Evaluate, EvaluateInternal, GetHashCode, SetZero, SetZero_Injected, op_Addition, op_Equality, op_Inequality, op_Multiply
+
+### UnityEngine.Rendering.BatchCullingContext  : Il2CppSystem.ValueType
+  properties: batchVisibility, cullingMatrix, cullingPlanes, lodParameters, nearPlane, visibleIndices, visibleIndicesY
+
+### UnityEngine.Rendering.BatchRendererGroup  : Il2CppSystem.Object
+  properties: m_GroupHandle, m_PerformCulling
+  methods:    AddBatch, AddBatch_Injected, Create, Destroy, Dispose, EnableVisibleIndicesYArray, GetBatchMatrices, GetBatchMatrixArray, GetBatchMatrixArray_Internal, GetBatchScalarArray, GetBatchScalarArrayInt, GetBatchScalarArray_Internal, GetBatchVectorArray, GetBatchVectorArrayInt, GetBatchVectorArray_Internal, GetNumBatches, InternalSetBatchPropertyMetadata, InvokeOnPerformCulling, RemoveBatch, SetBatchBounds, SetBatchBounds_Injected, SetBatchFlags, SetBatchPropertyMetadata, SetInstancingData
+
+### UnityEngine.Rendering.AttachmentDescriptor  : System.ValueType
+  properties: clearColor, clearDepth, clearStencil, format, graphicsFormat, loadAction, loadStoreTarget, resolveTarget, storeAction
+  methods:    BoxIl2CppObject, ConfigureClear, ConfigureResolveTarget, ConfigureTarget, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.BlendState  : System.ValueType
+  properties: alphaToMask, blendState0, blendState1, blendState2, blendState3, blendState4, blendState5, blendState6, blendState7, defaultValue, separateMRTBlendStates
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.CoreCameraValues  : System.ValueType
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.CameraProperties  : System.ValueType
+  methods:    BoxIl2CppObject, Equals, GetCameraCullingPlane, GetHashCode, GetShadowCullingPlane, SetCameraCullingPlane, SetShadowCullingPlane, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.ScriptableCullingParameters  : System.ValueType
+  properties: accurateOcclusionThreshold, cameraProperties, conservativeEnclosingSphere, cullingJobsLowerLimit, cullingJobsUpperLimit, cullingMask, cullingMatrix, cullingOptions, cullingPlaneCount, isOrthographic, layerCount, lodParameters, maximumCullingPlaneCount, maximumPortalCullingJobs, maximumVisibleLights, numIterationsEnclosingSphere, origin, reflectionProbeSortingCriteria, shadowDistance, shadowNearPlaneOffset, stereoProjectionMatrix, stereoSeparationDistance, stereoViewMatrix
+  methods:    BoxIl2CppObject, Equals, GetCullingPlane, GetHashCode, GetLayerCullingDistance, SetCullingPlane, SetLayerCullingDistance, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.CullingResults  : System.ValueType
+  properties: lightAndReflectionProbeIndexCount, lightIndexCount, reflectionProbeIndexCount, visibleLights, visibleOffscreenVertexLights, visibleReflectionProbes
+  methods:    BoxIl2CppObject, ComputeDirectionalShadowMatricesAndCullingPrimitives, ComputeDirectionalShadowMatricesAndCullingPrimitives_Injected, ComputePointShadowMatricesAndCullingPrimitives, ComputeSpotShadowMatricesAndCullingPrimitives, Equals, FillLightAndReflectionProbeIndices, FillLightAndReflectionProbeIndicesGraphicsBuffer, FillLightIndexMap, FillReflectionProbeIndexMap, GetHashCode, GetLightIndexCount, GetLightIndexMap, GetLightIndexMapSize, GetNativeArray, GetReflectionProbeIndexCount, GetReflectionProbeIndexMap, GetReflectionProbeIndexMapSize, GetShadowCasterBounds, SetLightIndexMap, SetReflectionProbeIndexMap, Validate, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.DepthState  : System.ValueType
+  properties: compareFunction, defaultValue, writeEnabled
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.DrawingSettings  : System.ValueType
+  properties: enableDynamicBatching, enableInstancing, fallbackMaterial, mainLightIndex, maxShaderPasses, overrideMaterial, overrideMaterialPassIndex, perObjectData, sortingSettings
+  methods:    BoxIl2CppObject, Equals, GetHashCode, GetShaderPassName, SetShaderPassName, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.FilteringSettings  : System.ValueType
+  properties: defaultValue, excludeMotionVectorObjects, layerMask, renderQueueRange, renderingLayerMask, sortingLayerRange
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.LODParameters  : System.ValueType
+  properties: cameraPixelHeight, cameraPosition, fieldOfView, isOrthographic, orthoSize
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.RasterState  : System.ValueType
+  properties: conservative, cullingMode, defaultValue, depthClip, offsetFactor, offsetUnits
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.RenderPipeline  : Il2CppSystem.Object
+  properties: _disposed_k__BackingField, defaultSettings, disposed
+  methods:    BeginCameraRendering, BeginContextRendering, BeginFrameRendering, Dispose, EndCameraRendering, EndContextRendering, EndFrameRendering, InternalRender, InternalRenderWithRequests, ProcessRenderRequests, Render
+
+### UnityEngine.Rendering.RenderPipelineAsset  : UnityEngine.ScriptableObject
+  properties: autodeskInteractiveMaskedShader, autodeskInteractiveShader, autodeskInteractiveTransparentShader, default2DMaskMaterial, default2DMaterial, defaultLineMaterial, defaultMaterial, defaultParticleMaterial, defaultShader, defaultSpeedTree7Shader, defaultSpeedTree8Shader, defaultTerrainMaterial, defaultUIETC1SupportedMaterial, defaultUIMaterial, defaultUIOverdrawMaterial, prefixedRenderingLayerMaskNames, renderingLayerMaskNames, terrainDetailGrassBillboardShader, terrainDetailGrassShader, terrainDetailLitShader
+  methods:    CreatePipeline, InternalCreatePipeline, OnDisable, OnValidate
+
+### UnityEngine.Rendering.RenderPipelineManager  : Il2CppSystem.Object
+  properties: activeRenderPipelineCreated, activeRenderPipelineDisposed, activeRenderPipelineTypeChanged, beginCameraRendering, beginContextRendering, beginFrameRendering, currentPipeline, endCameraRendering, endContextRendering, endFrameRendering, pipelineSwitchCompleted, s_Cameras, s_CurrentPipelineAsset, s_currentPipeline, s_currentPipelineType
+  methods:    BeginCameraRendering, BeginContextRendering, CleanupRenderPipeline, DoRenderLoop_Internal, EndCameraRendering, EndContextRendering, GetCurrentPipelineAssetType, HandleRenderPipelineChange, IsPipelineRequireCreation, OnActiveRenderPipelineTypeChanged, PrepareRenderPipeline, add_beginCameraRendering, add_endCameraRendering, remove_beginCameraRendering, remove_endCameraRendering
+
+### UnityEngine.Rendering.RenderQueueRange  : System.ValueType
+  properties: all, k_MaximumBound, k_MinimumBound, lowerBound, maximumBound, minimumBound, opaque, transparent, upperBound
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.RenderStateBlock  : System.ValueType
+  properties: blendState, depthState, mask, rasterState, stencilReference, stencilState
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.RenderTargetBlendState  : System.ValueType
+  properties: alphaBlendOperation, colorBlendOperation, defaultValue, destinationAlphaBlendMode, destinationColorBlendMode, sourceAlphaBlendMode, sourceColorBlendMode, writeMask
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.ScriptableRenderContext  : System.ValueType
+  properties: kRenderTypeTag
+  methods:    BeginRenderPass, BeginRenderPass_Internal, BeginScopedRenderPass, BeginScopedSubPass, BeginSubPass, BeginSubPass_Internal, BoxIl2CppObject, CreateRendererList, CreateRendererList_Internal, CreateRendererList_Internal_Injected, Cull, DrawGizmos, DrawGizmos_Internal, DrawGizmos_Internal_Injected, DrawRenderers, DrawRenderers_Internal, DrawRenderers_Internal_Injected, DrawShadows, DrawShadows_Internal, DrawShadows_Internal_Injected, DrawSkybox, DrawSkybox_Internal, DrawSkybox_Internal_Injected, DrawUIOverlay, DrawUIOverlay_Internal, DrawUIOverlay_Internal_Injected, DrawWireOverlay, DrawWireOverlay_Impl, DrawWireOverlay_Impl_Injected, EmitGeometryForCamera, EndRenderPass, EndRenderPass_Internal, EndSubPass, EndSubPass_Internal, Equals, ExecuteCommandBuffer, ExecuteCommandBufferAsync, ExecuteCommandBufferAsync_Internal, ExecuteCommandBufferAsync_Internal_Injected, ExecuteCommandBuffer_Internal, ExecuteCommandBuffer_Internal_Injected, GetCameras, GetCameras_Internal, GetCameras_Internal_Injected, GetHashCode, InitializeSortSettings, Internal_Cull, Internal_Cull_Injected, Internal_GetPtr, InvokeOnRenderObjectCallback, InvokeOnRenderObjectCallback_Internal, InvokeOnRenderObjectCallback_Internal_Injected, PrepareRendererListsAsync, PrepareRendererListsAsync_Internal, PrepareRendererListsAsync_Internal_Injected, QueryRendererListStatus, QueryRendererListStatus_Internal, QueryRendererListStatus_Internal_Injected, SetupCameraProperties, SetupCameraProperties_Internal, SetupCameraProperties_Internal_Injected, StartMultiEye, StartMultiEye_Internal, StartMultiEye_Internal_Injected, StereoEndRender, StereoEndRender_Internal, StereoEndRender_Internal_Injected, StopMultiEye, StopMultiEye_Internal, StopMultiEye_Internal_Injected, Submit, SubmitForRenderPassValidation, SubmitForRenderPassValidation_Internal, SubmitForRenderPassValidation_Internal_Injected, Submit_Internal, Submit_Internal_Injected, Validate, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.ShaderTagId  : System.ValueType
+  properties: id, name, none
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Explicit, op_Inequality
+
+### UnityEngine.Rendering.ShadowDrawingSettings  : System.ValueType
+  properties: cullingResults, lightIndex, objectsFilter, splitData, useRenderingLayerMaskTest
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.ShadowSplitData  : System.ValueType
+  properties: cullingPlaneCount, cullingSphere, k_MaximumCullingPlaneCount, maximumCullingPlaneCount, shadowCascadeBlendCullingFactor
+  methods:    BoxIl2CppObject, Equals, GetCullingPlane, GetHashCode, SetCullingPlane, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.SortingLayerRange  : System.ValueType
+  properties: all, lowerBound, upperBound
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.SortingSettings  : System.ValueType
+  properties: cameraPosition, criteria, customAxis, distanceMetric, worldToCameraMatrix
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.StencilState  : System.ValueType
+  properties: compareFunctionBack, compareFunctionFront, defaultValue, enabled, failOperationBack, failOperationFront, passOperationBack, passOperationFront, readMask, writeMask, zFailOperationBack, zFailOperationFront
+  methods:    BoxIl2CppObject, Equals, GetHashCode, SetCompareFunction, SetFailOperation, SetPassOperation, SetZFailOperation, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.SupportedRenderingFeatures  : Il2CppSystem.Object
+  properties: _autoAmbientProbeBaking_k__BackingField, _autoDefaultReflectionProbeBaking_k__BackingField, _defaultMixedLightingModes_k__BackingField, _editableMaterialRenderQueue_k__BackingField, _enlightenLightmapper_k__BackingField, _enlighten_k__BackingField, _lightProbeProxyVolumes_k__BackingField, _lightmapBakeTypes_k__BackingField, _lightmapsModes_k__BackingField, _mixedLightingModes_k__BackingField, _motionVectors_k__BackingField, _overrideShadowmaskMessage_k__BackingField, _overridesEnvironmentLighting_k__BackingField, _overridesFog_k__BackingField, _overridesLODBias_k__BackingField, _overridesMaximumLODLevel_k__BackingField, _overridesOtherLightingSettings_k__BackingField, _overridesRealtimeReflectionProbes_k__BackingField, _overridesShadowmask_k__BackingField, _particleSystemInstancing_k__BackingField, _receiveShadows_k__BackingField, _reflectionProbeModes_k__BackingField, _reflectionProbesBlendDistance_k__BackingField, _reflectionProbes_k__BackingField, _rendererPriority_k__BackingField, _rendererProbes_k__BackingField, _rendersUIOverlay_k__BackingField, active, autoAmbientProbeBaking, autoDefaultReflectionProbeBaking, defaultMixedLightingModes, editableMaterialRenderQueue, enlighten, enlightenLightmapper, lightProbeProxyVolumes, lightmapBakeTypes, lightmapsModes, mixedLightingModes, motionVectors, overrideShadowmaskMessage, overridesEnvironmentLighting, overridesFog, overridesLODBias, overridesMaximumLODLevel, overridesOtherLightingSettings, overridesRealtimeReflectionProbes, overridesShadowmask, particleSystemInstancing, receiveShadows, reflectionProbeModes, reflectionProbes, reflectionProbesBlendDistance, rendererPriority, rendererProbes, rendersUIOverlay, s_Active, shadowmaskMessage, terrainDetailUnsupported
+  methods:    FallbackLightmapper, FallbackLightmapperByRef, FallbackMixedLightingMode, FallbackMixedLightingModeByRef, IsAutoAmbientProbeBakingSupported, IsAutoDefaultReflectionProbeBakingSupported, IsLightmapBakeTypeSupported, IsLightmapBakeTypeSupportedByRef, IsLightmapperSupported, IsLightmapperSupportedByRef, IsLightmapsModeSupported, IsLightmapsModeSupportedByRef, IsMixedLightingModeSupported, IsMixedLightingModeSupportedByRef, IsUIOverlayRenderedBySRP
+
+### UnityEngine.Rendering.VisibleLight  : System.ValueType
+  properties: finalColor, intersectsFarPlane, intersectsNearPlane, light, lightType, localToWorldMatrix, range, screenRect, spotAngle
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.VisibleReflectionProbe  : System.ValueType
+  properties: blendDistance, bounds, center, hdrData, importance, isBoxProjection, localToWorldMatrix, reflectionProbe, texture
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.GlobalKeyword  : Il2CppSystem.ValueType
+  properties: m_Index, m_Name, name
+  methods:    Create, CreateGlobalKeyword, GetGlobalKeywordCount, GetGlobalKeywordIndex, ToString
+
+### UnityEngine.Rendering.LocalKeyword  : Il2CppSystem.ValueType
+  properties: isOverridable, isValid, m_Index, m_Name, m_SpaceInfo, name, type
+  methods:    Equals, GetComputeShaderKeywordCount, GetComputeShaderKeywordIndex, GetHashCode, GetKeywordType, GetKeywordType_Injected, GetShaderKeywordCount, GetShaderKeywordIndex, IsOverridable, IsOverridable_Injected, IsValid, IsValid_Injected, ToString, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.LocalKeywordSpace  : System.ValueType
+  properties: keywordCount, keywordNames, keywords
+  methods:    BoxIl2CppObject, Equals, FindKeyword, GetHashCode, GetKeyword, GetKeywordCount, GetKeywordCount_Injected, GetKeywordNames, GetKeywordNames_Injected, GetKeyword_Injected, GetKeywords, GetKeywords_Injected, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.ShaderKeyword  : Il2CppSystem.ValueType
+  properties: index, m_Index, m_IsCompute, m_IsLocal, m_IsValid, m_Name, name
+  methods:    CreateGlobalKeyword, GetComputeShaderKeywordCount, GetComputeShaderKeywordIndex, GetGlobalKeywordCount, GetGlobalKeywordIndex, GetGlobalKeywordName, GetGlobalKeywordType, GetGlobalShaderKeywordType, GetKeywordCount, GetKeywordIndex, GetKeywordName, GetKeywordType, GetName, IsKeywordLocal, IsValid, ToString
+
+### UnityEngine.Rendering.SortingGroup  : UnityEngine.Behaviour
+  properties: index, invalidSortingGroupID, sortingGroupID, sortingGroupOrder, sortingLayerID, sortingLayerName, sortingOrder
+  methods:    GetSortingGroupByIndex, UpdateAllSortingGroups
+
+### UnityEngine.Rendering.RendererUtils.RendererList  : System.ValueType
+  properties: isValid, isValid_Injected, nullRendererList
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.RendererUtils.RendererListDesc  : Il2CppSystem.ValueType
+  properties: _camera_k__BackingField, _cullingResult_k__BackingField, _passName_k__BackingField, _passNames_k__BackingField, camera, cullingResult, excludeObjectMotionVectors, layerMask, overrideMaterial, overrideMaterialPassIndex, passName, passNames, renderQueueRange, rendererConfiguration, sortingCriteria, stateBlock
+  methods:    IsValid
+
+### UnityEngine.Rendering.RendererUtils.RendererListParams  : Il2CppSystem.ValueType
+  properties: _isValid_k__BackingField, cullingResult, drawSettings, filteringSettings, isValid, nullRendererList, s_EmptyName, stateBlock
+  methods:    Create
+
+### UnityEngine.Playables.FrameData  : System.ValueType
+  properties: deltaTime, effectiveParentDelay, effectiveParentSpeed, effectivePlayState, effectiveSpeed, effectiveWeight, evaluationType, frameId, output, seekOccurred, timeHeld, timeLooped, weight
+  methods:    BoxIl2CppObject, HasFlags
+
+### UnityEngine.Playables.FrameRate  : System.ValueType
+  properties: dropFrame, k_23_976Fps, k_24Fps, k_25Fps, k_29_97Fps, k_30Fps, k_50Fps, k_59_94Fps, k_60Fps, rate
+  methods:    BoxIl2CppObject, DoubleToFrameRate, Equals, FrameRateToInt, GetHashCode, IsValid, ToString, op_Equality, op_GreaterThan, op_GreaterThanOrEqual, op_Inequality, op_LessThan, op_LessThanOrEqual
+
+### UnityEngine.Playables.IPlayableBehaviour  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    OnBehaviourPause, OnBehaviourPlay, OnGraphStart, OnGraphStop, OnPlayableCreate, OnPlayableDestroy, PrepareFrame, ProcessFrame
+
+### UnityEngine.Playables.Playable  : System.ValueType
+  properties: Null, m_NullPlayable
+  methods:    BoxIl2CppObject, Create, Equals, GetHandle, GetPlayableType, IsPlayableOfType
+
+### UnityEngine.Playables.IPlayableAsset  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: duration
+  methods:    CreatePlayable
+
+### UnityEngine.Playables.PlayableAsset  : UnityEngine.ScriptableObject
+  properties: duration, outputs
+  methods:    CreatePlayable, Internal_CreatePlayable, Internal_GetPlayableAssetDuration
+
+### UnityEngine.Playables.PlayableBehaviour  : Il2CppSystem.Object
+  methods:    Clone, OnBehaviourDelay, OnBehaviourPause, OnBehaviourPlay, OnGraphStart, OnGraphStop, OnPlayableCreate, OnPlayableDestroy, PrepareData, PrepareFrame, ProcessFrame
+
+### UnityEngine.Playables.PlayableBinding  : Il2CppSystem.ValueType
+  properties: DefaultDuration, None, m_CreateOutputMethod, m_SourceBindingType, m_SourceObject, m_StreamName, outputTargetType, sourceBindingType, sourceObject, streamName, streamType
+  methods:    CreateInternal, CreateOutput
+
+### UnityEngine.Playables.PlayableExtensions  : Il2CppSystem.Object
+  methods:    AddInput, CanChangeInputs, CanDestroy, CanSetWeights, ConnectInput, Destroy, DisconnectInput, GetDelay, GetDuration, GetGraph, GetInput, GetInputCount, GetInputWeight, GetLeadTime, GetOutput, GetOutputCount, GetPlayState, GetPreviousTime, GetPropagateSetTime, GetSpeed, GetTime, GetTimeWrapMode, GetTraversalMode, IsDelayed, IsDone, IsNull, IsValid, Pause, Play, SetDelay, SetDone, SetDuration, SetInputCount, SetInputWeight, SetLeadTime, SetOutputCount, SetPlayState, SetPropagateSetTime, SetSpeed, SetTime, SetTimeWrapMode, SetTraversalMode
+
+### UnityEngine.Playables.PlayableGraph  : System.ValueType
+  methods:    BoxIl2CppObject, Connect, ConnectInternal, ConnectInternal_Injected, Create, CreatePlayableHandle, CreatePlayableHandle_Injected, CreateScriptOutputInternal, CreateScriptOutputInternal_Injected, Create_Injected, Destroy, DestroyOutput, DestroyOutputInternal, DestroyOutputInternal_Injected, DestroyPlayable, DestroyPlayableInternal, DestroyPlayableInternal_Injected, DestroySubgraph, DestroySubgraphInternal, DestroySubgraphInternal_Injected, Destroy_Injected, DisableMatchFrameRate, DisableMatchFrameRate_Injected, Disconnect, DisconnectInternal, DisconnectInternal_Injected, EnableMatchFrameRate, EnableMatchFrameRate_Injected, Evaluate, Evaluate_Injected, GetFrameRate, GetFrameRate_Injected, GetOutput, GetOutputByType, GetOutputByTypeInternal, GetOutputByTypeInternal_Injected, GetOutputCount, GetOutputCountByType, GetOutputCountByTypeInternal, GetOutputCountByTypeInternal_Injected, GetOutputCount_Injected, GetOutputInternal, GetOutputInternal_Injected, GetPlayableCount, GetPlayableCount_Injected, GetResolver, GetResolver_Injected, GetRootPlayable, GetRootPlayableCount, GetRootPlayableCount_Injected, GetRootPlayableInternal, GetRootPlayableInternal_Injected, GetTimeUpdateMode, GetTimeUpdateMode_Injected, IsDone, IsDone_Injected, IsMatchFrameRateEnabled, IsMatchFrameRateEnabled_Injected, IsPlaying, IsPlaying_Injected, IsValid, IsValid_Injected, Play, Play_Injected, SetResolver, SetResolver_Injected, SetTimeUpdateMode, SetTimeUpdateMode_Injected, Stop, Stop_Injected, SynchronizeEvaluation, SynchronizeEvaluation_Injected
+
+### UnityEngine.Playables.PlayableHandle  : System.ValueType
+  properties: Null, m_Null
+  methods:    BoxIl2CppObject, CanChangeInputs, CanChangeInputs_Injected, CanDestroy, CanDestroy_Injected, CanSetWeights, CanSetWeights_Injected, CheckInputBounds, CompareVersion, Destroy, Equals, GetDelay, GetDelay_Injected, GetDuration, GetDuration_Injected, GetGraph, GetGraph_Injected, GetHashCode, GetInput, GetInputCount, GetInputCount_Injected, GetInputHandle, GetInputHandle_Injected, GetInputWeight, GetInputWeightFromIndex, GetInputWeightFromIndex_Injected, GetJobData, GetJobData_Injected, GetJobType, GetJobType_Injected, GetLeadTime, GetLeadTime_Injected, GetObject, GetOutput, GetOutputCount, GetOutputCount_Injected, GetOutputHandle, GetOutputHandle_Injected, GetPlayState, GetPlayState_Injected, GetPlayableType, GetPlayableType_Injected, GetPreviousTime, GetPreviousTime_Injected, GetPropagateSetTime, GetPropagateSetTime_Injected, GetScriptInstance, GetScriptInstance_Injected, GetSpeed, GetSpeed_Injected, GetTime, GetTimeWrapMode, GetTimeWrapMode_Injected, GetTime_Injected, GetTraversalMode, GetTraversalMode_Injected, IsDelayed, IsDelayed_Injected, IsDone, IsDone_Injected, IsNull, IsNull_Injected, IsPlayableOfType, IsValid, IsValid_Injected, Pause, Pause_Injected, Play, Play_Injected, SetDelay, SetDelay_Injected, SetDone, SetDone_Injected, SetDuration, SetDuration_Injected, SetInputCount, SetInputCount_Injected, SetInputWeight, SetInputWeightFromIndex, SetInputWeightFromIndex_Injected, SetInputWeight_Injected, SetLeadTime, SetLeadTime_Injected, SetOutputCount, SetOutputCount_Injected, SetPropagateSetTime, SetPropagateSetTime_Injected, SetScriptInstance, SetScriptInstance_Injected, SetSpeed, SetSpeed_Injected, SetTime, SetTimeWrapMode, SetTimeWrapMode_Injected, SetTime_Injected, SetTraversalMode, SetTraversalMode_Injected, op_Equality, op_Inequality
+
+### UnityEngine.Playables.PlayableOutput  : System.ValueType
+  properties: Null, m_NullPlayableOutput
+  methods:    BoxIl2CppObject, Equals, GetHandle, GetPlayableOutputType, IsPlayableOutputOfType
+
+### UnityEngine.Playables.PlayableOutputExtensions  : Il2CppSystem.Object
+  methods:    AddNotificationReceiver, GetNotificationReceivers, GetReferenceObject, GetSourceInputPort, GetSourceOutputPort, GetSourcePlayable, GetUserData, GetWeight, IsOutputNull, IsOutputValid, PushNotification, RemoveNotificationReceiver, SetReferenceObject, SetSourceInputPort, SetSourceOutputPort, SetSourcePlayable, SetUserData, SetWeight
+
+### UnityEngine.Playables.PlayableOutputHandle  : System.ValueType
+  properties: Null, m_Null
+  methods:    AddNotificationReceiver, AddNotificationReceiver_Injected, BoxIl2CppObject, CompareVersion, Equals, GetHashCode, GetNotificationReceivers, GetNotificationReceivers_Injected, GetPlayableOutputType, GetPlayableOutputType_Injected, GetReferenceObject, GetReferenceObject_Injected, GetSourceOutputPort, GetSourceOutputPort_Injected, GetSourcePlayable, GetSourcePlayable_Injected, GetUserData, GetUserData_Injected, GetWeight, GetWeight_Injected, IsNull, IsNull_Injected, IsPlayableOutputOfType, IsValid, IsValid_Injected, PushNotification, PushNotification_Injected, RemoveNotificationReceiver, RemoveNotificationReceiver_Injected, SetReferenceObject, SetReferenceObject_Injected, SetSourcePlayable, SetSourcePlayable_Injected, SetUserData, SetUserData_Injected, SetWeight, SetWeight_Injected, op_Equality, op_Inequality
+
+### UnityEngine.Playables.ScriptPlayableBinding  : Il2CppSystem.Object
+  methods:    Create, CreateScriptOutput
+
+### UnityEngine.Playables.ScriptPlayableOutput  : System.ValueType
+  properties: Null
+  methods:    BoxIl2CppObject, Create, GetHandle, op_Explicit, op_Implicit
+
+### UnityEngine.Diagnostics.Utils  : Il2CppSystem.Object
+  methods:    ForceCrash, NativeAssert, NativeError, NativeWarning
+
+### UnityEngine.Experimental.U2D.SpriteRendererGroup  : Il2CppSystem.Object
+  methods:    AddRenderers, Clear
+
+### UnityEngine.Experimental.GlobalIllumination.LinearColor  : System.ValueType
+  properties: blue, green, intensity, red
+  methods:    Black, BoxIl2CppObject, Convert
+
+### UnityEngine.Experimental.GlobalIllumination.Cookie  : System.ValueType
+  methods:    BoxIl2CppObject, Defaults
+
+### UnityEngine.Experimental.GlobalIllumination.LightDataGI  : System.ValueType
+  methods:    BoxIl2CppObject, Init, InitNoBake
+
+### UnityEngine.Experimental.GlobalIllumination.LightmapperUtils  : Il2CppSystem.Object
+  methods:    ApplyColorTemperature, Extract, ExtractColorTemperature, ExtractIndirect, ExtractInnerCone
+
+### UnityEngine.Experimental.GlobalIllumination.Lightmapping  : Il2CppSystem.Object
+  properties: s_DefaultDelegate, s_RequestLightsDelegate
+  methods:    GetDelegate, RequestLights, ResetDelegate, SetDelegate
+
+### UnityEngine.Experimental.Playables.CameraPlayable  : System.ValueType
+  methods:    BoxIl2CppObject, Create, CreateHandle, Equals, GetCamera, GetCameraInternal, GetHandle, InternalCreateCameraPlayable, SetCamera, SetCameraInternal, ValidateType, op_Explicit, op_Implicit
+
+### UnityEngine.Experimental.Playables.MaterialEffectPlayable  : System.ValueType
+  methods:    BoxIl2CppObject, Create, CreateHandle, Equals, GetHandle, GetMaterial, GetMaterialInternal, GetPass, GetPassInternal, InternalCreateMaterialEffectPlayable, SetMaterial, SetMaterialInternal, SetPass, SetPassInternal, ValidateType, op_Explicit, op_Implicit
+
+### UnityEngine.Experimental.Playables.TextureMixerPlayable  : System.ValueType
+  methods:    BoxIl2CppObject, Create, CreateHandle, CreateTextureMixerPlayableInternal, Equals, GetHandle, op_Explicit, op_Implicit
+
+### UnityEngine.Experimental.Playables.TexturePlayableOutput  : System.ValueType
+  properties: Null
+  methods:    BoxIl2CppObject, Create, GetHandle, GetTarget, InternalGetTarget, InternalSetTarget, SetTarget, op_Explicit, op_Implicit
+
+### UnityEngine.Experimental.Rendering.BuiltinRuntimeReflectionSystem  : Il2CppSystem.Object
+  methods:    BuiltinUpdate, Dispose, Internal_BuiltinRuntimeReflectionSystem_New, TickRealtimeProbes
+
+### UnityEngine.Experimental.Rendering.ScriptableRuntimeReflectionSystemSettings  : Il2CppSystem.Object
+  properties: Internal_ScriptableRuntimeReflectionSystemSettings_instance, Internal_ScriptableRuntimeReflectionSystemSettings_system, s_Instance, system
+  methods:    ScriptingDirtyReflectionSystemInstance
+
+### UnityEngine.Experimental.Rendering.ScriptableRuntimeReflectionSystemWrapper  : Il2CppSystem.Object
+  properties: _implementation_k__BackingField, implementation
+  methods:    Internal_ScriptableRuntimeReflectionSystemWrapper_TickRealtimeProbes
+
+### UnityEngine.Experimental.Rendering.GraphicsFormatUtility  : Il2CppSystem.Object
+  properties: tableNoStencil, tableStencil
+  methods:    CanDecompressFormat, ComputeMipmapSize, ComputeMipmapSize_Native_2D, ComputeMipmapSize_Native_3D, ConvertToAlphaFormat, GetAlphaComponentCount, GetBlockHeight, GetBlockSize, GetBlockWidth, GetColorComponentCount, GetComponentCount, GetDepthBits, GetDepthStencilFormat, GetDepthStencilFormatFromBitsLegacy_Native, GetFormat, GetFormatString, GetGraphicsFormat, GetGraphicsFormat_Native_RenderTextureFormat, GetGraphicsFormat_Native_TextureFormat, GetLinearFormat, GetRenderTextureFormat, GetSRGBFormat, GetSwizzleA, GetSwizzleB, GetSwizzleG, GetSwizzleR, GetTextureFormat, GetTextureFormat_Native_GraphicsFormat, HasAlphaChannel, Is16BitPackedFormat, IsASTCFormat, IsAlphaOnlyFormat, IsAlphaTestFormat, IsBCFormat, IsBPTCFormat, IsCompressedFormat, IsCompressedTextureFormat, IsCrunchFormat, IsDXTCFormat, IsDepthFormat, IsEACFormat, IsETCFormat, IsFloatFormat, IsHalfFormat, IsIEEE754Format, IsIntegerFormat, IsNormFormat, IsPVRTCFormat, IsPackedFormat, IsRGTCFormat, IsSIntFormat, IsSNormFormat, IsSRGBFormat, IsSignedFormat, IsStencilFormat, IsSwizzleFormat, IsUIntFormat, IsUNormFormat, IsUnsignedFormat, IsXRFormat
+
+### UnityEngine.Assertions.Assert  : Il2CppSystem.Object
+  properties: raiseExceptions
+  methods:    AreApproximatelyEqual, AreEqual, AreNotApproximatelyEqual, AreNotEqual, Equals, Fail, IsFalse, IsNotNull, IsNull, IsTrue, ReferenceEquals
+
+### UnityEngine.Assertions.AssertionException  : Il2CppSystem.Exception
+  properties: Message, m_UserMessage
+
+### UnityEngine.Assertions.AssertionMessageUtil  : Il2CppSystem.Object
+  methods:    BooleanFailureMessage, GetEqualityMessage, GetMessage, NullFailureMessage
+
+### JetBrains.Annotations.ContractAnnotationAttribute  : System.Attribute
+  properties: Contract, ForceFullStates
+
+### JetBrains.Annotations.MeansImplicitUseAttribute  : System.Attribute
+  properties: TargetFlags, UseKindFlags
+
+### JetBrains.Annotations.MacroAttribute  : System.Attribute
+  properties: Editable, Expression, Target
+
+### Unity.Baselib.ErrorState  : System.ValueType
+  properties: ErrorCode
+  methods:    Explain, ThrowIfFailed
+
+### Unity.Baselib.LowLevel.Binding  : System.Object
+  methods:    Baselib_Memory_AlignedAllocate, Baselib_Memory_AlignedFree, Baselib_Memory_AlignedReallocate, Baselib_Memory_Allocate, Baselib_Memory_Free, Baselib_Memory_Reallocate, Baselib_RegisteredNetwork_Endpoint_Empty, Baselib_RegisteredNetwork_Endpoint_Empty_Injected, Baselib_TLS_Alloc, Baselib_TLS_Free, Baselib_TLS_Get, Baselib_TLS_Set, Baselib_Thread_GetCurrentThreadId, Baselib_Thread_YieldExecution, Baselib_Timer_GetHighPrecisionTimerTicks, Baselib_Timer_GetTimeSinceStartupInSeconds, Baselib_Timer_WaitForAtLeast
+
+### Unity.Rendering.HybridV2.HybridV2ShaderReflection  : System.Object
+  methods:    GetDOTSInstancingCbuffersPointer, GetDOTSInstancingPropertiesPointer, GetDOTSReflectionVersionNumber
+
+### Unity.Collections.LowLevel.Unsafe.BurstLike  : System.Object
+  methods:    NativeFunctionCall_Int_IntPtr_IntPtr, StaticDataGetOrCreate
+
+### Unity.IO.LowLevel.Unsafe.AsyncReadManager  : System.Object
+  methods:    CloseCachedFileAsync, CloseCachedFileAsync_Injected
+
+### Unity.IO.LowLevel.Unsafe.AsyncReadManagerMetrics  : System.Object
+  methods:    ClearCompletedMetrics, ClearMetrics_Internal, GetCurrentSummaryMetrics, GetMetrics, GetMetrics_Filtered_Internal, GetMetrics_Internal, GetMetrics_NoAlloc_Filtered_Internal, GetMetrics_NoAlloc_Internal, GetSummaryMetricsWithFilters_Internal, GetSummaryMetrics_Internal, GetSummaryOfMetrics, GetSummaryOfMetricsWithFilters_FromContainer_Internal, GetSummaryOfMetricsWithFilters_Internal, GetSummaryOfMetrics_FromContainer_Internal, GetSummaryOfMetrics_Internal, GetTotalSizeOfNonASRMReadsBytes, IsEnabled, StartCollectingMetrics, StopCollectingMetrics
+
+### Unity.IO.LowLevel.Unsafe.AsyncReadManagerSummaryMetrics  : System.Object
+  properties: AverageBandwidthMBPerSecond, AverageReadSizeInBytes, AverageReadTimeMicroseconds, AverageThroughputMBPerSecond, AverageTotalRequestTimeMicroseconds, AverageWaitTimeMicroseconds, LongestReadAssetType, LongestReadSubsystem, LongestReadTimeMicroseconds, LongestWaitAssetType, LongestWaitSubsystem, LongestWaitTimeMicroseconds, NumberOfAsyncReads, NumberOfCachedReads, NumberOfCanceledRequests, NumberOfCompletedRequests, NumberOfFailedRequests, NumberOfInProgressRequests, NumberOfSyncReads, NumberOfWaitingRequests, TotalBytesRead, TotalNumberOfRequests
+
+### UnityEngineInternal.MemorylessManager  : System.Object
+  properties: depthMemorylessMode
+  methods:    GetFramebufferDepthMemorylessMode, SetFramebufferDepthMemorylessMode
+
+### UnityEngineInternal.GIDebugVisualisation  : System.Object
+  properties: cycleMode, pauseCycleMode, texType
+  methods:    CycleSkipInstances, CycleSkipSystems, PauseCycleMode, PlayCycleMode, ResetRuntimeInputTextures, StopCycleMode
+
+### UnityEngine.Pose  : System.ValueType
+  properties: forward, identity, right, up
+  methods:    Equals, GetHashCode, GetTransformedBy, ToString, op_Equality, op_Inequality
+
+### UnityEngine.DrivenPropertyManager  : System.Object
+  methods:    RegisterProperty, RegisterPropertyPartial, TryRegisterProperty, TryRegisterPropertyPartial, UnregisterProperties, UnregisterProperty, UnregisterPropertyPartial
+
+### UnityEngine.HotReloadDeserializer  : System.Object
+  methods:    CreateEmptyAsset, DeserializeAsset, FinalizeAssetCreation, FinishHotReload, GetDependencies, GetNullDependencies, PrepareHotReload, RemapInstanceIds
+
+### UnityEngine.BoundsInt  : System.ValueType
+  properties: allPositionsWithin, center, max, min, position, size, x, xMax, xMin, y, yMax, yMin, z, zMax, zMin
+  methods:    ClampToBounds, Contains, Equals, GetHashCode, SetMinMax, ToString, op_Equality, op_Inequality
+
+### UnityEngine.ShaderVariantCollection  : UnityEngine.Object
+  properties: isWarmedUp, shaderCount, variantCount
+  methods:    AddVariant, Clear, ContainsVariant, Internal_Create, RemoveVariant, WarmUp
+
+### UnityEngine.SparseTexture  : UnityEngine.Texture
+  properties: isCreated, tileHeight, tileWidth
+  methods:    Internal_Create, UnloadTile, UpdateTile, UpdateTileRaw, ValidateFormat, ValidateIsNotCrunched, ValidateSize
+
+### UnityEngine.BillboardAsset  : UnityEngine.Object
+  properties: bottom, height, imageCount, indexCount, material, vertexCount, width
+  methods:    GetImageTexCoords, GetImageTexCoordsInternal, GetIndices, GetIndicesInternal, GetVertices, GetVerticesInternal, Internal_Create, MakeMaterialProperties, SetImageTexCoords, SetImageTexCoordsInternalList, SetIndices, SetIndicesInternalList, SetVertices, SetVerticesInternalList
+
+### UnityEngine.RendererExtensions  : System.Object
+  methods:    UpdateGIMaterials, UpdateGIMaterialsForRenderer
+
+### UnityEngine.OcclusionArea  : UnityEngine.Component
+  properties: center, center_Injected, size, size_Injected
+
+### UnityEngine.LensFlare  : UnityEngine.Behaviour
+  properties: brightness, color, color_Injected, fadeSpeed, flare
+
+### UnityEngine.Projector  : UnityEngine.Behaviour
+  properties: aspectRatio, farClipPlane, fieldOfView, ignoreLayers, material, nearClipPlane, orthographic, orthographicSize
+
+### UnityEngine.LineUtility  : System.Object
+  methods:    GeneratePointsToKeep2D, GeneratePointsToKeep3D, GenerateSimplifiedPoints2D, GenerateSimplifiedPoints3D, Simplify
+
+### UnityEngine.FrameTimingManager  : System.Object
+  methods:    CaptureFrameTimings, GetCpuTimerFrequency, GetGpuTimerFrequency, GetVSyncsPerSecond
+
+### UnityEngine.HDROutputSettings  : System.Object
+  properties: HDRModeChangeRequested, active, automaticHDRTonemapping, available, displayColorGamut, format, graphicsFormat, main, maxFullFrameToneMapLuminance, maxToneMapLuminance, minToneMapLuminance, paperWhiteNits
+  methods:    GetActive, GetAutomaticHDRTonemapping, GetAvailable, GetDisplayColorGamut, GetGraphicsFormat, GetHDRModeChangeRequested, GetMaxFullFrameToneMapLuminance, GetMaxToneMapLuminance, GetMinToneMapLuminance, GetPaperWhiteNits, RequestHDRModeChange, RequestHDRModeChangeInternal, SetAutomaticHDRTonemapping, SetPaperWhiteInNits, SetPaperWhiteNits
+
+### UnityEngine.Security  : System.Object
+  methods:    LoadAndVerifyAssembly, PrefetchSocketPolicy
+
+### UnityEngine.UnityEventQueueSystem  : System.Object
+  methods:    GenerateEventIdForPayload, GetGlobalEventQueue
+
+### UnityEngine.DynamicGI  : System.Object
+  properties: asyncMaterialUpdates, indirectScale, isConverged, materialUpdateTimeSlice, scheduledMaterialUpdatesCount, synchronousMode, updateThreshold
+  methods:    SetEmissive, SetEmissive_Injected, SetEnvironmentData, UpdateEnvironment, UpdateMaterials
+
+### UnityEngine.Ping  : System.Object
+  properties: ip, isDone, time
+  methods:    DestroyPing, Finalize, Internal_Create, Internal_Destroy, Internal_IsDone
+
+### UnityEngine.CrashReport  : System.Object
+  properties: lastReport, reports
+  methods:    Compare, GetReportData, GetReports, PopulateReports, Remove, RemoveAll, RemoveReport
+
+### UnityEngine.StaticBatchingUtility  : System.Object
+  methods:    Combine
+
+### UnityEngine.InternalStaticBatchingUtility  : System.Object
+  methods:    Combine, CombineGameObjects, CombineRoot, GetMeshFormatHash, SortGameObjectsForStaticBatching
+
+### UnityEngine.Snapping  : System.Object
+  methods:    IsCardinalDirection, Snap
+
+### UnityEngine.SnapAxisFilter  : System.ValueType
+  properties: Item, active, x, y, z
+  methods:    Equals, GetHashCode, ToString, op_BitwiseAnd, op_BitwiseOr, op_Equality, op_ExclusiveOr, op_Explicit, op_Implicit, op_Inequality, op_Multiply, op_OnesComplement
+
+### UnityEngine.UnityAPICompatibilityVersionAttribute  : System.Attribute
+  properties: configurationAssembliesHashes, version
+
+### UnityEngine.EnumDataUtility  : System.Object
+  methods:    CheckObsoleteAddition, EnumTooltipFromEnumField, IntToEnumFlags
+
+### UnityEngine.FrameDebugger  : System.Object
+  properties: enabled
+  methods:    IsLocalEnabled, IsRemoteEnabled
+
+### UnityEngine.U2D.SpriteRendererDataAccessExtensions  : System.Object
+  methods:    DeactivateDeformableBuffer, IsUsingDeformableBuffer, SetBatchDeformableBufferAndLocalAABBArray, SetDeformableBuffer, SetLocalAABB, SetLocalAABB_Injected
+
+### UnityEngine.Profiling.Recorder  : System.Object
+  properties: elapsedNanoseconds, enabled, gpuElapsedNanoseconds, gpuSampleBlockCount, isValid, sampleBlockCount
+  methods:    CollectFromAllThreads, FilterToCurrentThread, Finalize, Get, SetEnabled
+
+### UnityEngine.Assertions.Comparers.FloatComparer  : System.Object
+  methods:    AreEqual, AreEqualRelative, Equals, GetHashCode
+
+### UnityEngine.Assertions.Must.MustExtensions  : System.Object
+  methods:    MustBeApproximatelyEqual, MustBeEqual, MustBeFalse, MustBeNull, MustBeTrue, MustNotBeApproximatelyEqual, MustNotBeEqual, MustNotBeNull
+
+### UnityEngine.Scripting.GarbageCollector  : System.Object
+  properties: GCMode, incrementalTimeSliceNanoseconds, isIncremental
+  methods:    CollectIncremental, GetMode, SetMode, add_GCModeChanged, remove_GCModeChanged
+
+### UnityEngine.SearchService.ObjectSelectorHandlerWithLabelsAttribute  : System.Attribute
+  properties: labels, matchAll
+
+### UnityEngine.Search.SearchContextAttribute  : UnityEngine.PropertyAttribute
+  properties: flags, instantiableProviders, providerIds, query
+
+### UnityEngine.LowLevel.PlayerLoop  : System.Object
+  methods:    GetCurrentPlayerLoop, GetCurrentPlayerLoopInternal, GetDefaultPlayerLoop, GetDefaultPlayerLoopInternal, InternalToPlayerLoopSystem, PlayerLoopSystemToInternal, SetPlayerLoop, SetPlayerLoopInternal
+
+### UnityEngine.SceneManagement.SceneUtility  : System.Object
+  methods:    GetBuildIndexByScenePath, GetScenePathByBuildIndex
+
+### UnityEngine.Windows.Input  : System.Object
+  methods:    ForwardRawInput
+
+### UnityEngine.Device.SystemInfo  : System.Object
+  properties: batteryLevel, batteryStatus, computeSubGroupSize, constantBufferOffsetAlignment, copyTextureSupport, deviceModel, deviceName, deviceType, deviceUniqueIdentifier, graphicsDeviceID, graphicsDeviceName, graphicsDeviceType, graphicsDeviceVendor, graphicsDeviceVendorID, graphicsDeviceVersion, graphicsMemorySize, graphicsMultiThreaded, graphicsShaderLevel, graphicsUVStartsAtTop, hasDynamicUniformArrayIndexingInFragmentShaders, hasHiddenSurfaceRemovalOnGPU, hasMipMaxLevel, hdrDisplaySupportFlags, maxAnisotropyLevel, maxComputeBufferInputsCompute, maxComputeBufferInputsDomain, maxComputeBufferInputsFragment, maxComputeBufferInputsGeometry, maxComputeBufferInputsHull, maxComputeBufferInputsVertex, maxComputeWorkGroupSize, maxComputeWorkGroupSizeX, maxComputeWorkGroupSizeY, maxComputeWorkGroupSizeZ, maxCubemapSize, maxGraphicsBufferSize, maxTexture3DSize, maxTextureArraySlices, maxTextureSize, npotSupport, operatingSystem, operatingSystemFamily, processorCount, processorFrequency, processorType, renderingThreadingMode, supportedRandomWriteTargetCount, supportedRenderTargetCount, supports2DArrayTextures, supports32bitsIndexBuffer, supports3DRenderTextures, supports3DTextures, supportsAccelerometer, supportsAnisotropicFilter, supportsAsyncCompute, supportsAsyncGPUReadback, supportsAudio, supportsCompressed3DTextures, supportsComputeShaders, supportsConservativeRaster, supportsCubemapArrayTextures, supportsGeometryShaders, supportsGpuRecorder, supportsGraphicsFence, supportsGyroscope, supportsHardwareQuadTopology, supportsInstancing, supportsLocationService, supportsMipStreaming, supportsMotionVectors, supportsMultisampleAutoResolve, supportsMultisampleResolveDepth, supportsMultisampled2DArrayTextures, supportsMultisampledTextures, supportsMultiview, supportsRawShadowDepthSampling, supportsRayTracing, supportsRenderTargetArrayIndexFromVertexShader, supportsSeparatedRenderTargetsBlend, supportsSetConstantBuffer, supportsShadows, supportsSparseTextures, supportsStoreAndResolveAction, supportsTessellationShaders, supportsTextureWrapMirrorOnce, supportsVibration, systemMemorySize, usesLoadStoreActions, usesReversedZBuffer
+  methods:    GetCompatibleFormat, GetGraphicsFormat, GetRenderTextureSupportedMSAASampleCount, IsFormatSupported, SupportsBlendingOnRenderTextureFormat, SupportsRandomWriteOnRenderTextureFormat, SupportsRenderTextureFormat, SupportsTextureFormat, SupportsVertexAttributeFormat
+
+### UnityEngine.Device.Screen  : System.Object
+  properties: autorotateToLandscapeLeft, autorotateToLandscapeRight, autorotateToPortrait, autorotateToPortraitUpsideDown, brightness, currentResolution, cutouts, dpi, fullScreen, fullScreenMode, height, mainWindowDisplayInfo, mainWindowPosition, orientation, resolutions, safeArea, sleepTimeout, width
+  methods:    GetDisplayLayout, MoveMainWindowTo, SetResolution
+
+### UnityEngine.Device.Application  : System.Object
+  properties: absoluteURL, backgroundLoadingPriority, buildGUID, cloudProjectId, companyName, consoleLogPath, dataPath, genuine, genuineCheckAvailable, identifier, installMode, installerName, internetReachability, isBatchMode, isConsolePlatform, isEditor, isFocused, isMobilePlatform, isPlaying, persistentDataPath, platform, productName, runInBackground, sandboxType, streamingAssetsPath, systemLanguage, targetFrameRate, temporaryCachePath, unityVersion, version
+  methods:    CanStreamedLevelBeLoaded, GetBuildTags, GetStackTraceLogType, HasProLicense, HasUserAuthorization, IsPlaying, OpenURL, Quit, RequestAdvertisingIdentifierAsync, RequestUserAuthorization, SetBuildTags, SetStackTraceLogType, Unload, add_deepLinkActivated, add_focusChanged, add_logMessageReceived, add_logMessageReceivedThreaded, add_lowMemory, add_onBeforeRender, remove_deepLinkActivated, remove_focusChanged, remove_logMessageReceived, remove_logMessageReceivedThreaded, remove_lowMemory, remove_onBeforeRender
+
+### UnityEngine.Serialization.UnitySurrogateSelector  : System.Object
+  methods:    ChainSelector, GetNextSelector, GetSurrogate
+
+### UnityEngine.Serialization.ListSerializationSurrogate  : System.Object
+  methods:    ArrayFromGenericList, GetObjectData, SetObjectData
+
+### UnityEngine.Experimental.Playables.TexturePlayableBinding  : System.Object
+  methods:    Create, CreateTextureOutput
+
+### UnityEngine.Experimental.Rendering.RayTracingShader  : UnityEngine.Object
+  properties: maxRecursionDepth
+  methods:    Dispatch, SetAccelerationStructure, SetBool, SetBuffer, SetConstantBuffer, SetConstantComputeBuffer, SetConstantGraphicsBuffer, SetFloat, SetFloatArray, SetFloats, SetGraphicsBuffer, SetInt, SetIntArray, SetInts, SetMatrix, SetMatrixArray, SetMatrix_Injected, SetShaderPass, SetTexture, SetTextureFromGlobal, SetVector, SetVectorArray, SetVector_Injected
+
+### UnityEngine.Experimental.Rendering.RayTracingAccelerationStructure  : System.Object
+  methods:    AddInstance, AddInstanceSubMeshFlagsArray, AddInstance_Procedural, AddInstance_Procedural_Injected, Build, Build_Injected, Destroy, Dispose, Finalize, GetInstanceCount, GetSize, Release, RemoveInstance, Update, UpdateInstanceID, UpdateInstanceMask, UpdateInstanceTransform, Update_Injected
+
+### UnityEngine.Experimental.Rendering.ExternalGPUProfiler  : System.Object
+  methods:    BeginGPUCapture, EndGPUCapture, IsAttached
+
+### UnityEngine.Experimental.Rendering.GraphicsDeviceSettings  : System.Object
+  properties: graphicsJobsSyncPoint, waitForPresentSyncPoint
+
+### UnityEngine.Experimental.Rendering.ScriptableRuntimeReflectionSystem  : System.Object
+  methods:    Dispose, System.IDisposable.Dispose, TickRealtimeProbes
+
+### UnityEngine.Apple.FrameCapture  : System.Object
+  methods:    BeginCaptureImpl, BeginCaptureToFile, BeginCaptureToXcode, CaptureNextFrameImpl, CaptureNextFrameToFile, CaptureNextFrameToXcode, EndCapture, EndCaptureImpl, IsDestinationSupported, IsDestinationSupportedImpl
+
+### UnityEngine.Diagnostics.PlayerConnection  : System.Object
+  properties: connected
+  methods:    SendFile
+
+### UnityEngine.IO.File  : System.Object
+  properties: MainThreadIORestrictionMode, recordZeroSeeks, totalBytesRead, totalBytesWritten, totalCloseCalls, totalFilesClosed, totalFilesOpened, totalOpenCalls, totalReadCalls, totalSeekCalls, totalWriteCalls, totalZeroSeekCalls
+  methods:    GetMainThreadFileIORestriction, GetRecordZeroSeeks, GetTotalBytesRead, GetTotalBytesWritten, GetTotalCloseCalls, GetTotalFilesClosed, GetTotalFilesOpened, GetTotalOpenCalls, GetTotalReadCalls, GetTotalSeekCalls, GetTotalWriteCalls, GetTotalZeroSeekCalls, SetMainThreadFileIORestriction, SetRecordZeroSeeks
+
+### UnityEngine.Rendering.PIX  : System.Object
+  methods:    BeginGPUCapture, EndGPUCapture, IsAttached
+
+### UnityEngine.TestTools.Coverage  : System.Object
+  properties: enabled
+  methods:    ResetAll, ResetFor, ResetFor_Internal
+
+### AutoScope  : System.ValueType
+  methods:    BoxIl2CppObject, Dispose
+
+### PanicFunction_  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Enumerator  : Il2CppSystem.ValueType
+  properties: Current, m_Array, m_Index, value
+  methods:    Dispose, MoveNext, Reset, System_Collections_IEnumerator_get_Current
+
+### ReadOnly  : Il2CppSystem.ValueType
+  properties: m_Buffer, m_Length
+  methods:    GetEnumerator, System_Collections_Generic_IEnumerable_T__GetEnumerator, System_Collections_IEnumerable_GetEnumerator
+
+### Enumerator  : Il2CppSystem.ValueType
+  properties: Current, m_Array, m_Index
+  methods:    Dispose, MoveNext, Reset, System_Collections_IEnumerator_get_Current
+
+### AdvertisingIdentifierCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### LowMemoryCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### LogCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### GateFitParameters  : System.ValueType
+  properties: aspect, mode
+  methods:    BoxIl2CppObject
+
+### RenderRequest  : Il2CppSystem.ValueType
+  properties: m_CameraRenderMode, m_OutputSpace, m_ResultRT
+
+### CameraCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### StateChanged  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OrderBlock  : Il2CppSystem.ValueType
+  properties: callback, order
+
+### DisplaysUpdatedDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### MeshData  : System.ValueType
+  properties: subMeshCount, vertexBufferCount
+  methods:    BoxIl2CppObject, GetIndexData, GetIndexDataPtr, GetIndexDataSize, GetVertexBufferCount, GetVertexData, GetVertexDataPtr, GetVertexDataSize, SetIndexBufferParams, SetIndexBufferParamsImpl, SetSubMesh, SetSubMeshCount, SetSubMeshImpl, SetSubMeshImpl_Injected, SetVertexBufferParams, SetVertexBufferParamsFromArray
+
+### MeshDataArray  : System.ValueType
+  properties: Item, Length
+  methods:    AcquireReadOnlyMeshData, AcquireReadOnlyMeshDatas, ApplyToMeshAndDispose, ApplyToMeshImpl, ApplyToMeshesAndDispose, ApplyToMeshesImpl, BoxIl2CppObject, CreateNewMeshDatas, Dispose, ReleaseMeshDatas
+
+### EncodingUtility  : Il2CppSystem.Object
+  properties: encodingLookup, targetEncoding
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__0_0
+
+### WorkRequest  : Il2CppSystem.ValueType
+  properties: m_DelagateCallback, m_DelagateState, m_WaitHandle
+  methods:    Invoke
+
+### ReapplyDrivenProperties  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Enumerator  : Il2CppSystem.Object
+  properties: Current, currentIndex, outer
+  methods:    MoveNext, Reset
+
+### ErrorDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### StatusDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### PhraseRecognizedDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### DictationHypothesisDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### DictationResultDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### DictationCompletedDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### DictationErrorHandler  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnCaptureResourceCreatedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnPhotoModeStartedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnPhotoModeStoppedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnCapturedToDiskCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnCapturedToMemoryCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnVideoCaptureResourceCreatedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnVideoModeStartedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnVideoModeStoppedCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnStartedRecordingVideoCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### OnStoppedRecordingVideoCallback  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### UpdateFunction  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### MessageTypeSubscribers  : Il2CppSystem.Object
+  properties: MessageTypeId, m_messageTypeId, messageCallback, subscriberCount
+
+### OnPerformCulling  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### CreateOutputMethod  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### RequestLightsDelegate  : Il2CppSystem.MulticastDelegate
+  methods:    Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Enumerator  : Il2CppSystem.ValueType
+  properties: Current, m_Array, m_Index, value
+  methods:    Dispose, MoveNext, Reset, System_Collections_IEnumerator_get_Current
+
+### TransformJobData  : Il2CppSystem.ValueType
+  properties: IsReadOnly, TransformAccessArray

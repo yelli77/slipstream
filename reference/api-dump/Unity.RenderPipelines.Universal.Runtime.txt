@@ -1,0 +1,1237 @@
+# API dump of Unity.RenderPipelines.Universal.Runtime.dll (357 types with members)
+# Generated via metadata reflection (dnfile) from the BepInEx Il2CppInterop-generated
+# assembly - property/method NAMES only, no parameter/return types decoded.
+# Use: grep -i '<keyword>' this file to find candidate native types/members,
+# then confirm exact signature via C# reflection (GetType().GetProperty/GetMethod) at runtime.
+
+### UnityEngine.Experimental.Rendering.Universal.PixelPerfectCamera  : UnityEngine.MonoBehaviour
+  properties: assetsPPU, cameraRTSize, cropFrame, cropFrameX, cropFrameY, finalBlitFilterMode, gridSnapping, m_AssetsPPU, m_Camera, m_CinemachineCompatibilityMode, m_CropFrame, m_GridSnapping, m_Internal, m_RefResolutionX, m_RefResolutionY, offscreenRTSize, orthographicSize, pixelRatio, pixelSnapping, refResolutionX, refResolutionY, stretchFill, upscaleRT
+  methods:    Awake, CorrectCinemachineOrthoSize, OnAfterDeserialize, OnBeforeSerialize, OnBeginCameraRendering, OnDisable, OnEnable, OnEndCameraRendering, PixelSnap, RoundToPixel, UpdateCameraProperties
+
+### UnityEngine.Experimental.Rendering.Universal.RenderObjectsPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: _overrideMaterialPassIndex_k__BackingField, _overrideMaterial_k__BackingField, m_CameraSettings, m_FilteringSettings, m_ProfilerTag, m_ProfilingSampler, m_RenderStateBlock, m_ShaderTagIdList, overrideMaterial, overrideMaterialPassIndex, renderQueueType
+  methods:    Execute, SetDetphState, SetStencilState
+
+### UnityEngine.Experimental.Rendering.Universal.RenderObjects  : UnityEngine.Rendering.Universal.ScriptableRendererFeature
+  properties: renderObjectsPass, settings
+  methods:    AddRenderPasses, Create, SupportsNativeRenderPass
+
+### UnityEngine.Rendering.Universal.CinemachineUniversalPixelPerfect  : UnityEngine.MonoBehaviour
+  methods:    OnEnable
+
+### UnityEngine.Rendering.Universal.DoublePoint  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.PolyTree  : UnityEngine.Rendering.Universal.PolyNode
+  properties: Total, m_AllPolys
+  methods:    Clear, GetFirst
+
+### UnityEngine.Rendering.Universal.PolyNode  : Il2CppSystem.Object
+  properties: ChildCount, Childs, Contour, IsHole, IsOpen, Parent, _IsOpen_k__BackingField, m_Childs, m_Index, m_Parent, m_endtype, m_jointype, m_polygon
+  methods:    AddChild, GetNext, GetNextSiblingUp, IsHoleNode
+
+### UnityEngine.Rendering.Universal.Int128  : System.ValueType
+  methods:    BoxIl2CppObject, Equals, GetHashCode, Int128Mul, IsNegative, op_Addition, op_Equality, op_Explicit, op_GreaterThan, op_Inequality, op_LessThan, op_Subtraction, op_UnaryNegation
+
+### UnityEngine.Rendering.Universal.IntPoint  : System.ValueType
+  methods:    BoxIl2CppObject, Equals, GetHashCode, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.Universal.IntRect  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.TEdge  : Il2CppSystem.Object
+  properties: Bot, Curr, Delta, Dx, Next, NextInAEL, NextInLML, NextInSEL, OutIdx, PolyTyp, Prev, PrevInAEL, PrevInSEL, Side, Top, WindCnt, WindCnt2, WindDelta
+
+### UnityEngine.Rendering.Universal.IntersectNode  : Il2CppSystem.Object
+  properties: Edge1, Edge2, Pt
+
+### UnityEngine.Rendering.Universal.MyIntersectNodeSort  : Il2CppSystem.Object
+  methods:    Compare
+
+### UnityEngine.Rendering.Universal.LocalMinima  : Il2CppSystem.Object
+  properties: LeftBound, Next, RightBound, Y
+
+### UnityEngine.Rendering.Universal.Scanbeam  : Il2CppSystem.Object
+  properties: Next, Y
+
+### UnityEngine.Rendering.Universal.Maxima  : Il2CppSystem.Object
+  properties: Next, Prev, X
+
+### UnityEngine.Rendering.Universal.OutRec  : Il2CppSystem.Object
+  properties: BottomPt, FirstLeft, Idx, IsHole, IsOpen, PolyNode, Pts
+
+### UnityEngine.Rendering.Universal.OutPt  : Il2CppSystem.Object
+  properties: Idx, Next, Prev, Pt
+
+### UnityEngine.Rendering.Universal.Join  : Il2CppSystem.Object
+  properties: OffPt, OutPt1, OutPt2
+
+### UnityEngine.Rendering.Universal.ClipperBase  : Il2CppSystem.Object
+  properties: PreserveCollinear, Skip, Unassigned, _PreserveCollinear_k__BackingField, hiRange, horizontal, loRange, m_ActiveEdges, m_CurrentLM, m_HasOpenPaths, m_MinimaList, m_PolyOuts, m_Scanbeam, m_UseFullRange, m_edges, tolerance
+  methods:    AddPath, AddPaths, Clear, CreateOutRec, DeleteFromAEL, DisposeLocalMinimaList, DisposeOutRec, FindNextLocMin, GetBounds, InitEdge, InitEdge2, InsertLocalMinima, InsertScanbeam, IsHorizontal, LocalMinimaPending, PointIsVertex, PointOnLineSegment, PointOnPolygon, PopLocalMinima, PopScanbeam, ProcessBound, Pt2IsBetweenPt1AndPt3, RangeTest, RemoveEdge, Reset, ReverseHorizontal, SetDx, SlopesEqual, Swap, SwapPositionsInAEL, UpdateEdgeIntoAEL, near_zero
+
+### UnityEngine.Rendering.Universal.Clipper  : UnityEngine.Rendering.Universal.ClipperBase
+  properties: LastIndex, ReverseSolution, StrictlySimple, _LastIndex_k__BackingField, _ReverseSolution_k__BackingField, _StrictlySimple_k__BackingField, ioPreserveCollinear, ioReverseSolution, ioStrictlySimple, m_ClipFillType, m_ClipType, m_ExecuteLocked, m_GhostJoins, m_IntersectList, m_IntersectNodeComparer, m_Joins, m_Maxima, m_SortedEdges, m_SubjFillType, m_UsingPolyTree
+  methods:    AddEdgeToSEL, AddGhostJoin, AddJoin, AddLocalMaxPoly, AddLocalMinPoly, AddOutPt, AddPolyNodeToPaths, AppendPolygon, Area, BuildIntersectList, BuildResult, BuildResult2, CleanPolygon, CleanPolygons, ClosedPathsFromPolyTree, CopyAELToSEL, DeleteFromSEL, DisposeAllPolyPts, DistanceFromLineSqrd, DistanceSqrd, DoMaxima, DoSimplePolygons, DupOutPt, E2InsertsBeforeE1, EdgesAdjacent, ExcludeOp, Execute, ExecuteInternal, FirstIsBottomPt, FixHoleLinkage, FixupFirstLefts1, FixupFirstLefts2, FixupFirstLefts3, FixupIntersectionOrder, FixupOutPolygon, FixupOutPolyline, GetBottomPt, GetDx, GetHorzDirection, GetLastOutPt, GetLowermostRec, GetMaximaPair, GetMaximaPairEx, GetNextInAEL, GetOutRec, GetOverlap, HorzSegmentsOverlap, InsertEdgeIntoAEL, InsertLocalMinimaIntoAEL, InsertMaxima, IntersectEdges, IntersectNodeSort, IntersectPoint, IsContributing, IsEvenOddAltFillType, IsEvenOddFillType, IsIntermediate, IsMaxima, IsMinima, JoinCommonEdges, JoinHorz, JoinPoints, Minkowski, MinkowskiDiff, MinkowskiSum, OpenPathsFromPolyTree, Orientation, OutRec1RightOfOutRec2, ParseFirstLeft, PointCount, PointInPolygon, PointsAreClose, Poly2ContainsPoly1, PolyTreeToPaths, PopEdgeFromSEL, ProcessEdgesAtTopOfScanbeam, ProcessHorizontal, ProcessHorizontals, ProcessIntersectList, ProcessIntersections, ReversePaths, ReversePolyPtLinks, Round, SetHoleState, SetWindingCount, SimplifyPolygon, SimplifyPolygons, SlopesNearCollinear, SwapPoints, SwapPolyIndexes, SwapPositionsInSEL, SwapSides, TopX, TranslatePath, UpdateOutPtIdxs
+
+### UnityEngine.Rendering.Universal.ClipperOffset  : Il2CppSystem.Object
+  properties: ArcTolerance, _ArcTolerance_k__BackingField, def_arc_tolerance, m_StepsPerRad, m_cos, m_delta, m_destPoly, m_destPolys, m_lowest, m_normals, m_polyNodes, m_sin, m_sinA, m_srcPoly, two_pi
+  methods:    AddPath, AddPaths, Clear, DoMiter, DoOffset, DoRound, DoSquare, Execute, FixOrientations, GetUnitNormal, OffsetPoint, Round
+
+### UnityEngine.Rendering.Universal.Light2D  : UnityEngine.U2D.Light2DBase
+  properties: _boundingSphere_k__BackingField, affectedSortingLayers, alphaBlendOnOverlap, blendStyleIndex, boundingSphere, color, falloffIntensity, forceUpdate, hasCachedMesh, indices, intensity, isPointLight, k_CurrentComponentVersion, lightCookieSprite, lightCookieSpriteInstanceID, lightMesh, lightOrder, lightType, m_ApplyToSortingLayers, m_BlendStyleIndex, m_CachedPosition, m_Color, m_ComponentVersion, m_DeprecatedPointLightCookieSprite, m_FalloffIntensity, m_Intensity, m_LightCookieSprite, m_LightOrder, m_LightType, m_LightVolumeIntensity, m_LightVolumeIntensityEnabled, m_LocalBounds, m_Mesh, m_NormalMapDistance, m_NormalMapQuality, m_OverlapOperation, m_PointLightInnerAngle, m_PointLightInnerRadius, m_PointLightOuterAngle, m_PointLightOuterRadius, m_PreviousLightCookieSprite, m_PreviousLightType, m_PreviousShapeLightFalloffSize, m_PreviousShapeLightParametricAngleOffset, m_PreviousShapeLightParametricRadius, m_PreviousShapeLightParametricSides, m_PreviousShapePathHash, m_ShadowIntensity, m_ShadowIntensityEnabled, m_ShadowVolumeIntensity, m_ShadowVolumeIntensityEnabled, m_ShapeLightFalloffOffset, m_ShapeLightFalloffSize, m_ShapeLightParametricAngleOffset, m_ShapeLightParametricRadius, m_ShapeLightParametricSides, m_ShapePath, m_Triangles, m_UseNormalMap, m_Vertices, normalMapDistance, normalMapQuality, overlapOperation, pointLightDistance, pointLightInnerAngle, pointLightInnerRadius, pointLightOuterAngle, pointLightOuterRadius, pointLightQuality, renderVolumetricShadows, shadowIntensity, shadowVolumeIntensity, shadowsEnabled, shapeLightFalloffSize, shapeLightParametricAngleOffset, shapeLightParametricRadius, shapeLightParametricSides, shapePath, vertices, volumeIntensity, volumeIntensityEnabled, volumeOpacity, volumetricShadowsEnabled
+  methods:    Awake, CacheValues, GetTopMostLitLayer, IsLitLayer, LateUpdate, MarkForUpdate, OnAfterDeserialize, OnBeforeSerialize, OnDisable, OnEnable, SetShapePath, UpdateBoundingSphere, UpdateMesh, UpdateSpriteMesh
+
+### UnityEngine.Rendering.Universal.Light2DBlendStyle  : Il2CppSystem.ValueType
+  properties: _hasRenderTarget_k__BackingField, _isDirty_k__BackingField, blendFactors, blendMode, hasRenderTarget, isDirty, maskTextureChannel, maskTextureChannelFilter, name, renderTargetHandle
+
+### UnityEngine.Rendering.Universal.LightStats  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.ILight2DCullResult  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: visibleLights
+  methods:    GetLightStatsByLayer, IsSceneLit
+
+### UnityEngine.Rendering.Universal.Light2DCullResult  : Il2CppSystem.Object
+  properties: m_VisibleLights, visibleLights
+  methods:    GetLightStatsByLayer, IsSceneLit, SetupCulling
+
+### UnityEngine.Rendering.Universal.Light2DManager  : Il2CppSystem.Object
+  properties: _lights_k__BackingField, lights, s_SortingLayers
+  methods:    ContainsDuplicateGlobalLight, DeregisterLight, ErrorIfDuplicateGlobalLight, GetCachedSortingLayer, GetGlobalColor, RegisterLight
+
+### UnityEngine.Rendering.Universal.LightUtility  : Il2CppSystem.Object
+  methods:    CheckForChange, DegeneratePivots, FixPivots, GenerateParametricMesh, GenerateShapeMesh, GenerateSpriteMesh, GetOutlinePath, GetShapePathHash, SortPivots, Tessellate, TestPivot, TransferToMesh
+
+### UnityEngine.Rendering.Universal.IRenderPass2D  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: rendererData
+
+### UnityEngine.Rendering.Universal.PixelPerfectBackgroundPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_ProfilingScope, m_SavedIsOrthographic, m_SavedOrthographicSize
+  methods:    Execute, Setup
+
+### UnityEngine.Rendering.Universal.Render2DLightingPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: k_CameraSortingLayerTextureID, k_CombinedRenderingPassName, k_HDREmulationScaleID, k_InverseHDREmulationScaleID, k_LegacyPassName, k_NormalsRenderingPassName, k_RendererColorID, k_ShaderTags, k_ShapeLightTextureIDs, k_UseSceneLightingID, m_BlitMaterial, m_CameraSortingLayerBoundsIndex, m_NeedsDepth, m_ProfilingDrawLayerBatch, m_ProfilingDrawLightTextures, m_ProfilingDrawLights, m_ProfilingDrawRenderers, m_ProfilingSamplerUnlit, m_Renderer2DData, m_SamplingMaterial
+  methods:    CopyCameraSortingLayerRenderTexture, DetermineWhenToResolve, DrawLayerBatches, Execute, GetCameraSortingLayerBoundsIndex, GetTransparencySortingMode, Render, Setup, UnityEngine_Rendering_Universal_IRenderPass2D_get_rendererData
+
+### UnityEngine.Rendering.Universal.LayerBatch  : System.ValueType
+  methods:    BoxIl2CppObject, GetRTId, InitRTIds, ReleaseRT
+
+### UnityEngine.Rendering.Universal.LayerUtility  : Il2CppSystem.Object
+  properties: _maxTextureCount_k__BackingField, maxTextureCount, s_LayerBatches
+  methods:    CalculateBatches, CanBatchLightsInLayer, FindUpperBoundInBatch, InitializeBatchInfos, InitializeBudget
+
+### UnityEngine.Rendering.Universal.Light2DLookupTexture  : Il2CppSystem.Object
+  properties: s_PointLightLookupTexture
+  methods:    CreatePointLightLookupTexture, GetLightLookupTexture
+
+### UnityEngine.Rendering.Universal.RendererLighting  : Il2CppSystem.Object
+  properties: k_BlendFactorsPropIDs, k_CookieTexID, k_DstBlendID, k_FalloffDistanceID, k_FalloffIntensityID, k_FalloffLookupID, k_InnerAngleMultID, k_InnerRadiusMultID, k_InvertedFilterPropIDs, k_IsFullSpotlightID, k_LightColorID, k_LightInvMatrixID, k_LightLookupID, k_LightPositionID, k_LightQualityFastKeyword, k_LightZDistanceID, k_MaskFilterPropIDs, k_NormalClearColor, k_NormalsRenderingPassName, k_OuterAngleID, k_PointLightCookieTexID, k_SpriteLightKeyword, k_SrcBlendID, k_UseAdditiveBlendingKeyword, k_UseBlendStyleKeywords, k_UseNormalMap, k_UsePointLightCookiesKeyword, k_VolumeOpacityID, m_ProfilingSampler, s_HasSetupRenderTextureFormatToUse, s_RenderTextureFormatToUse
+  methods:    CanCastShadows, CanCastVolumetricShadows, ClearDirtyLighting, CreateCameraSortingLayerRenderTexture, CreateLightMaterial, CreateNormalMapRenderTexture, DisableAllKeywords, DrawPointLight, EnableBlendStyle, GetBlendStyleRenderTextureDesc, GetLightMaterial, GetLightMaterialIndex, GetNormalizedAngle, GetNormalizedInnerRadius, GetRenderTextureFormat, GetScaledLightInvMatrix, ReleaseRenderTextures, RenderLightSet, RenderLightVolumes, RenderLights, RenderNormals, SetBlendModes, SetGeneralLightShaderGlobals, SetPointLightShaderGlobals, SetShapeLightShaderGlobals
+
+### UnityEngine.Rendering.Universal.IPixelPerfectCamera  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: assetsPPU, cropFrameX, cropFrameY, pixelSnapping, refResolutionX, refResolutionY, stretchFill, upscaleRT
+
+### UnityEngine.Rendering.Universal.PixelPerfectCameraInternal  : Il2CppSystem.Object
+  properties: cinemachineVCamZoom, cropFrameXAndY, cropFrameXOrY, hasPostProcessLayer, m_Component, m_SerializableComponent, offscreenRTHeight, offscreenRTWidth, originalOrthoSize, orthoSize, pixelRect, unitsPerPixel, useOffscreenRT, useStretchFill, zoom
+  methods:    CalculateCameraProperties, CalculateFinalBlitPixelRect, CorrectCinemachineOrthoSize, OnAfterDeserialize, OnBeforeSerialize
+
+### UnityEngine.Rendering.Universal.Renderer2D  : UnityEngine.Rendering.Universal.ScriptableRenderer
+  properties: afterPostProcessColorHandle, colorGradingLutHandle, colorGradingLutPass, createColorTexture, createDepthTexture, finalPostProcessPass, k_ColorTextureHandle, k_DepthBufferBits, k_DepthTextureHandle, m_BlitMaterial, m_CreateColorTexture, m_CreateDepthTexture, m_FinalBlitPass, m_LightCullResult, m_PixelPerfectBackgroundPass, m_PostProcessPasses, m_ProfilingSampler, m_Render2DLightingPass, m_Renderer2DData, m_SamplingMaterial, m_UseDepthStencilBuffer, postProcessPass
+  methods:    CreateRenderTextures, Dispose, FinishRendering, GetRenderer2DData, Setup, SetupCullingParameters, SupportedCameraStackingTypes
+
+### UnityEngine.Rendering.Universal.Renderer2DData  : UnityEngine.Rendering.Universal.ScriptableRendererData
+  properties: _geometryUnshadowMaterial_k__BackingField, _isNormalsRenderTargetValid_k__BackingField, _lightCullResult_k__BackingField, _lightMaterials_k__BackingField, _normalsRenderTargetScale_k__BackingField, _projectedShadowMaterial_k__BackingField, _spriteSelfShadowMaterial_k__BackingField, _spriteUnshadowMaterial_k__BackingField, _stencilOnlyShadowMaterial_k__BackingField, blitShader, cameraSortingLayerDownsamplingMethod, cameraSortingLayerRenderTarget, cameraSortingLayerTextureBound, fallOffLookup, geometryUnshadowMaterial, geometryUnshadowShader, hdrEmulationScale, isNormalsRenderTargetValid, lightBlendStyles, lightCullResult, lightMaterials, lightRenderTextureMemoryBudget, lightRenderTextureScale, m_BlitShader, m_CameraSortingLayerDownsamplingMethod, m_CameraSortingLayersTextureBound, m_FallOffLookup, m_FallbackErrorShader, m_GeometryUnshadowShader, m_HDREmulationScale, m_LightBlendStyles, m_LightRenderTextureScale, m_MaxLightRenderTextureCount, m_MaxShadowRenderTextureCount, m_PointLightShader, m_PointLightVolumeShader, m_PostProcessData, m_ProjectedShadowShader, m_SamplingShader, m_ShapeLightShader, m_ShapeLightVolumeShader, m_SpriteShadowShader, m_SpriteUnshadowShader, m_TransparencySortAxis, m_TransparencySortMode, m_UseCameraSortingLayersTexture, m_UseDepthStencilBuffer, normalsRenderTarget, normalsRenderTargetScale, pointLightShader, pointLightVolumeShader, postProcessData, projectedShadowMaterial, projectedShadowShader, samplingShader, shadowRenderTextureMemoryBudget, shadowsRenderTarget, shapeLightShader, shapeLightVolumeShader, spriteSelfShadowMaterial, spriteShadowShader, spriteUnshadowMaterial, spriteUnshadowShader, stencilOnlyShadowMaterial, transparencySortAxis, transparencySortMode, useCameraSortingLayerTexture, useDepthStencilBuffer
+  methods:    Create, OnEnable
+
+### UnityEngine.Rendering.Universal.CompositeShadowCaster2D  : UnityEngine.Rendering.Universal.ShadowCasterGroup2D
+  methods:    OnDisable, OnEnable
+
+### UnityEngine.Rendering.Universal.ShadowCaster2D  : UnityEngine.Rendering.Universal.ShadowCasterGroup2D
+  properties: castsShadows, k_CurrentComponentVersion, m_ApplyToSortingLayers, m_CachedInverseShadowMatrix, m_CachedLocalToWorldMatrix, m_CachedLossyScale, m_CachedPosition, m_CachedRotation, m_CachedShadowMatrix, m_CastsShadows, m_ComponentVersion, m_HasRenderer, m_InstanceId, m_Mesh, m_PreviousCastsShadows, m_PreviousPathHash, m_PreviousShadowCasterGroup, m_PreviousShadowGroup, m_ProjectedBoundingSphere, m_SelfShadows, m_ShadowCasterGroup, m_ShapePath, m_ShapePathHash, m_UseRendererSilhouette, mesh, selfShadows, shapePath, shapePathHash, useRendererSilhouette
+  methods:    Awake, CacheValues, IsLit, IsShadowedLayer, OnAfterDeserialize, OnBeforeSerialize, OnDisable, OnEnable, SetDefaultSortingLayers, Update
+
+### UnityEngine.Rendering.Universal.ShadowCasterGroup2D  : UnityEngine.MonoBehaviour
+  properties: m_ShadowCasters, m_ShadowGroup
+  methods:    CacheValues, GetShadowCasters, GetShadowGroup, RegisterShadowCaster2D, UnregisterShadowCaster2D
+
+### UnityEngine.Rendering.Universal.ShadowCasterGroup2DManager  : Il2CppSystem.Object
+  properties: s_ShadowCasterGroups, shadowCasterGroups
+  methods:    AddGroup, AddShadowCasterGroupToList, AddToShadowCasterGroup, CacheValues, FindTopMostCompositeShadowCaster, RemoveFromShadowCasterGroup, RemoveGroup, RemoveShadowCasterGroupFromList
+
+### UnityEngine.Rendering.Universal.ShadowRendering  : Il2CppSystem.Object
+  properties: _maxTextureCount_k__BackingField, k_ColorLookup, k_LightPosID, k_SelfShadowingID, k_ShadowColorMaskID, k_ShadowIntensityID, k_ShadowModelInvMatrixID, k_ShadowModelMatrixID, k_ShadowModelScaleID, k_ShadowRadiusID, k_ShadowStencilGroupID, k_ShadowVolumeIntensityID, m_LightInputTextures, m_ProfilingSamplerShadowColorsLookup, m_ProfilingSamplerShadows, m_ProfilingSamplerShadowsA, m_ProfilingSamplerShadowsB, m_ProfilingSamplerShadowsG, m_ProfilingSamplerShadowsR, m_RenderTargets, maxTextureCount
+  methods:    CreateMaterials, CreateShadowRenderTexture, DisableGlobalShadowTexture, GetGeometryUnshadowMaterial, GetProjectedShadowMaterial, GetSpriteSelfShadowMaterial, GetSpriteUnshadowMaterial, GetStencilOnlyShadowMaterial, InitializeBudget, PrerenderShadows, ReleaseShadowRenderTexture, RenderShadows, SetGlobalShadowTexture, SetShadowProjectionGlobals
+
+### UnityEngine.Rendering.Universal.ShadowUtility  : Il2CppSystem.Object
+  methods:    ComputeBoundingSphere, CreateEdge, CreateShadowTriangles, GenerateShadowMesh, InitializeTangents, InterpCustomVertexData, IsOutsideEdge, PopulateEdgeArray, SortEdges
+
+### UnityEngine.Rendering.Universal.ComponentUtility  : Il2CppSystem.Object
+  methods:    IsUniversalCamera, IsUniversalLight
+
+### UnityEngine.Rendering.Universal.PostProcessData  : UnityEngine.ScriptableObject
+  properties: shaders, textures
+
+### UnityEngine.Rendering.Universal.StencilStateData  : Il2CppSystem.Object
+  properties: failOperation, overrideStencilState, passOperation, stencilCompareFunction, stencilReference, zFailOperation
+
+### UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset  : UnityEngine.Rendering.RenderPipelineAsset
+  properties: AdditionalLightsDefaultShadowResolutionTierHigh, AdditionalLightsDefaultShadowResolutionTierLow, AdditionalLightsDefaultShadowResolutionTierMedium, additionalLightsCookieFormat, additionalLightsCookieResolution, additionalLightsRenderingMode, additionalLightsShadowResolutionTierHigh, additionalLightsShadowResolutionTierLow, additionalLightsShadowResolutionTierMedium, additionalLightsShadowmapResolution, cascade2Split, cascade3Split, cascade4Split, cascadeBorder, colorGradingLutSize, colorGradingMode, conservativeEnclosingSphere, debugLevel, decalMaterial, default2DMaskMaterial, default2DMaterial, defaultLineMaterial, defaultMaterial, defaultParticleMaterial, defaultShader, defaultTerrainMaterial, defaultUIETC1SupportedMaterial, defaultUIMaterial, defaultUIOverdrawMaterial, fsrOverrideSharpness, fsrSharpness, k_AssetPreviousVersion, k_AssetVersion, k_MaxLutSize, k_MinLutSize, k_ShadowCascadeMaxCount, k_ShadowCascadeMinCount, lightLayerMaskNames, m_AdditionalLightShadowsSupported, m_AdditionalLightsCookieFormat, m_AdditionalLightsCookieResolution, m_AdditionalLightsPerObjectLimit, m_AdditionalLightsRenderingMode, m_AdditionalLightsShadowResolutionTierHigh, m_AdditionalLightsShadowResolutionTierLow, m_AdditionalLightsShadowResolutionTierMedium, m_AdditionalLightsShadowmapResolution, m_Cascade2Split, m_Cascade3Split, m_Cascade4Split, m_CascadeBorder, m_ColorGradingLutSize, m_ColorGradingMode, m_ConservativeEnclosingSphere, m_DebugLevel, m_DefaultRendererIndex, m_DefaultShader, m_FsrOverrideSharpness, m_FsrSharpness, m_LocalShadowsAtlasResolution, m_LocalShadowsSupported, m_MSAA, m_MainLightRenderingMode, m_MainLightShadowmapResolution, m_MainLightShadowsSupported, m_MaxPixelLights, m_MixedLightingSupported, m_NumIterationsEnclosingSphere, m_OpaqueDownsampling, m_ReflectionProbeBlending, m_ReflectionProbeBoxProjection, m_RenderScale, m_RendererData, m_RendererDataList, m_RendererType, m_Renderers, m_RequireDepthTexture, m_RequireOpaqueTexture, m_ShaderVariantLogLevel, m_ShadowAtlasResolution, m_ShadowCascadeCount, m_ShadowCascades, m_ShadowDepthBias, m_ShadowDistance, m_ShadowNormalBias, m_ShadowType, m_SoftShadowsSupported, m_StoreActionsOptimization, m_SupportsDynamicBatching, m_SupportsHDR, m_SupportsLightLayers, m_SupportsTerrainHoles, m_UpscalingFilter, m_UseAdaptivePerformance, m_UseFastSRGBLinearConversion, m_UseSRPBatcher, m_VolumeFrameworkUpdateMode, mainLightRenderingMode, mainLightShadowmapResolution, maxAdditionalLightsCount, msaaSampleCount, numIterationsEnclosingSphere, opaqueDownsampling, prefixedRenderingLayerMaskNames, reflectionProbeBlending, reflectionProbeBoxProjection, renderScale, rendererIndexList, renderingLayerMaskNames, s_LightCookieFormatList, scriptableRenderer, scriptableRendererData, shaderVariantLogLevel, shadowCascadeCount, shadowCascadeOption, shadowDepthBias, shadowDistance, shadowNormalBias, storeActionsOptimization, supportsAdditionalLightShadows, supportsCameraDepthTexture, supportsCameraOpaqueTexture, supportsDynamicBatching, supportsHDR, supportsLightLayers, supportsMainLightShadows, supportsMixedLighting, supportsSoftShadows, supportsTerrainHoles, upscalingFilter, useAdaptivePerformance, useFastSRGBLinearConversion, useSRPBatcher, volumeFrameworkUpdateMode
+  methods:    CreatePipeline, CreateRenderers, DestroyRenderer, DestroyRenderers, GetAdditionalLightsShadowResolution, GetMaterial, GetRenderer, LoadBuiltinRendererData, OnAfterDeserialize, OnBeforeSerialize, OnDisable, OnValidate, ValidatePerObjectLights, ValidateRenderScale, ValidateRendererData, ValidateRendererDataList, ValidateShadowBias
+
+### UnityEngine.Rendering.Universal.UniversalRenderPipelineEditorResources  : UnityEngine.ScriptableObject
+  properties: materials, shaders
+
+### UnityEngine.Rendering.Universal.XRSystemData  : UnityEngine.ScriptableObject
+  properties: shaders
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettings  : Il2CppSystem.Object
+  properties: AreAnySettingsActive, CommonSettings, Instance, IsLightingActive, IsPostProcessingAllowed, LightingSettings, MaterialSettings, RenderingSettings, _CommonSettings_k__BackingField, _LightingSettings_k__BackingField, _MaterialSettings_k__BackingField, _RenderingSettings_k__BackingField, m_Settings, s_Instance
+  methods:    Add, ForEach, Reset, TryGetScreenClearColor
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsCommon  : Il2CppSystem.Object
+  properties: AreAnySettingsActive, IsLightingActive, IsPostProcessingAllowed
+  methods:    CreatePanel, TryGetScreenClearColor
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsLighting  : Il2CppSystem.Object
+  properties: AreAnySettingsActive, DebugLightingFeatureFlagsMask, DebugLightingMode, IsLightingActive, IsPostProcessingAllowed, _DebugLightingFeatureFlagsMask_k__BackingField, _DebugLightingMode_k__BackingField
+  methods:    CreatePanel, TryGetScreenClearColor
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsMaterial  : Il2CppSystem.Object
+  properties: AlbedoCompareColor, AlbedoHueTolerance, AlbedoMaxLuminance, AlbedoMinLuminance, AlbedoSaturationTolerance, AreAnySettingsActive, DebugMaterialModeData, DebugVertexAttributeIndexData, IsLightingActive, IsPostProcessingAllowed, MaterialValidationMode, MetallicMaxValue, MetallicMinValue, _DebugMaterialModeData_k__BackingField, _DebugVertexAttributeIndexData_k__BackingField, albedoDebugValidationPreset, m_AlbedoDebugValidationPreset, m_AlbedoDebugValidationPresetData, m_AlbedoHueTolerance, m_AlbedoSaturationTolerance
+  methods:    CreatePanel, TryGetScreenClearColor
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsPanel  : Il2CppSystem.Object
+  properties: PanelName, Widgets, m_Widgets
+  methods:    AddWidget, Dispose
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsRendering  : Il2CppSystem.Object
+  properties: AreAnySettingsActive, IsLightingActive, IsPostProcessingAllowed, ValidationRangeMax, ValidationRangeMin, _ValidationRangeMax_k__BackingField, _ValidationRangeMin_k__BackingField, _debugFullScreenModeOutputSizeScreenPercent_k__BackingField, _debugFullScreenMode_k__BackingField, _debugMipInfoMode_k__BackingField, _debugPostProcessingMode_k__BackingField, _debugSceneOverrideMode_k__BackingField, _enableHDR_k__BackingField, _enableMsaa_k__BackingField, _validationChannels_k__BackingField, _validationMode_k__BackingField, debugFullScreenMode, debugFullScreenModeOutputSizeScreenPercent, debugMipInfoMode, debugPostProcessingMode, debugSceneOverrideMode, enableHDR, enableMsaa, m_Overdraw, m_WireframeMode, overdraw, validationChannels, validationMode, wireframeMode
+  methods:    CreatePanel, TryGetScreenClearColor, UpdateDebugSceneOverrideMode
+
+### UnityEngine.Rendering.Universal.DebugDisplaySettingsUI  : Il2CppSystem.Object
+  properties: m_DisposablePanels, m_Settings
+  methods:    GetReset, RegisterDebug, Reset, UnregisterDebug
+
+### UnityEngine.Rendering.Universal.DebugHandler  : Il2CppSystem.Object
+  properties: AreAnySettingsActive, DebugDisplaySettings, IsActiveModeUnsupportedForDeferred, IsLightingActive, IsPostProcessingAllowed, IsRenderPassSupported, IsScreenClearNeeded, LightingSettings, MaterialSettings, RenderingSettings, ReplacementMaterial, k_DebugColorInvalidModePropertyId, k_DebugColorPropertyId, k_DebugFullScreenModeId, k_DebugLightingFeatureFlagsId, k_DebugLightingModeId, k_DebugMaterialModeId, k_DebugMaterialValidationModeId, k_DebugMipInfoModeId, k_DebugRenderTargetSupportsStereo, k_DebugSceneOverrideModeId, k_DebugTextureDisplayRect, k_DebugTextureNoStereoPropertyId, k_DebugTexturePropertyId, k_DebugValidateAboveMaxThresholdColorPropertyId, k_DebugValidateAlbedoCompareColorId, k_DebugValidateAlbedoHueToleranceId, k_DebugValidateAlbedoMaxLuminanceId, k_DebugValidateAlbedoMinLuminanceId, k_DebugValidateAlbedoSaturationToleranceId, k_DebugValidateBelowMinThresholdColorPropertyId, k_DebugValidateMetallicMaxValueId, k_DebugValidateMetallicMinValueId, k_DebugValidationModeId, k_DebugVertexAttributeModeId, k_RangeMaximumId, k_RangeMinimumId, k_ValidationChannelsId, m_DebugDisplaySettings, m_DebugRenderTargetIdentifier, m_DebugRenderTargetPixelRect, m_DebugRenderTargetSupportsStereo, m_HasDebugRenderTarget, m_ReplacementMaterial
+  methods:    CreateDebugRenderSetupEnumerable, DrawWithDebugRenderState, IsActiveForCamera, ResetDebugRenderTarget, SetDebugRenderTarget, Setup, SetupShaderProperties, TryGetFullscreenDebugMode, TryGetScreenClearColor, UpdateShaderGlobalPropertiesForFinalValidationPass
+
+### UnityEngine.Rendering.Universal.DebugRenderSetup  : Il2CppSystem.Object
+  properties: LightingSettings, MaterialSettings, RenderingSettings, m_CommandBuffer, m_Context, m_DebugHandler, m_Index
+  methods:    Begin, CreateDrawingSettings, Dispose, End, GetRenderStateBlock
+
+### UnityEngine.Rendering.Universal.IDebugDisplaySettingsData  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    CreatePanel
+
+### UnityEngine.Rendering.Universal.IDebugDisplaySettingsPanel  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: PanelName, Widgets
+
+### UnityEngine.Rendering.Universal.IDebugDisplaySettingsQuery  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: AreAnySettingsActive, IsLightingActive, IsPostProcessingAllowed
+  methods:    TryGetScreenClearColor
+
+### UnityEngine.Rendering.Universal.DecalDrawDBufferSystem  : UnityEngine.Rendering.Universal.DecalDrawSystem
+  methods:    GetPassIndex
+
+### UnityEngine.Rendering.Universal.DBufferRenderPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: _cameraDepthAttachmentIndentifier_k__BackingField, _cameraDepthTextureIndentifier_k__BackingField, _dBufferColorIndentifiers_k__BackingField, _dBufferDepthIndentifier_k__BackingField, _deferredLights_k__BackingField, cameraDepthAttachmentIndentifier, cameraDepthTextureIndentifier, dBufferColorIndentifiers, dBufferDepthIndentifier, deferredLights, isDeferred, m_DBufferClear, m_DBufferCount, m_DrawSystem, m_FilteringSettings, m_ProfilingSampler, m_Settings, m_ShaderTagIdList, s_DBufferDepthName, s_DBufferNames
+  methods:    ClearDBuffers, Execute, OnCameraCleanup, OnCameraSetup
+
+### UnityEngine.Rendering.Universal.DecalDrawFowardEmissiveSystem  : UnityEngine.Rendering.Universal.DecalDrawSystem
+  methods:    GetPassIndex
+
+### UnityEngine.Rendering.Universal.DecalForwardEmissivePass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DrawSystem, m_FilteringSettings, m_ProfilingSampler, m_ShaderTagIdList
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.DecalDrawErrorSystem  : UnityEngine.Rendering.Universal.DecalDrawSystem
+  properties: m_Technique
+  methods:    GetMaterial, GetPassIndex
+
+### UnityEngine.Rendering.Universal.DecalPreviewPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_FilteringSettings, m_ProfilingSampler, m_ShaderTagIdList
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.DecalProjector  : UnityEngine.MonoBehaviour
+  properties: _decalEntity_k__BackingField, _defaultMaterial_k__BackingField, decalEntity, decalOffset, decalSize, defaultMaterial, drawDistance, effectiveScale, endAngleFade, fadeFactor, fadeScale, isSupported, m_DrawDistance, m_EndAngleFade, m_FadeFactor, m_FadeScale, m_Material, m_Offset, m_OldMaterial, m_ScaleMode, m_Size, m_StartAngleFade, m_UVBias, m_UVScale, material, onDecalAdd, onDecalMaterialChange, onDecalPropertyChange, onDecalRemove, pivot, scaleMode, size, startAngleFade, uvBias, uvScale, uvScaleBias
+  methods:    InitMaterial, IsValid, OnDisable, OnEnable, OnValidate, add_onDecalAdd, add_onDecalMaterialChange, add_onDecalPropertyChange, add_onDecalRemove, remove_onDecalAdd, remove_onDecalMaterialChange, remove_onDecalPropertyChange, remove_onDecalRemove
+
+### UnityEngine.Rendering.Universal.DecalShaderPassNames  : Il2CppSystem.Object
+  properties: DBufferMesh, DBufferProjector, DecalGBufferMesh, DecalGBufferProjector, DecalMeshForwardEmissive, DecalPreview, DecalProjectorForwardEmissive, DecalScreenSpaceMesh, DecalScreenSpaceProjector
+
+### UnityEngine.Rendering.Universal.DecalChunk  : Il2CppSystem.Object
+  properties: _capacity_k__BackingField, _count_k__BackingField, _currentJobHandle_k__BackingField, capacity, count, currentJobHandle
+  methods:    Dispose, Push, RemoveAtSwapBack, ResizeNativeArray, SetCapacity
+
+### UnityEngine.Rendering.Universal.DecalSubDrawCall  : System.ValueType
+  properties: count
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.DecalDrawCallChunk  : UnityEngine.Rendering.Universal.DecalChunk
+  properties: decalToWorlds, normalToDecals, subCallCount, subCallCounts, subCalls
+  methods:    Dispose, RemoveAtSwapBack, SetCapacity
+
+### UnityEngine.Rendering.Universal.DecalCreateDrawCallSystem  : Il2CppSystem.Object
+  properties: m_EntityManager, m_MaxDrawDistance, m_Sampler, maxDrawDistance
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.DecalDrawSystem  : Il2CppSystem.Object
+  properties: _overrideMaterial_k__BackingField, m_EntityManager, m_NormalToDecals, m_Sampler, m_WorldToDecals, overrideMaterial
+  methods:    Draw, DrawInstanced, Execute, GetMaterial, GetPassIndex
+
+### UnityEngine.Rendering.Universal.DecalEntityIndexer  : Il2CppSystem.Object
+  properties: m_Entities, m_FreeIndices
+  methods:    Clear, CreateDecalEntity, DestroyDecalEntity, GetItem, IsValid, RemapChunkIndices, UpdateIndex
+
+### UnityEngine.Rendering.Universal.DecalEntity  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.DecalEntityChunk  : UnityEngine.Rendering.Universal.DecalChunk
+  properties: decalEntities, decalProjectors, material, transformAccessArray
+  methods:    Dispose, Push, RemoveAtSwapBack, SetCapacity
+
+### UnityEngine.Rendering.Universal.DecalEntityManager  : Il2CppSystem.Object
+  properties: cachedChunks, chunkCount, culledChunks, decalProjectorMesh, drawCallChunks, entityChunks, errorMaterial, m_AddDecalSampler, m_CombinedChunkRemmap, m_CombinedChunks, m_DecalEntityIndexer, m_DecalProjectorMesh, m_ErrorMaterial, m_MaterialToChunkIndex, m_ResizeChunks, m_SortChunks
+  methods:    CreateChunkIndex, CreateDecalEntity, DestroyDecalEntity, Dispose, IsValid, Update, UpdateDecalEntityData
+
+### UnityEngine.Rendering.Universal.DecalSkipCulledSystem  : Il2CppSystem.Object
+  properties: m_Camera, m_EntityManager, m_Sampler
+  methods:    Execute, GetSceneCullingMaskFromCamera
+
+### UnityEngine.Rendering.Universal.DecalCachedChunk  : UnityEngine.Rendering.Universal.DecalChunk
+  properties: angleFades, boundingSphereArray, boundingSpheres, decalToWorlds, dirty, drawDistances, drawOrder, fadeFactors, isCreated, layerMasks, normalToWorlds, passIndexDBuffer, passIndexEmissive, passIndexGBuffer, passIndexScreenSpace, positions, propertyBlock, rotation, scaleModes, scales, sceneLayerMasks, sizeOffsets, uvScaleBias
+  methods:    Dispose, RemoveAtSwapBack, SetCapacity
+
+### UnityEngine.Rendering.Universal.DecalUpdateCachedSystem  : Il2CppSystem.Object
+  properties: m_EntityManager, m_Sampler, m_SamplerJob
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.DecalUpdateCulledSystem  : Il2CppSystem.Object
+  properties: m_EntityManager, m_Sampler
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.DecalCulledChunk  : UnityEngine.Rendering.Universal.DecalChunk
+  properties: cameraPosition, cullingGroups, cullingMask, sceneCullingMask, visibleDecalCount, visibleDecalIndexArray, visibleDecalIndices
+  methods:    Dispose, RemoveAtSwapBack, SetCapacity
+
+### UnityEngine.Rendering.Universal.DecalUpdateCullingGroupSystem  : Il2CppSystem.Object
+  properties: boundingDistance, m_BoundingDistance, m_Camera, m_EntityManager, m_Sampler
+  methods:    Execute, GetSceneCullingMaskFromCamera
+
+### UnityEngine.Rendering.Universal.DecalDrawGBufferSystem  : UnityEngine.Rendering.Universal.DecalDrawSystem
+  methods:    GetPassIndex
+
+### UnityEngine.Rendering.Universal.DecalGBufferRenderPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DeferredLights, m_DrawSystem, m_FilteringSettings, m_GbufferAttachments, m_ProfilingSampler, m_Settings, m_ShaderTagIdList
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### UnityEngine.Rendering.Universal.DecalDrawScreenSpaceSystem  : UnityEngine.Rendering.Universal.DecalDrawSystem
+  methods:    GetPassIndex
+
+### UnityEngine.Rendering.Universal.DecalScreenSpaceRenderPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DrawSystem, m_FilteringSettings, m_ProfilingSampler, m_Settings, m_ShaderTagIdList
+  methods:    Execute, OnCameraCleanup
+
+### UnityEngine.Rendering.Universal.DeferredShaderData  : Il2CppSystem.Object
+  properties: instance, m_BufferCount, m_BufferInfos, m_Buffers, m_CachedBufferIndex, m_FrameIndex, m_Instance, m_PreTiles
+  methods:    Align, Dispose, DisposeBuffers, DisposeNativeArrays, GetOrUpdateBuffer, GetOrUpdateNativeArray, GetPreTiles, IsLessCircular, ReserveBuffer, ResetBuffers
+
+### UnityEngine.Rendering.Universal.ScriptableRenderPass  : Il2CppSystem.Object
+  properties: _depthOnly_k__BackingField, _isBlitRenderPass_k__BackingField, _isLastPass_k__BackingField, _overrideCameraTarget_k__BackingField, _profilingSampler_k__BackingField, _renderPassEvent_k__BackingField, _renderPassQueueIndex_k__BackingField, _renderTargetFormat_k__BackingField, _renderTargetHeight_k__BackingField, _renderTargetSampleCount_k__BackingField, _renderTargetWidth_k__BackingField, _useNativeRenderPass_k__BackingField, clearColor, clearFlag, colorAttachment, colorAttachments, colorStoreActions, depthAttachment, depthOnly, depthStoreAction, input, isBlitRenderPass, isLastPass, m_ClearColor, m_ClearFlag, m_ColorAttachmentIndices, m_ColorAttachments, m_ColorStoreActions, m_DepthAttachment, m_DepthStoreAction, m_Input, m_InputAttachmentIndices, m_InputAttachmentIsTransient, m_InputAttachments, m_OverriddenColorStoreActions, m_OverriddenDepthStoreAction, overriddenColorStoreActions, overriddenDepthStoreAction, overrideCameraTarget, profilingSampler, renderPassEvent, renderPassQueueIndex, renderTargetFormat, renderTargetHeight, renderTargetSampleCount, renderTargetWidth, useNativeRenderPass
+  methods:    Blit, Configure, ConfigureClear, ConfigureColorStoreAction, ConfigureColorStoreActions, ConfigureDepthStoreAction, ConfigureInput, ConfigureInputAttachments, ConfigureTarget, CreateDrawingSettings, Execute, FrameCleanup, GetActiveDebugHandler, IsInputAttachmentTransient, OnCameraCleanup, OnCameraSetup, OnFinishCameraStackRendering, SetInputAttachmentTransient, op_GreaterThan, op_LessThan
+
+### UnityEngine.Rendering.Universal.ForwardRenderer  : UnityEngine.Rendering.Universal.ScriptableRenderer
+  properties: k_ErrorMessage
+  methods:    FinishRendering, GetCameraColorFrontBuffer, Setup, SetupCullingParameters, SetupLights, SwapColorBuffer
+
+### UnityEngine.Rendering.Universal.ScriptableRenderer  : Il2CppSystem.Object
+  properties: DebugHandler, _DebugHandler_k__BackingField, _profilingExecute_k__BackingField, _stripAdditionalLightOffVariants_k__BackingField, _stripShadowsOffVariants_k__BackingField, _supportedRenderingFeatures_k__BackingField, _unsupportedGraphicsDeviceTypes_k__BackingField, _useDepthPriming_k__BackingField, activeRenderPassQueue, cameraColorTarget, cameraDepth, cameraDepthTarget, current, disableNativeRenderPassInFeatures, isCameraColorTargetValid, kRenderPassMapSize, kRenderPassMaxCount, k_RenderPassBlockCount, m_ActiveColorAttachmentDescriptors, m_ActiveColorAttachments, m_ActiveColorStoreActions, m_ActiveDepthAttachment, m_ActiveDepthAttachmentDescriptor, m_ActiveDepthStoreAction, m_ActiveRenderPassQueue, m_CameraColorTarget, m_CameraDepthTarget, m_CameraResolveTarget, m_FinalColorStoreAction, m_FinalDepthStoreAction, m_FirstTimeCameraColorTargetIsBound, m_FirstTimeCameraDepthTargetIsBound, m_IsActiveColorAttachmentTransient, m_IsPipelineExecuting, m_LastBeginSubpassPassIndex, m_MergeableRenderPassesMap, m_MergeableRenderPassesMapArrays, m_PassIndexToPassHash, m_RenderPassesAttachmentCount, m_RendererFeatures, m_StoreActionsOptimizationSetting, m_TrimmedColorAttachmentCopies, m_UseOptimizedStoreActions, profilingExecute, rendererFeatures, s_Planes, s_VectorPlanes, stripAdditionalLightOffVariants, stripShadowsOffVariants, supportedRenderingFeatures, unsupportedGraphicsDeviceTypes, useDepthPriming, useRenderPassEnabled
+  methods:    AddRenderPasses, AreAttachmentIndicesCompatible, BeginXRRendering, CalculateBillboardProperties, Clear, ClearRenderingState, ConfigureActiveTarget, ConfigureCameraColorTarget, ConfigureCameraTarget, ConfigureNativeRenderPass, CreateRenderPassHash, Dispose, DrawGizmos, DrawWireOverlay, EnableSwapBufferMSAA, EndXRRendering, EnqueuePass, Execute, ExecuteBlock, ExecuteNativeRenderPass, ExecuteRenderPass, FindAttachmentDescriptorIndexInList, FinishRendering, GetCameraClearFlag, GetCameraColorFrontBuffer, GetDefaultGraphicsFormat, GetSubPassAttachmentIndicesCount, GetValidColorAttachmentCount, GetValidInputAttachmentCount, GetValidPassIndexCount, InitializeRenderPassDescriptor, InternalFinishRendering, InternalStartRendering, IsDepthOnlyRenderTexture, IsRenderPassEnabled, OnPreCullRenderPasses, PassHasInputAttachments, ResetNativeRenderPassFrameData, SetCameraMatrices, SetNativeRenderPassAttachmentList, SetNativeRenderPassMRTAttachmentList, SetPerCameraBillboardProperties, SetPerCameraClippingPlaneProperties, SetPerCameraShaderVariables, SetRenderPassAttachments, SetRenderTarget, SetShaderTimeValues, Setup, SetupCullingParameters, SetupInputAttachmentIndices, SetupLights, SetupNativeRenderPassFrameData, SetupTransientInputAttachments, SortStable, SupportedCameraStackingTypes, SupportsCameraStackingType, SwapColorBuffer, UpdateFinalStoreActions
+
+### UnityEngine.Rendering.Universal.Documentation  : UnityEngine.Rendering.DocumentationInfo
+  properties: packageName
+  methods:    GetPageLink
+
+### UnityEngine.Rendering.Universal.ForwardRendererData  : UnityEngine.Rendering.Universal.ScriptableRendererData
+  properties: accurateGbufferNormals, defaultStencilState, k_ErrorMessage, m_AccurateGbufferNormals, m_ClusteredRendering, m_DefaultStencilState, m_DepthPrimingMode, m_OpaqueLayerMask, m_RenderingMode, m_ShadowTransparentReceive, m_TileSize, m_TransparentLayerMask, opaqueLayerMask, postProcessData, renderingMode, shaders, shadowTransparentReceive, transparentLayerMask, xrSystemData
+  methods:    Create
+
+### UnityEngine.Rendering.Universal.LightCookieManager  : Il2CppSystem.Object
+  properties: IsKeywordLightCookieEnabled, _IsKeywordLightCookieEnabled_k__BackingField, k_MaxCookieSizeDivisor, m_AdditionalLightsCookieAtlas, m_AdditionalLightsCookieShaderData, m_CookieSizeDivisor, m_PrevCookieRequestPixelCount, m_Settings, m_VisibleLightIndexToShaderDataIndex, m_WorkMem, s_DirLightProj
+  methods:    AdjustUVRect, ApproximateCookieSizeDivisor, ComputeCookieRequestPixelCount, ComputeOctahedralCookieSize, Dispose, Fetch2D, FetchCube, FetchUVRects, FilterAndValidateAdditionalLights, GetLightCookieShaderDataIndex, GetLightCookieShaderFormat, GetLightUVScaleOffset, InitAdditionalLights, Setup, SetupAdditionalLights, SetupMainLight, ShrinkUVRect, UpdateAdditionalLightsAtlas, UploadAdditionalLights, isInitialized
+
+### UnityEngine.Rendering.Universal.Bloom  : UnityEngine.Rendering.VolumeComponent
+  properties: clamp, dirtIntensity, dirtTexture, highQualityFiltering, intensity, scatter, skipIterations, threshold, tint
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ChannelMixer  : UnityEngine.Rendering.VolumeComponent
+  properties: blueOutBlueIn, blueOutGreenIn, blueOutRedIn, greenOutBlueIn, greenOutGreenIn, greenOutRedIn, redOutBlueIn, redOutGreenIn, redOutRedIn
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ChromaticAberration  : UnityEngine.Rendering.VolumeComponent
+  properties: intensity
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ColorAdjustments  : UnityEngine.Rendering.VolumeComponent
+  properties: colorFilter, contrast, hueShift, postExposure, saturation
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ColorCurves  : UnityEngine.Rendering.VolumeComponent
+  properties: blue, green, hueVsHue, hueVsSat, lumVsSat, master, red, satVsSat
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ColorLookup  : UnityEngine.Rendering.VolumeComponent
+  properties: contribution, texture
+  methods:    IsActive, IsTileCompatible, ValidateLUT
+
+### UnityEngine.Rendering.Universal.DepthOfField  : UnityEngine.Rendering.VolumeComponent
+  properties: aperture, bladeCount, bladeCurvature, bladeRotation, focalLength, focusDistance, gaussianEnd, gaussianMaxRadius, gaussianStart, highQualitySampling, mode
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.FilmGrain  : UnityEngine.Rendering.VolumeComponent
+  properties: intensity, response, texture, type
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.LensDistortion  : UnityEngine.Rendering.VolumeComponent
+  properties: center, intensity, scale, xMultiplier, yMultiplier
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.LiftGammaGain  : UnityEngine.Rendering.VolumeComponent
+  properties: gain, gamma, lift
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.MotionBlur  : UnityEngine.Rendering.VolumeComponent
+  properties: clamp, intensity, mode, quality
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.PaniniProjection  : UnityEngine.Rendering.VolumeComponent
+  properties: cropToFit, distance
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.ShadowsMidtonesHighlights  : UnityEngine.Rendering.VolumeComponent
+  properties: highlights, highlightsEnd, highlightsStart, midtones, shadows, shadowsEnd, shadowsStart
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.SplitToning  : UnityEngine.Rendering.VolumeComponent
+  properties: balance, highlights, shadows
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.Tonemapping  : UnityEngine.Rendering.VolumeComponent
+  properties: mode
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.Vignette  : UnityEngine.Rendering.VolumeComponent
+  properties: center, color, intensity, rounded, smoothness
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.WhiteBalance  : UnityEngine.Rendering.VolumeComponent
+  properties: temperature, tint
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.CapturePass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_CameraColorHandle, m_ProfilerTag, m_ProfilingSampler
+  methods:    Execute, Setup
+
+### UnityEngine.Rendering.Universal.DrawSkyboxPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.InvokeOnRenderObjectCallbackPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.IPostProcessComponent  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  methods:    IsActive, IsTileCompatible
+
+### UnityEngine.Rendering.Universal.TransparentSettingsPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_ProfilerTag, m_ProfilingSampler, m_shouldReceiveShadows
+  methods:    Execute, Setup
+
+### UnityEngine.Rendering.Universal.XROcclusionMeshPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.PostProcessPasses  : Il2CppSystem.ValueType
+  properties: afterPostProcessColor, colorGradingLut, colorGradingLutPass, finalPostProcessPass, isCreated, m_AfterPostProcessColor, m_BlitMaterial, m_ColorGradingLut, m_ColorGradingLutPass, m_CurrentPostProcessData, m_FinalPostProcessPass, m_PostProcessPass, m_RendererPostProcessData, postProcessPass
+  methods:    Dispose, Recreate
+
+### UnityEngine.Rendering.Universal.PostProcessUtils  : Il2CppSystem.Object
+  methods:    ConfigureDithering, ConfigureFilmGrain, SetSourceSize
+
+### UnityEngine.Rendering.Universal.DBufferSettings  : Il2CppSystem.Object
+  properties: surfaceData
+
+### UnityEngine.Rendering.Universal.DecalScreenSpaceSettings  : Il2CppSystem.Object
+  properties: normalBlend, useGBuffer
+
+### UnityEngine.Rendering.Universal.DecalSettings  : Il2CppSystem.Object
+  properties: dBufferSettings, maxDrawDistance, screenSpaceSettings, technique
+
+### UnityEngine.Rendering.Universal.SharedDecalEntityManager  : Il2CppSystem.Object
+  properties: m_DecalEntityManager, m_ReferenceCounter
+  methods:    Dispose, Get, OnDecalAdd, OnDecalMaterialChange, OnDecalPropertyChange, OnDecalRemove, Release
+
+### UnityEngine.Rendering.Universal.DecalRendererFeature  : UnityEngine.Rendering.Universal.ScriptableRendererFeature
+  properties: _sharedDecalEntityManager_k__BackingField, intermediateRendering, m_CopyDepthMaterial, m_CopyDepthPS, m_CopyDepthPass, m_DBufferClear, m_DBufferClearMaterial, m_DBufferRenderPass, m_DBufferSettings, m_DecalCreateDrawCallSystem, m_DecalDrawDBufferSystem, m_DecalDrawForwardEmissiveSystem, m_DecalDrawScreenSpaceSystem, m_DecalEntityManager, m_DecalPreviewPass, m_DecalSkipCulledSystem, m_DecalUpdateCachedSystem, m_DecalUpdateCulledSystem, m_DecalUpdateCullingGroupSystem, m_DeferredLights, m_DrawErrorSystem, m_DrawGBufferSystem, m_ForwardEmissivePass, m_GBufferRenderPass, m_RecreateSystems, m_ScreenSpaceDecalRenderPass, m_ScreenSpaceSettings, m_Settings, m_Technique, sharedDecalEntityManager
+  methods:    AddRenderPasses, ChangeAdaptivePerformanceDrawDistances, Create, Dispose, GetDBufferSettings, GetScreenSpaceSettings, GetTechnique, IsAutomaticDBuffer, OnCameraPreCull, RecreateSystemsIfNeeded, SupportsNativeRenderPass
+
+### UnityEngine.Rendering.Universal.DisallowMultipleRendererFeature  : Il2CppSystem.Attribute
+  properties: _customTitle_k__BackingField, customTitle
+
+### UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusionSettings  : Il2CppSystem.Object
+  properties: AfterOpaque, DirectLightingStrength, Downsample, Intensity, NormalSamples, Radius, SampleCount, Source
+
+### UnityEngine.Rendering.Universal.ScreenSpaceAmbientOcclusion  : UnityEngine.Rendering.Universal.ScriptableRendererFeature
+  properties: afterOpaque, k_NormalReconstructionHighKeyword, k_NormalReconstructionLowKeyword, k_NormalReconstructionMediumKeyword, k_OrthographicCameraKeyword, k_ShaderName, k_SourceDepthKeyword, k_SourceDepthNormalsKeyword, m_Material, m_SSAOPass, m_Settings, m_Shader
+  methods:    AddRenderPasses, Create, Dispose, GetMaterial, SetNumSamples
+
+### UnityEngine.Rendering.Universal.ScreenSpaceShadows  : UnityEngine.Rendering.Universal.ScriptableRendererFeature
+  properties: k_ShaderName, m_Material, m_SSShadowsPass, m_SSShadowsPostPass, m_Settings, m_Shader
+  methods:    AddRenderPasses, Create, Dispose, LoadMaterial
+
+### UnityEngine.Rendering.Universal.RenderingUtils  : Il2CppSystem.Object
+  properties: UNITY_STEREO_CAMERA_INV_PROJECTION, UNITY_STEREO_CAMERA_PROJECTION, UNITY_STEREO_MATRIX_IP, UNITY_STEREO_MATRIX_IV, UNITY_STEREO_MATRIX_IVP, UNITY_STEREO_MATRIX_P, UNITY_STEREO_MATRIX_V, UNITY_STEREO_MATRIX_VP, UNITY_STEREO_VECTOR_CAMPOS, emptyAttachment, errorMaterial, fullscreenMesh, m_GraphicsFormatSupport, m_LegacyShaderPassNames, m_RenderTextureFormatSupport, s_EmptyAttachment, s_ErrorMaterial, s_FullscreenMesh, stereoConstants, useStructuredBuffer
+  methods:    Blit, ClearSystemInfoCache, Contains, CountDistinct, GetLastValidColorBufferIndex, GetValidColorBufferCount, IndexOf, IsMRT, LastValid, RenderObjectsWithError, SequenceEqual, SetStereoViewAndProjectionMatrices, SetViewAndProjectionMatrices, SupportsGraphicsFormat, SupportsLightLayers, SupportsRenderTextureFormat
+
+### UnityEngine.Rendering.Universal.RenderTargetHandle  : System.ValueType
+  properties: CameraTarget, id, rtid
+  methods:    BoxIl2CppObject, Equals, GetCameraTarget, GetHashCode, HasInternalRenderTargetId, Identifier, Init, op_Equality, op_Inequality
+
+### UnityEngine.Rendering.Universal.ScriptableRendererData  : UnityEngine.ScriptableObject
+  properties: _isInvalidated_k__BackingField, debugShaders, isInvalidated, m_RendererFeatureMap, m_RendererFeatures, m_UseNativeRenderPass, rendererFeatures, useNativeRenderPass
+  methods:    Create, InternalCreateRenderer, OnEnable, OnValidate, SetDirty, TryGetRendererFeature
+
+### UnityEngine.Rendering.Universal.ScriptableRendererFeature  : UnityEngine.ScriptableObject
+  properties: isActive, m_Active
+  methods:    AddRenderPasses, Create, Dispose, OnCameraPreCull, OnEnable, OnValidate, SetActive, SupportsNativeRenderPass
+
+### UnityEngine.Rendering.Universal.ShaderData  : Il2CppSystem.Object
+  properties: instance, m_AdditionalLightShadowParamsStructuredBuffer, m_AdditionalLightShadowSliceMatricesStructuredBuffer, m_Instance, m_LightDataBuffer, m_LightIndicesBuffer
+  methods:    Dispose, DisposeBuffer, GetAdditionalLightShadowParamsStructuredBuffer, GetAdditionalLightShadowSliceMatricesStructuredBuffer, GetLightDataBuffer, GetLightIndicesBuffer, GetOrUpdateBuffer
+
+### UnityEngine.Rendering.Universal.ShaderUtils  : Il2CppSystem.Object
+  properties: s_ShaderPaths
+  methods:    GetEnumFromPath, GetShaderPath, IsLWShader
+
+### UnityEngine.Rendering.Universal.ShadowSliceData  : System.ValueType
+  methods:    BoxIl2CppObject, Clear
+
+### UnityEngine.Rendering.Universal.ShadowUtils  : Il2CppSystem.Object
+  properties: m_ForceShadowPointSampling
+  methods:    ApplySliceTransform, ExtractDirectionalLightMatrix, ExtractPointLightMatrix, ExtractSpotLightMatrix, GetMaxTileResolutionInAtlas, GetScaleAndBiasForLinearDistanceFade, GetShadowBias, GetShadowTransform, GetTemporaryShadowTexture, RenderShadowSlice, SetupShadowCasterConstantBuffer
+
+### UnityEngine.Rendering.Universal.LightExtractionJob  : Il2CppSystem.ValueType
+  properties: coneRadiuses, directions, lightTypes, lights, positions, radiuses
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.LightMinMaxZ  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.MinMaxZJob  : Il2CppSystem.ValueType
+  properties: lights, meanZs, minMaxZs, worldToViewMatrix
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.RadixSortJob  : Il2CppSystem.ValueType
+  properties: indices, keys
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.SliceCombineJob  : Il2CppSystem.ValueType
+  properties: lightMasks, sliceLightMasksH, sliceLightMasksV, tileResolution, wordsPerTile
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.SliceCullingJob  : Il2CppSystem.ValueType
+  properties: coneRadiuses, directions, lightTypes, lightsPerTile, positions, radiuses, scale, sliceLightMasks, viewForward, viewOrigin, viewRight, viewUp
+  methods:    ComputePlane, ConeBehindPlane, ContainsLight, Execute, PointBehindPlane, SphereBehindPlane
+
+### UnityEngine.Rendering.Universal.TileSizeExtensions  : Il2CppSystem.Object
+  methods:    IsValid
+
+### UnityEngine.Rendering.Universal.ZBin  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.ZBinningJob  : Il2CppSystem.ValueType
+  properties: batchCount, binOffset, bins, minMaxZs, zFactor
+  methods:    Execute
+
+### UnityEngine.Rendering.Universal.CameraExtensions  : Il2CppSystem.Object
+  methods:    DestroyVolumeStack, GetUniversalAdditionalCameraData, GetVolumeFrameworkUpdateMode, GetVolumeLayerMaskAndTrigger, SetVolumeFrameworkUpdateMode, UpdateVolumeStack
+
+### UnityEngine.Rendering.Universal.CameraTypeUtility  : Il2CppSystem.Object
+  properties: s_CameraTypeNames
+  methods:    GetName
+
+### UnityEngine.Rendering.Universal.UniversalAdditionalCameraData  : UnityEngine.MonoBehaviour
+  properties: allowXRRendering, antialiasing, antialiasingQuality, camera, cameraStack, clearDepth, defaultAdditionalCameraData, dithering, k_BaseCameraGizmoPath, k_GizmoPath, k_OverlayCameraGizmoPath, k_PostProcessingGizmoPath, m_AllowXRRendering, m_Antialiasing, m_AntialiasingQuality, m_Camera, m_CameraType, m_Cameras, m_ClearDepth, m_Dithering, m_RenderPostProcessing, m_RenderShadows, m_RendererIndex, m_RequiresColorTexture, m_RequiresDepthTexture, m_RequiresDepthTextureOption, m_RequiresOpaqueTextureOption, m_StopNaN, m_Version, m_VolumeFrameworkUpdateModeOption, m_VolumeLayerMask, m_VolumeStack, m_VolumeTrigger, renderPostProcessing, renderShadows, renderType, requiresColorOption, requiresColorTexture, requiresDepthOption, requiresDepthTexture, requiresVolumeFrameworkUpdate, s_DefaultAdditionalCameraData, scriptableRenderer, stopNaN, version, volumeFrameworkUpdateMode, volumeLayerMask, volumeStack, volumeTrigger
+  methods:    OnAfterDeserialize, OnBeforeSerialize, OnDrawGizmos, SetRenderer, UpdateCameraStack
+
+### UnityEngine.Rendering.Universal.LightExtensions  : Il2CppSystem.Object
+  methods:    GetUniversalAdditionalLightData
+
+### UnityEngine.Rendering.Universal.UniversalAdditionalLightData  : UnityEngine.MonoBehaviour
+  properties: AdditionalLightsShadowDefaultCustomResolution, AdditionalLightsShadowDefaultResolutionTier, AdditionalLightsShadowMinimumResolution, AdditionalLightsShadowResolutionTierCustom, AdditionalLightsShadowResolutionTierHigh, AdditionalLightsShadowResolutionTierLow, AdditionalLightsShadowResolutionTierMedium, additionalLightsShadowResolutionTier, customShadowLayers, lightCookieOffset, lightCookieSize, lightLayerMask, m_AdditionalLightsShadowResolutionTier, m_CustomShadowLayers, m_LightCookieOffset, m_LightCookieSize, m_LightLayerMask, m_ShadowLayerMask, m_UsePipelineSettings, m_Version, shadowLayerMask, usePipelineSettings, version
+
+### UnityEngine.Rendering.Universal.UniversalRenderer  : UnityEngine.Rendering.Universal.ScriptableRenderer
+  properties: accurateGbufferNormals, actualRenderingMode, colorGradingLut, colorGradingLutPass, deferredLights, depthPrimingMode, finalPostProcessPass, k_DepthNormalsOnly, k_DepthStencilBufferBits, m_ActiveCameraColorAttachment, m_ActiveCameraDepthAttachment, m_AdditionalLightsShadowCasterPass, m_BlitMaterial, m_CameraDepthAttachment, m_CameraMotionVecMaterial, m_CapturePass, m_ColorBufferSystem, m_ColorFrontBuffer, m_CopyColorPass, m_CopyDepthMaterial, m_CopyDepthPass, m_DefaultStencilState, m_DeferredLights, m_DeferredPass, m_DepthInfoTexture, m_DepthNormalPrepass, m_DepthPrepass, m_DepthPrimingMode, m_DepthPrimingRecommended, m_DepthTexture, m_DrawSkyboxPass, m_FinalBlitPass, m_ForwardLights, m_GBufferCopyDepthPass, m_GBufferPass, m_IntermediateTextureMode, m_LightCookieManager, m_MainLightShadowCasterPass, m_MotionVectorPass, m_NormalsTexture, m_ObjectMotionVecMaterial, m_OnRenderObjectCallbackPass, m_OpaqueColor, m_PostProcessPasses, m_PrimedDepthCopyPass, m_RenderOpaqueForwardOnlyPass, m_RenderOpaqueForwardPass, m_RenderTransparentForwardPass, m_RenderingMode, m_SamplingMaterial, m_StencilDeferredMaterial, m_TileDeferredMaterial, m_TileDepthInfoMaterial, m_TileDepthInfoTexture, m_TileDepthRangeExtraPass, m_TileDepthRangePass, m_TransparentSettingsPass, m_XRCopyDepthPass, m_XROcclusionMeshPass, postProcessPass, renderingMode
+  methods:    CanCopyDepth, CreateCameraRenderTarget, Dispose, EnableSwapBufferMSAA, EnqueueDeferred, FinishRendering, GetCameraColorFrontBuffer, GetRenderPassInputs, IsGLESDevice, PlatformRequiresExplicitMsaaResolve, RequiresIntermediateColorTexture, Setup, SetupCullingParameters, SetupFinalPassDebug, SetupLights, SupportedCameraStackingTypes, SwapColorBuffer
+
+### UnityEngine.Rendering.Universal.UniversalRendererData  : UnityEngine.Rendering.Universal.ScriptableRendererData
+  properties: accurateGbufferNormals, clusteredRendering, defaultStencilState, depthPrimingMode, intermediateTextureMode, k_DefaultTileSize, k_LatestAssetVersion, m_AccurateGbufferNormals, m_AssetVersion, m_ClusteredRendering, m_DefaultStencilState, m_DepthPrimingMode, m_IntermediateTextureMode, m_OpaqueLayerMask, m_RenderingMode, m_ShadowTransparentReceive, m_TileSize, m_TransparentLayerMask, opaqueLayerMask, postProcessData, renderingMode, shaders, shadowTransparentReceive, tileSize, transparentLayerMask, xrSystemData
+  methods:    Create, OnEnable, OnValidate, ReloadAllNullProperties, UnityEngine_ISerializationCallbackReceiver_OnAfterDeserialize, UnityEngine_ISerializationCallbackReceiver_OnBeforeSerialize
+
+### UnityEngine.Rendering.Universal.UniversalRenderPipeline  : UnityEngine.Rendering.RenderPipeline
+  properties: asset, cameraComparison, defaultSettings, k_DefaultLightAttenuation, k_DefaultLightColor, k_DefaultLightPosition, k_DefaultLightSpotDirection, k_DefaultLightsProbeChannel, k_DefaultRenderingLayerMask, k_MaxVisibleAdditionalLightsMobile, k_MaxVisibleAdditionalLightsMobileShaderLevelLessThan45, k_MaxVisibleAdditionalLightsNonMobile, k_ShaderTagName, lightsDelegate, lightsPerTile, m_DebugDisplaySettingsUI, m_GlobalSettings, m_ShadowBiasData, m_ShadowResolutionData, m_XRSystem, maxPerObjectLights, maxRenderScale, maxShadowBias, maxTileVec4s, maxVisibleAdditionalLights, maxZBins, minRenderScale
+  methods:    CheckAndApplyDebugSettings, CheckPostProcessForDepth, CleanupLightData, CreateRenderTextureDescriptor, Dispose, GetLightAttenuationAndSpotDirection, GetMainLightIndex, GetPerObjectLightFlags, InitializeAdditionalCameraData, InitializeCameraData, InitializeLightConstants_Common, InitializeLightData, InitializePostProcessingData, InitializeRenderingData, InitializeShadowData, InitializeStackedCameraData, IsGameCamera, IsMultiPassStereoEnabled, IsStereoEnabled, MakeRenderTextureGraphicsFormat, Render, RenderCameraStack, RenderSingleCamera, ResolveUpscalingFilterSelection, SetSupportedRenderingFeatures, SetupPerFrameShaderConstants, SortCameras, TryGetCullingParameters, UpdateCameraStereoMatrices, UpdateVolumeFramework
+
+### UnityEngine.Rendering.Universal.RenderingData  : Il2CppSystem.ValueType
+  properties: cameraData, cullResults, lightData, perObjectData, postProcessingData, postProcessingEnabled, shadowData, supportsDynamicBatching
+
+### UnityEngine.Rendering.Universal.LightData  : Il2CppSystem.ValueType
+  properties: additionalLightsCount, mainLightIndex, maxPerObjectAdditionalLightsCount, originalIndices, reflectionProbeBlending, reflectionProbeBoxProjection, shadeAdditionalLightsPerVertex, supportsAdditionalLights, supportsLightLayers, supportsMixedLighting, visibleLights
+
+### UnityEngine.Rendering.Universal.CameraData  : Il2CppSystem.ValueType
+  properties: antialiasing, antialiasingQuality, aspectRatio, camera, cameraTargetDescriptor, cameraType, captureActions, clearDepth, defaultOpaqueSortFlags, fsrOverrideSharpness, fsrSharpness, imageScalingMode, isDefaultViewport, isDitheringEnabled, isHdrEnabled, isPreviewCamera, isRenderPassSupportedCamera, isSceneViewCamera, isStereoEnabled, isStopNaNEnabled, m_ProjectionMatrix, m_ViewMatrix, maxShadowDistance, pixelHeight, pixelRect, pixelWidth, postProcessEnabled, postProcessingRequiresDepthTexture, renderScale, renderType, renderer, requireSrgbConversion, requiresDepthTexture, requiresOpaqueTexture, resolveFinalTarget, targetTexture, upscalingFilter, volumeLayerMask, volumeTrigger, worldSpaceCameraPos, xr, xrRendering
+  methods:    GetGPUProjectionMatrix, GetProjectionMatrix, GetViewMatrix, IsCameraProjectionMatrixFlipped, SetViewAndProjectionMatrix
+
+### UnityEngine.Rendering.Universal.ShadowData  : Il2CppSystem.ValueType
+  properties: additionalLightsShadowmapHeight, additionalLightsShadowmapWidth, bias, isKeywordAdditionalLightShadowsEnabled, isKeywordSoftShadowsEnabled, mainLightShadowCascadeBorder, mainLightShadowCascadesCount, mainLightShadowCascadesSplit, mainLightShadowmapHeight, mainLightShadowmapWidth, requiresScreenSpaceShadowResolve, resolution, shadowmapDepthBufferBits, supportsAdditionalLightShadows, supportsMainLightShadows, supportsSoftShadows
+
+### UnityEngine.Rendering.Universal.PreTile  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.TileData  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.PunctualLightData  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.ShaderPropertyId  : Il2CppSystem.Object
+  properties: ambientEquatorColor, ambientGroundColor, ambientSkyColor, billboardCameraParams, billboardNormal, billboardTangent, cameraProjectionMatrix, cameraToWorldMatrix, cameraWorldClipPlanes, cosTime, deltaTime, globalMipBias, glossyEnvironmentColor, glossyEnvironmentCubeMap, glossyEnvironmentCubeMapHDR, inverseCameraProjectionMatrix, inverseProjectionMatrix, inverseViewAndProjectionMatrix, inverseViewMatrix, orthoParams, projectionMatrix, projectionParams, rendererColor, scaleBias, scaleBiasRt, scaledScreenParams, screenParams, screenSize, sinTime, sourceTex, subtractiveShadowColor, time, timeParameters, viewAndProjectionMatrix, viewMatrix, worldSpaceCameraPos, worldToCameraMatrix, zBufferParams
+
+### UnityEngine.Rendering.Universal.PostProcessingData  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.ShaderKeywordStrings  : Il2CppSystem.Object
+  properties: AdditionalLightShadows, AdditionalLightsPixel, AdditionalLightsVertex, BillboardFaceCameraPos, BloomHQ, BloomHQDirt, BloomLQ, BloomLQDirt, CastingPunctualLightShadow, ChromaticAberration, ClusteredRendering, DBufferMRT1, DBufferMRT2, DBufferMRT3, DEBUG_DISPLAY, DIRLIGHTMAP_COMBINED, DOWNSAMPLING_SIZE_16, DOWNSAMPLING_SIZE_2, DOWNSAMPLING_SIZE_4, DOWNSAMPLING_SIZE_8, DYNAMICLIGHTMAP_ON, DecalNormalBlendHigh, DecalNormalBlendLow, DecalNormalBlendMedium, DepthMsaa2, DepthMsaa4, DepthMsaa8, DepthNoMsaa, Distortion, Dithering, EDITOR_VISUALIZATION, FilmGrain, Fxaa, Gamma20, HDRGrading, HighQualitySampling, LIGHTMAP_ON, LightCookies, LightLayers, LightmapShadowMixing, LinearToSRGBConversion, MainLightShadowCascades, MainLightShadowScreen, MainLightShadows, MixedLightingSubtractive, PaniniGeneric, PaniniUnitDistance, PointSampling, Rcas, ReflectionProbeBlending, ReflectionProbeBoxProjection, RenderPassEnabled, ScreenSpaceOcclusion, ShadowsShadowMask, SmaaHigh, SmaaLow, SmaaMedium, SoftShadows, TonemapACES, TonemapNeutral, UseDrawProcedural, UseFastSRGBLinearConversion, UseRGBM, _ALPHAMODULATE_ON, _ALPHAPREMULTIPLY_ON, _ALPHATEST_ON, _CLEARCOAT, _CLEARCOATMAP, _DEFERRED_FIRST_LIGHT, _DEFERRED_MAIN_LIGHT, _DEFERRED_MIXED_LIGHTING, _DEFERRED_STENCIL, _DETAIL_MULX2, _DETAIL_SCALED, _DIRECTIONAL, _EMISSION, _GBUFFER_NORMALS_OCT, _NORMALMAP, _POINT, _RECEIVE_SHADOWS_OFF, _SPOT, _SURFACE_TYPE_TRANSPARENT
+
+### UnityEngine.Rendering.Universal.UniversalRenderPipelineGlobalSettings  : UnityEngine.Rendering.RenderPipelineGlobalSettings
+  properties: cachedInstance, defaultAssetName, instance, k_AssetVersion, k_DefaultLightLayerNames, lightLayerName0, lightLayerName1, lightLayerName2, lightLayerName3, lightLayerName4, lightLayerName5, lightLayerName6, lightLayerName7, lightLayerNames, m_LightLayerNames, m_PrefixedLightLayerNames, m_PrefixedRenderingLayerNames, m_RenderingLayerNames, m_StripDebugVariants, m_StripUnusedPostProcessingVariants, m_StripUnusedVariants, prefixedLightLayerNames, prefixedRenderingLayerMaskNames, prefixedRenderingLayerNames, renderingLayerMaskNames, renderingLayerNames, stripDebugVariants, stripUnusedPostProcessingVariants, stripUnusedVariants, supportRuntimeDebugDisplay
+  methods:    OnAfterDeserialize, OnBeforeSerialize, Reset, ResetRenderingLayerNames, UpdateGraphicsSettings, UpdateRenderingLayerNames
+
+### UnityEngine.Rendering.Universal.XRLayout  : Il2CppSystem.ValueType
+  properties: camera, xrSystem
+  methods:    AddViewToPass, CreatePass
+
+### UnityEngine.Rendering.Universal.XRPassCreateInfo  : Il2CppSystem.ValueType
+  properties: cullingParameters, cullingPassId, customMirrorView, multipassId, renderTarget, renderTargetDesc, renderTargetIsRenderTexture
+
+### UnityEngine.Rendering.Universal.XRViewCreateInfo  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.XRView  : Il2CppSystem.ValueType
+  properties: occlusionMesh, projMatrix, textureArraySlice, viewMatrix, viewport
+
+### UnityEngine.Rendering.Universal.XRPass  : Il2CppSystem.Object
+  properties: UNITY_STEREO_MATRIX_IV, UNITY_STEREO_MATRIX_IVP, UNITY_STEREO_MATRIX_V, UNITY_STEREO_MATRIX_VP, _XRCustomMirrorProfilingSampler, _XROcclusionProfilingSampler, _canMarkLateLatch_k__BackingField, _copyDepth_k__BackingField, _cullingParams_k__BackingField, _cullingPassId_k__BackingField, _hasMarkedLateLatch_k__BackingField, _isLateLatchEnabled_k__BackingField, _multipassId_k__BackingField, _renderTargetDesc_k__BackingField, _renderTargetIsRenderTexture_k__BackingField, _renderTarget_k__BackingField, _xrSdkEnabled_k__BackingField, canMarkLateLatch, copyDepth, cullingParams, cullingPassId, customMirrorView, enabled, hasMarkedLateLatch, hasValidOcclusionMesh, invalidRT, isLateLatchEnabled, isOcclusionMeshSupported, k_XRCustomMirrorTag, k_XROcclusionTag, multipassId, occlusionMeshCombined, occlusionMeshCombinedHashCode, occlusionMeshMaterial, renderTarget, renderTargetDesc, renderTargetIsRenderTexture, renderTargetValid, singlePassEnabled, stereoCameraProjectionMatrix, stereoProjectionMatrix, stereoViewMatrix, viewCount, views, xrSdkEnabled
+  methods:    AddView, AddViewInternal, Create, CreateOcclusionMeshCombined, EndCamera, GetProjMatrix, GetTextureArraySlice, GetViewMatrix, GetViewport, MarkLateLatchShaderProperties, Release, RenderOcclusionMesh, SetCustomMirrorView, StartSinglePass, StopSinglePass, TryGetOcclusionMeshCombinedHashCode, UnmarkLateLatchShaderProperties, UpdateCullingParams, UpdateGPUViewAndProjectionMatrices, UpdateOcclusionMesh, UpdateView
+
+### UnityEngine.Rendering.Universal.XRSystem  : Il2CppSystem.Object
+  properties: _XRMirrorProfilingSampler, display, displayList, emptyPass, framePasses, k_XRMirrorTag, mirrorViewMaterial, mirrorViewMaterialProperty, msaaLevel, occlusionMeshMaterial, testRenderTexture
+  methods:    AddPassToFrame, BeginLateLatching, CreateLayoutFromXrSdk, Dispose, EndLateLatching, GetDisplaySubsystem, GetMSAALevel, GetMaxViews, InitializeXRSystemData, Method_Internal_Static_Boolean_XRRenderPass_byref___c__DisplayClass26_0_0, OverrideForAutomatedTests, RefreshXrSdk, ReleaseFrame, RenderMirrorView, SetupFrame, UpdateCameraData, UpdateFromCamera, UpdateMSAALevel, UpdateRenderScale, XRSystemInit
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.Geom  : Il2CppSystem.Object
+  methods:    AddWinding, EdgeEval, EdgeGoesLeft, EdgeGoesRight, EdgeIntersect, EdgeSign, Interpolate, IsWindingInside, Swap, TransEval, TransLeq, TransSign, VertCCW, VertEq, VertL1dist, VertLeq
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.Mesh
+  properties: _eHead, _eHeadSym, _fHead, _vHead
+  methods:    AddEdgeVertex, Check, Connect, Delete, MakeEdge, MergeConvexFaces, OnFree, Reset, Splice, SplitEdge, ZapFace
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.Vec3  : System.ValueType
+  properties: Item, Zero
+  methods:    BoxIl2CppObject, Dot, LongAxis, Neg, Normalize, Sub, ToString
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.MeshUtils  : Il2CppSystem.Object
+  properties: Undef
+  methods:    FaceArea, KillEdge, KillFace, KillVertex, MakeEdge, MakeFace, MakeVertex, Splice
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.PQHandle  : System.ValueType
+  properties: Invalid
+  methods:    BoxIl2CppObject
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.Tess  : Il2CppSystem.Object
+  properties: ElementCount, Elements, NoEmptyPolygons, Normal, SUnitX, SUnitY, SentinelCoord, UsePooling, VertexCount, Vertices, _bmaxX, _bmaxY, _bminX, _bminY, _combineCallback, _dict, _elementCount, _elements, _event, _mesh, _normal, _pq, _sUnit, _tUnit, _vertexCount, _vertices, _windingRule
+  methods:    AddContour, AddRegionBelow, AddRightEdges, AddSentinel, CheckForIntersect, CheckForLeftSplice, CheckForRightSplice, CheckOrientation, ComputeInterior, ComputeNormal, ComputeWinding, ConnectLeftDegenerate, ConnectLeftVertex, ConnectRightVertex, DeleteRegion, DiscardExterior, DoneEdgeDict, DonePriorityQ, EdgeLeq, FinishLeftRegions, FinishRegion, FixUpperEdge, GetIntersectData, GetNeighbourFace, InitEdgeDict, InitPriorityQ, OutputContours, OutputPolymesh, ProjectPolygon, RegionAbove, RegionBelow, RemoveDegenerateEdges, RemoveDegenerateFaces, SetWindingNumber, SignedArea, SpliceMergeVertices, SweepEvent, Tessellate, TessellateInterior, TessellateMonoRegion, TopLeftRegion, TopRightRegion, VertexWeights, WalkDirtyRegions
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.ContourVertex  : Il2CppSystem.ValueType
+  properties: Data, Position
+  methods:    ToString
+
+### UnityEngine.Rendering.Universal.LibTessDotNet.CombineCallback  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### UnityEngine.Rendering.Universal.Internal.DeferredConfig  : Il2CppSystem.Object
+  properties: IsDX10, IsOpenGL, UseCBufferForDepthRange, UseCBufferForLightData, UseCBufferForLightList, UseCBufferForTileList, _IsDX10_k__BackingField, _IsOpenGL_k__BackingField, kAvgLightPerTile, kHasNativeQuadSupport, kPreferredCBufferSize, kPreferredStructuredBufferSize, kTileDepthInfoIntermediateLevel, kTilePixelHeight, kTilePixelWidth, kTilerDepth, kTilerSubdivisions
+
+### UnityEngine.Rendering.Universal.Internal.DeferredLights  : Il2CppSystem.Object
+  properties: AccurateGbufferNormals, DeferredInputAttachments, DeferredInputIsTransient, DepthAttachment, DepthAttachmentIdentifier, DepthCopyTexture, DepthCopyTextureIdentifier, DepthInfoTexture, DepthInfoTextureIdentifier, GBufferAlbedoIndex, GBufferLightingIndex, GBufferNormalSmoothnessIndex, GBufferRenderingLayers, GBufferShadowMask, GBufferSliceCount, GBufferSpecularMetallicIndex, GbufferAttachmentIdentifiers, GbufferAttachments, GbufferDepthIndex, GbufferFormats, HasDepthPrepass, HasNormalPrepass, IsOverlay, MixedLightingSetup, RenderHeight, RenderWidth, TileDepthInfoTexture, TileDepthInfoTextureIdentifier, TiledDeferredShading, UseJobSystem, UseRenderPass, UseRenderingLayers, UseShadowMask, _DeferredInputAttachments_k__BackingField, _DeferredInputIsTransient_k__BackingField, _DepthAttachmentIdentifier_k__BackingField, _DepthAttachment_k__BackingField, _DepthCopyTextureIdentifier_k__BackingField, _DepthCopyTexture_k__BackingField, _DepthInfoTextureIdentifier_k__BackingField, _DepthInfoTexture_k__BackingField, _GbufferAttachmentIdentifiers_k__BackingField, _GbufferAttachments_k__BackingField, _GbufferFormats_k__BackingField, _HasDepthPrepass_k__BackingField, _HasNormalPrepass_k__BackingField, _IsOverlay_k__BackingField, _MixedLightingSetup_k__BackingField, _RenderHeight_k__BackingField, _RenderWidth_k__BackingField, _TileDepthInfoTextureIdentifier_k__BackingField, _TileDepthInfoTexture_k__BackingField, _TiledDeferredShading_k__BackingField, _UseJobSystem_k__BackingField, _UseRenderPass_k__BackingField, kStencilShapeGuard, k_ClearStencilPartial, k_DeferredFogPass, k_DeferredPass, k_DeferredStencilPass, k_DeferredTiledPass, k_GBufferNames, k_InvalidLightOffset, k_SetupLightConstants, k_SetupLights, k_StencilDeferredPassNames, k_TileDeferredPassNames, k_TileDepthInfo, m_AccurateGbufferNormals, m_AdditionalLightsShadowCasterPass, m_CachedProjectionMatrix, m_CachedRenderHeight, m_CachedRenderWidth, m_FullscreenMesh, m_HasTileVisLights, m_HemisphereMesh, m_LightCookieManager, m_MaxDepthRangePerBatch, m_MaxPunctualLightPerBatch, m_MaxRelLightIndicesPerBatch, m_MaxTilesPerBatch, m_ProfilingDeferredPass, m_ProfilingSamplerClearStencilPartialPass, m_ProfilingSamplerDeferredFogPass, m_ProfilingSamplerDeferredStencilPass, m_ProfilingSamplerDeferredTiledPass, m_ProfilingSetupLightConstants, m_ProfilingSetupLights, m_ProfilingTileDepthInfo, m_ScreenToWorld, m_SphereMesh, m_StencilDeferredMaterial, m_StencilDeferredPasses, m_TileDataCapacities, m_TileDeferredMaterial, m_TileDeferredPasses, m_TileDepthInfoMaterial, m_Tilers, m_stencilVisLightOffsets, m_stencilVisLights
+  methods:    Align, CheckHasTileLights, ClearStencilPartial, CreateFullscreenMesh, CreateGbufferAttachments, CreateHemisphereMesh, CreateSphereMesh, DisableFramebufferFetchInput, ExecuteDeferredPass, ExecuteDownsampleBitmaskPass, ExecuteTileDepthInfoPass, FloatToUInt, GetGBufferFormat, GetTiler, Half2ToUInt, HasStencilLightsOfType, HasTileDepthRangeExtraPass, HasTileLights, InitStencilDeferredMaterial, InitTileDeferredMaterial, IsRuntimeSupportedThisFrame, IsTileLight, OnCameraCleanup, OverwriteStencil, PackTileID, PrecomputeLights, RenderFog, RenderSSAOBeforeShading, RenderStencilDirectionalLights, RenderStencilLights, RenderStencilPointLights, RenderStencilSpotLights, RenderTileLights, ResolveMixedLightingMode, Setup, SetupLights, SetupMainLightConstants, SetupMatrixConstants, SetupShaderLightConstants, SortLights, StorePunctualLightData, StoreTileData, TrimLights
+
+### UnityEngine.Rendering.Universal.Internal.SortPrePunctualLight  : Il2CppSystem.Object
+  methods:    Compare
+
+### UnityEngine.Rendering.Universal.Internal.BitArray  : Il2CppSystem.ValueType
+  properties: m_BitCount, m_IntCount, m_Mem
+  methods:    Clear, Dispose, IsSet, Set
+
+### UnityEngine.Rendering.Universal.Internal.DeferredTiler  : Il2CppSystem.ValueType
+  properties: MaxLightPerTile, TileDataCapacity, TileHeaderSize, TileHeaders, TilePixelHeight, TilePixelWidth, TileXCount, TileYCount, TilerLevel, Tiles, m_AvgLightPerTile, m_Counters, m_FrustumPlanes, m_IsOrthographic, m_PreTiles, m_TileData, m_TileHeaderSize, m_TileHeaders, m_TilePixelHeight, m_TilePixelWidth, m_TileXCount, m_TileYCount, m_TilerLevel
+  methods:    AddTileData, Align, Clip, ClipPartial, CullFinalLights, CullIntermediateLights, DistanceToPlane, GetTileHeaderOffset, GetTileOffsetAndCount, IntersectionLineSphere, MakePlane, OnCameraCleanup, PrecomputeTiles, Setup, SignedSq, max2, max3, min2
+
+### UnityEngine.Rendering.Universal.Internal.AdditionalLightsShadowCasterPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: LightTypeIdentifierInShadowParams_Point, LightTypeIdentifierInShadowParams_Spot, MAX_PUNCTUAL_LIGHT_SHADOW_SLICES_IN_UBO, c_DefaultShadowParams, kMinimumPunctualLightHardShadowResolution, kMinimumPunctualLightSoftShadowResolution, k_ShadowmapBufferBits, m_AdditionalLightIndexToShadowParams, m_AdditionalLightIndexToVisibleLightIndex, m_AdditionalLightShadowSliceIndexTo_WorldShadowMatrix, m_AdditionalLightsShadowSlices, m_AdditionalLightsShadowmap, m_AdditionalLightsShadowmapTexture, m_AdditionalLightsWorldToShadow_SSBO, m_AdditionalShadowParams_SSBO, m_AdditionalShadowsBufferId, m_AdditionalShadowsIndicesId, m_CascadeBorder, m_CreateEmptyShadowmap, m_GlobalShadowSliceIndexToPerLightShadowSliceIndex, m_IssuedMessageAboutPointLightHardShadowResolutionTooSmall, m_IssuedMessageAboutPointLightSoftShadowResolutionTooSmall, m_IssuedMessageAboutRemovedShadowSlices, m_IssuedMessageAboutShadowMapsRescale, m_IssuedMessageAboutShadowMapsTooBig, m_IssuedMessageAboutShadowSlicesTooMany, m_MaxShadowDistanceSq, m_ProfilingSetupSampler, m_ShadowRequestsHashes, m_ShadowResolutionRequests, m_ShadowSliceToAdditionalLightIndex, m_SortedShadowResolutionRequests, m_UnusedAtlasSquareAreas, m_UseStructuredBuffer, m_VisibleLightIndexToAdditionalLightIndex, m_VisibleLightIndexToCameraSquareDistance, m_VisibleLightIndexToSortedShadowResolutionRequestsFirstSliceIndex
+  methods:    AtlasLayout, CalcGuardAngle, Clear, ComputeShadowRequestHash, Configure, EstimateScaleFactorNeededToFitAllShadowsInAtlas, Execute, GetPointLightShadowFrustumFovBiasInDegrees, GetPunctualLightShadowSlicesCount, GetShadowLightIndexFromLightIndex, InsertionSort, IsValidShadowCastingLight, MinimalPunctualLightShadowResolution, OnCameraCleanup, RenderAdditionalShadowmapAtlas, ResolutionLog2ForHash, SetEmptyAdditionalShadowmapAtlas, Setup, SetupAdditionalLightsShadowReceiverConstants, SetupForEmptyRendering
+
+### UnityEngine.Rendering.Universal.Internal.ForwardLights  : Il2CppSystem.Object
+  properties: k_SetupLightConstants, m_ActualTileWidth, m_AdditionalLightAttenuations, m_AdditionalLightColors, m_AdditionalLightOcclusionProbeChannels, m_AdditionalLightPositions, m_AdditionalLightSpotDirections, m_AdditionalLightsBufferId, m_AdditionalLightsIndicesId, m_AdditionalLightsLayerMasks, m_CullingHandle, m_DirectionalLightCount, m_LightCookieManager, m_MixedLightingSetup, m_ProfilingSampler, m_RequestedTileWidth, m_TileBuffer, m_TileLightMasks, m_TileResolution, m_UseClusteredRendering, m_UseStructuredBuffer, m_ZBinBuffer, m_ZBinFactor, m_ZBinOffset, m_ZBins
+  methods:    Cleanup, InitializeLightConstants, ProcessLights, Setup, SetupAdditionalLightConstants, SetupMainLightConstants, SetupPerObjectLightIndices, SetupShaderLightConstants
+
+### UnityEngine.Rendering.Universal.Internal.MotionVectorRendering  : Il2CppSystem.Object
+  properties: instance, m_CameraFrameData, m_FrameCount, m_LastTime, m_Time, s_Instance
+  methods:    CalculateTime, Clear, GetMotionDataForCamera, UpdateMotionData
+
+### UnityEngine.Rendering.Universal.Internal.NormalReconstruction  : Il2CppSystem.Object
+  properties: s_NormalReconstructionMatrix, s_NormalReconstructionMatrixID
+  methods:    SetupProperties
+
+### UnityEngine.Rendering.Universal.Internal.ColorGradingLutPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_AllowColorGradingACESHDR, m_HdrLutFormat, m_InternalLut, m_LdrLutFormat, m_LutBuilderHdr, m_LutBuilderLdr
+  methods:    Cleanup, Execute, Method_Private_Material_Shader_0, OnFinishCameraStackRendering, Setup
+
+### UnityEngine.Rendering.Universal.Internal.CopyColorPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: _destination_k__BackingField, _source_k__BackingField, destination, m_CopyColorMaterial, m_DownsamplingMethod, m_SampleOffsetShaderHandle, m_SamplingMaterial, source
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### UnityEngine.Rendering.Universal.Internal.CopyDepthPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: AllocateRT, MssaSamples, _AllocateRT_k__BackingField, _MssaSamples_k__BackingField, _destination_k__BackingField, _source_k__BackingField, destination, m_CopyDepthMaterial, source
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### UnityEngine.Rendering.Universal.Internal.DeferredPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DeferredLights
+  methods:    Configure, Execute, OnCameraCleanup
+
+### UnityEngine.Rendering.Universal.Internal.DepthNormalOnlyPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: _allocateDepth_k__BackingField, _allocateNormal_k__BackingField, _depthDescriptor_k__BackingField, _depthHandle_k__BackingField, _normalDescriptor_k__BackingField, _normalHandle_k__BackingField, _shaderTagIds_k__BackingField, allocateDepth, allocateNormal, depthDescriptor, depthHandle, k_DepthNormals, m_FilteringSettings, m_RendererMSAASamples, normalDescriptor, normalHandle, shaderTagIds
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### UnityEngine.Rendering.Universal.Internal.DepthOnlyPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: _allocateDepth_k__BackingField, _depthAttachmentHandle_k__BackingField, _descriptor_k__BackingField, _shaderTagId_k__BackingField, allocateDepth, depthAttachmentHandle, descriptor, k_ShaderTagId, m_FilteringSettings, shaderTagId
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### UnityEngine.Rendering.Universal.Internal.DrawObjectsPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_FilteringSettings, m_IsOpaque, m_ProfilerTag, m_ProfilingSampler, m_RenderStateBlock, m_ShaderTagIdList, m_UseDepthPriming, s_DrawObjectPassDataPropID
+  methods:    Execute, OnCameraSetup
+
+### UnityEngine.Rendering.Universal.Internal.FinalBlitPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_BlitMaterial, m_Source
+  methods:    Execute, Setup
+
+### UnityEngine.Rendering.Universal.Internal.GBufferPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DeferredLights, m_FilteringSettings, m_ProfilingSampler, m_RenderStateBlock, m_RenderStateBlocks, m_ShaderTagValues, s_CameraNormalsTextureID, s_ShaderTagLit, s_ShaderTagSimpleLit, s_ShaderTagUniversalGBuffer, s_ShaderTagUniversalMaterialType, s_ShaderTagUnlit
+  methods:    Configure, Execute, OnCameraCleanup
+
+### UnityEngine.Rendering.Universal.Internal.MainLightShadowCasterPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: k_MaxCascades, k_ShadowmapBufferBits, m_CascadeBorder, m_CascadeSlices, m_CascadeSplitDistances, m_CreateEmptyShadowmap, m_MainLightShadowMatrices, m_MainLightShadowmap, m_MainLightShadowmapTexture, m_MaxShadowDistanceSq, m_ProfilingSetupSampler, m_ShadowCasterCascadesCount
+  methods:    Clear, Configure, Execute, OnCameraCleanup, RenderMainLightCascadeShadowmap, SetEmptyMainLightCascadeShadowmap, Setup, SetupForEmptyRendering, SetupMainLightShadowReceiverConstants
+
+### UnityEngine.Rendering.Universal.Internal.MotionVectorRenderPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: kMotionVectorTexture, kPreviousViewProjectionMatrix, kPreviousViewProjectionMatrixStero, kSkyboxPreviousViewProjectionMatrix, m_CameraMaterial, m_MotionData, m_MotionVectorHandle, m_ObjectMaterial, m_ProfilingSampler, m_TargetFormat, s_ShaderTags
+  methods:    Configure, DrawCameraMotionVectors, DrawObjectMotionVectors, Execute, ExecuteCommand, FrameCleanup, GetDrawingSettings, Setup
+
+### UnityEngine.Rendering.Universal.Internal.PostProcessPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: k_MaxPyramidSize, k_RenderFinalPostProcessingTag, k_RenderPostProcessingTag, m_BlitMaterial, m_Bloom, m_BokehHash, m_BokehKernel, m_BokehMaxRadius, m_BokehRCPAspect, m_ChromaticAberration, m_ColorAdjustments, m_ColorLookup, m_Data, m_DefaultHDRFormat, m_Depth, m_DepthOfField, m_Descriptor, m_Destination, m_DitheringTextureIndex, m_EnableSRGBConversionIfNeeded, m_FilmGrain, m_GaussianCoCFormat, m_HasFinalPass, m_InternalLut, m_IsFinalPass, m_LensDistortion, m_MRT2, m_Materials, m_MotionBlur, m_PaniniProjection, m_PrevViewProjM, m_ProfilingRenderFinalPostProcessing, m_ProfilingRenderPostProcessing, m_ResetHistory, m_ResolveToScreen, m_SMAAEdgeFormat, m_Source, m_Tonemapping, m_UseDrawProcedural, m_UseFastSRGBLinearConversion, m_UseRGBM, m_UseSwapBuffer, m_Vignette, m_hasExternalPostPasses, viewProjMatrixStereo
+  methods:    Blit, BlitDstDiscardContent, CalcCropExtents, CalcViewExtents, CanRunOnTile, Cleanup, DoBokehDepthOfField, DoDepthOfField, DoGaussianDepthOfField, DoLensFlareDatadriven, DoMotionBlur, DoPaniniProjection, DoSubpixelMorphologicalAntialiasing, DrawFullscreenMesh, Execute, GetCompatibleDescriptor, GetLensFlareLightAttenuation, GetMaxBokehRadiusInPixels, Method_Private_RenderTargetIdentifier_byref___c__DisplayClass59_0_0, Method_Private_RenderTargetIdentifier_byref___c__DisplayClass59_0_PDM_0, Method_Private_Void_byref_ScriptableRenderer_byref___c__DisplayClass59_0_0, OnCameraCleanup, OnCameraSetup, PrepareBokehKernel, Render, RenderFinalPass, RequireSRGBConversionBlitToBackBuffer, ResetHistory, Setup, SetupBloom, SetupChromaticAberration, SetupColorGrading, SetupDithering, SetupFinalPass, SetupGrain, SetupLensDistortion, SetupVignette
+
+### UnityEngine.Rendering.Universal.Internal.ScreenSpaceShadowResolvePass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_RenderTextureDescriptor, m_ScreenSpaceShadowmap, m_ScreenSpaceShadowsMaterial
+  methods:    Configure, Execute, OnCameraCleanup, Setup
+
+### UnityEngine.Rendering.Universal.Internal.TileDepthRangePass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_DeferredLights, m_PassIndex
+  methods:    Configure, Execute, OnCameraCleanup
+
+### UnityEngine.Rendering.Universal.Internal.PreviousFrameData  : Il2CppSystem.Object
+  properties: isFirstFrame, lastFrameActive, m_IsFirstFrame, m_LastFrameActive, m_PreviousViewProjectionMatrix, m_PreviousViewProjectionMatrixStereo, m_ViewProjectionMatrixStereo, m_viewProjectionMatrix, previousViewProjectionMatrix, previousViewProjectionMatrixStereo, viewProjectionMatrix, viewProjectionMatrixStereo
+
+### UnityEngine.Rendering.Universal.Internal.RenderTargetBufferSystem  : Il2CppSystem.Object
+  properties: backBuffer, frontBuffer, m_A, m_AisBackBuffer, m_AllowMSAA, m_B, m_Desc, m_FilterMode, m_RTisAllocated
+  methods:    Clear, EnableMSAA, GetBackBuffer, GetBufferA, GetFrontBuffer, Initialize, SetCameraSettings, Swap
+
+### _PrivateImplementationDetails_  : Il2CppSystem.Object
+  properties: E2EF5640DF412939A64301FFA3F66A62A34FA6E45A26E62F6994E5390B380D01, F896C3A5F9841B6E1F0A22BD35A6A1BC5EFB28AAA23B66301EC8098CE57CF99A, _08243D32F28C35701F6EA57F52AE707302C8528E8D358F13C6E6915543D265C6, _18689A54C1FF754BE58500B2ED77A6C75B025BE96F6D01FEF89C42DA1C953F34, _6322123493378558D4F9DD025993C168685B194246485704DD5B391FDCD77A64, _8E2129A5F232A49B45FCB149981C3507166B7EE6265A5B90A1C9B0B87B2C0A80, _9D3A6E7E88415D8C1A0F3887B6384A9A8E4F44A036C5A24796C319751ACACCAD
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__19_0
+
+### RenderObjectsSettings  : Il2CppSystem.Object
+  properties: Event, cameraSettings, depthCompareFunction, enableWrite, filterSettings, overrideDepthState, overrideMaterial, overrideMaterialPassIndex, passTag, stencilSettings
+
+### FilterSettings  : Il2CppSystem.Object
+  properties: LayerMask, PassNames, RenderQueueType
+
+### CustomCameraSettings  : Il2CppSystem.Object
+  properties: cameraFieldOfView, offset, overrideCamera, restoreCamera
+
+### MaskChannelFilter  : System.ValueType
+  properties: inverted, mask
+  methods:    BoxIl2CppObject
+
+### BlendFactors  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__5_0
+
+### LightMeshVertex  : System.ValueType
+  properties: VertexLayout
+  methods:    BoxIl2CppObject
+
+### __c__DisplayClass6_0  : Il2CppSystem.Object
+  properties: c
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__6_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__26_0
+
+### _renderTargetIds_e__FixedBuffer  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### _renderTargetUsed_e__FixedBuffer  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__34_0
+
+### Edge  : System.ValueType
+  methods:    AssignVertexIndices, BoxIl2CppObject, Compare, CompareTo
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__9_0, __9__9_1, __9__9_2
+
+### ShaderResources  : Il2CppSystem.Object
+  properties: LensFlareDataDrivenPS, bloomPS, bokehDepthOfFieldPS, cameraMotionBlurPS, easuPS, finalPostPassPS, gaussianDepthOfFieldPS, lutBuilderHdrPS, lutBuilderLdrPS, paniniProjectionPS, scalingSetupPS, stopNanPS, subpixelMorphologicalAntialiasingPS, uberPostPS
+
+### TextureResources  : Il2CppSystem.Object
+  properties: blueNoise16LTex, filmGrainTex, smaaAreaTex, smaaSearchTex
+
+### ShaderResources  : Il2CppSystem.Object
+  properties: autodeskInteractiveMaskedPS, autodeskInteractivePS, autodeskInteractiveTransparentPS, defaultSpeedTree7PS, defaultSpeedTree8PS, terrainDetailGrassBillboardPS, terrainDetailGrassPS, terrainDetailLitPS
+
+### MaterialResources  : Il2CppSystem.Object
+  properties: decal, lit, particleLit, terrainLit
+
+### ShaderResources  : Il2CppSystem.Object
+  properties: xrMirrorViewPS, xrOcclusionMeshPS
+
+### __c  : Il2CppSystem.Object
+  properties: __9
+
+### WidgetFactory  : Il2CppSystem.Object
+  methods:    CreateMissingDebugShadersWarning
+
+### SettingsPanel  : UnityEngine.Rendering.Universal.DebugDisplaySettingsPanel
+  properties: PanelName, k_GoToSectionString
+
+### Strings  : Il2CppSystem.Object
+  properties: LightingDebugMode, LightingFeatures
+
+### WidgetFactory  : Il2CppSystem.Object
+  methods:    CreateLightingDebugMode, CreateLightingFeatures
+
+### SettingsPanel  : UnityEngine.Rendering.Universal.DebugDisplaySettingsPanel
+  properties: PanelName
+
+### AlbedoDebugValidationPresetData  : Il2CppSystem.ValueType
+  properties: color, maxLuminance, minLuminance, name
+
+### Strings  : Il2CppSystem.Object
+  properties: AlbedoHueTolerance, AlbedoMaxLuminance, AlbedoMinLuminance, AlbedoSaturationTolerance, AlbedoSettingsContainerName, MaterialOverride, MaterialValidationMode, MetallicMaxValue, MetallicMinValue, MetallicSettingsContainerName, ValidationPreset, VertexAttribute
+
+### WidgetFactory  : Il2CppSystem.Object
+  methods:    CreateAlbedoHueTolerance, CreateAlbedoMaxLuminance, CreateAlbedoMinLuminance, CreateAlbedoPreset, CreateAlbedoSaturationTolerance, CreateMaterialOverride, CreateMaterialValidationMode, CreateMetallicMaxValue, CreateMetallicMinValue, CreateVertexAttribute
+
+### SettingsPanel  : UnityEngine.Rendering.Universal.DebugDisplaySettingsPanel
+  properties: PanelName
+
+### Strings  : Il2CppSystem.Object
+  properties: AdditionalWireframeModes, Channels, HDR, MSAA, MapOverlays, MapSize, Overdraw, PixelValidationMode, PostProcessing, RangeValidationSettingsContainerName, ValueRangeMax, ValueRangeMin, WireframeNotSupportedWarning
+
+### WidgetFactory  : Il2CppSystem.Object
+  methods:    CreateAdditionalWireframeShaderViews, CreateHDR, CreateMSAA, CreateMapOverlaySize, CreateMapOverlays, CreateOverdraw, CreatePixelValidationChannels, CreatePixelValidationMode, CreatePixelValueRangeMax, CreatePixelValueRangeMin, CreatePostProcessing, CreateWireframeNotSupportedWarning
+
+### SettingsPanel  : UnityEngine.Rendering.Universal.DebugDisplaySettingsPanel
+  properties: PanelName
+
+### __c__DisplayClass3_0  : Il2CppSystem.Object
+  properties: debugManager, panels
+
+### DebugRenderPassEnumerable  : Il2CppSystem.Object
+  properties: m_CommandBuffer, m_Context, m_DebugHandler
+  methods:    GetEnumerator, System_Collections_IEnumerable_GetEnumerator
+
+### DrawFunction  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke
+
+### DecalProjectorAction  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### DrawCallJob  : Il2CppSystem.ValueType
+  properties: angleFades, boundingSpheres, cameraPosition, cullingMask, decalToWorlds, decalToWorldsDraw, drawDistances, fadeFactors, layerMasks, maxDrawDistance, normalToDecalsDraw, normalToWorlds, sceneCullingMask, sceneLayerMasks, sizeOffsets, subCallCount, subCalls, uvScaleBiases, visibleDecalCount, visibleDecalIndices
+  methods:    Execute
+
+### DecalEntityItem  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### CombinedChunks  : Il2CppSystem.ValueType
+  properties: cachedChunk, culledChunk, drawCallChunk, entityChunk, previousChunkIndex, valid
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__25_0
+
+### UpdateTransformsJob  : Il2CppSystem.ValueType
+  properties: boundingSpheres, decalToWorlds, dirty, k_MinusYtoZRotation, minDistance, normalToWorlds, positions, rotations, scaleModes, scales, sizeOffsets
+  methods:    DistanceBetweenQuaternions, Execute, GetDecalProjectBoundingSphere
+
+### ComputeBufferInfo  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### Profiling  : Il2CppSystem.Object
+  properties: addRenderPasses, clearRenderingState, configure, drawGizmos, execute, internalFinishRendering, internalStartRendering, k_Name, setAttachmentList, setMRTAttachmentsList, setPerCameraShaderVariables, setupCamera, setupFrameData, setupLights, sortRenderPasses
+
+### RenderPassDescriptor  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### RenderingFeatures  : Il2CppSystem.Object
+  properties: _cameraStacking_k__BackingField, _msaa_k__BackingField, cameraStacking, msaa
+
+### RenderPassBlock  : Il2CppSystem.Object
+  properties: AfterRendering, BeforeRendering, MainRenderingOpaque, MainRenderingTransparent
+
+### RenderBlocks  : Il2CppSystem.ValueType
+  properties: m_BlockEventLimits, m_BlockRangeLengths, m_BlockRanges
+  methods:    Dispose, FillBlockRanges, GetLength, GetRange
+
+### ShaderResources  : Il2CppSystem.Object
+  properties: blitPS, cameraMotionVector, copyDepthPS, coreBlitColorAndDepthPS, coreBlitPS, fallbackErrorPS, materialErrorPS, objectMotionVector, samplingPS, screenSpaceShadowPS, stencilDeferredPS
+
+### ShaderProperty  : Il2CppSystem.Object
+  properties: additionalLightsCookieAtlasTexture, additionalLightsCookieAtlasTextureFormat, additionalLightsCookieAtlasUVRectBuffer, additionalLightsCookieAtlasUVRects, additionalLightsCookieEnableBits, additionalLightsLightTypeBuffer, additionalLightsLightTypes, additionalLightsWorldToLightBuffer, additionalLightsWorldToLights, mainLightCookieTextureFormat, mainLightTexture, mainLightWorldToLight
+
+### Settings  : System.ValueType
+  methods:    BoxIl2CppObject, GetDefault
+
+### Sorting  : System.ValueType
+  methods:    BoxIl2CppObject, InsertionSort, Median3Pivot, Method_Internal_Static_Void_Int32_Int32_byref___c__DisplayClass2_0_1_T_PDM_0, Partition, QuickSort
+
+### LightCookieMapping  : Il2CppSystem.ValueType
+  properties: light, lightBufferIndex, s_CompareByBufferIndex, s_CompareByCookieSize, visibleLightIndex
+
+### WorkMemory  : Il2CppSystem.Object
+  properties: lightMappings, uvRects
+  methods:    Resize
+
+### ShaderBitArray  : Il2CppSystem.ValueType
+  properties: Item, bitCapacity, data, elemLength, k_BitsPerElement, k_ElementMask, k_ElementShift, m_Data
+  methods:    Clear, GetElementIndexAndBitOffset, Resize, ToString
+
+### LightCookieShaderData  : Il2CppSystem.Object
+  properties: _isUploaded_k__BackingField, atlasUVRects, cookieEnableBits, isUploaded, lightTypes, m_AtlasUVRectBuffer, m_AtlasUVRectCpuData, m_CookieEnableBitsCpuData, m_LightTypeBuffer, m_LightTypeCpuData, m_Size, m_UseStructuredBuffer, m_WorldToLightBuffer, m_WorldToLightCpuData, worldToLights
+  methods:    Clear, Dispose, Resize, Upload
+
+### ShaderConstants  : Il2CppSystem.Object
+  properties: _BlueNoise_Texture, _Dithering_Params, _Grain_Params, _Grain_Texture, _Grain_TilingParams, _SourceSize
+
+### ScreenSpaceAmbientOcclusionPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: isRendererDeferred, k_SSAOAmbientOcclusionParamName, k_SSAOTextureName, m_AOPassDescriptor, m_BlurPassesDescriptor, m_CameraTopLeftCorner, m_CameraViewProjections, m_CameraXExtent, m_CameraYExtent, m_CameraZExtent, m_CurrentSettings, m_FinalDescriptor, m_Material, m_ProfilingSampler, m_Renderer, m_SSAOTexture1Target, m_SSAOTexture2Target, m_SSAOTexture3Target, m_SSAOTextureFinalTarget, m_SupportsR8RenderTextureFormat, s_BaseMapID, s_CameraViewProjectionsID, s_CameraViewTopLeftCornerID, s_CameraViewXExtentID, s_CameraViewYExtentID, s_CameraViewZExtentID, s_ProjectionParams2ID, s_SSAOParamsID, s_SSAOTexture1ID, s_SSAOTexture2ID, s_SSAOTexture3ID, s_SSAOTextureFinalID
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Render, RenderAndSetBaseMap, Setup
+
+### ScreenSpaceShadowsPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: k_SSShadowsTextureName, m_CurrentSettings, m_Material, m_ProfilerTag, m_ProfilingSampler, m_RenderTarget, m_RenderTextureDescriptor
+  methods:    Execute, OnCameraCleanup, OnCameraSetup, Setup
+
+### ScreenSpaceShadowsPostPass  : UnityEngine.Rendering.Universal.ScriptableRenderPass
+  properties: m_ProfilerTag, m_ProfilingSampler
+  methods:    Configure, Execute
+
+### StereoConstants  : Il2CppSystem.Object
+  properties: invCameraProjMatrix, invProjMatrix, invViewMatrix, invViewProjMatrix, viewProjMatrix, worldSpaceCameraPos
+
+### DebugShaderResources  : Il2CppSystem.Object
+  properties: debugReplacementPS
+
+### __c__DisplayClass2_0  : Il2CppSystem.Object
+  properties: path
+
+### Cone  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### Sphere  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### Plane  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__45_0
+
+### Profiling  : Il2CppSystem.Object
+  properties: createCameraRenderTarget, k_Name
+
+### RenderPassInputSummary  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__76_0
+
+### ShaderResources  : Il2CppSystem.Object
+  properties: blitPS, cameraMotionVector, copyDepthPS, coreBlitColorAndDepthPS, coreBlitPS, fallbackErrorPS, materialErrorPS, objectMotionVector, samplingPS, screenSpaceShadowPS, stencilDeferredPS
+
+### Profiling  : Il2CppSystem.Object
+  properties: s_HashSamplerCache, unknownSampler
+  methods:    TryGetOrAddCameraSampler
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__27_0
+
+### CustomMirrorView  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### XRShaderIDs  : Il2CppSystem.Object
+  properties: _SRGBRead, _SRGBWrite, _SourceTexArraySlice
+
+### __c__DisplayClass26_0  : Il2CppSystem.ValueType
+  properties: camera
+
+### Node  : Il2CppSystem.Object
+  properties: Key, Next, Prev, _key, _next, _prev
+
+### LessOrEqual  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Vertex
+  properties: _anEdge, _coords, _data, _n, _next, _pqHandle, _prev, _s, _t
+  methods:    Reset
+
+### Face
+  properties: VertsCount, _anEdge, _inside, _marked, _n, _next, _prev, _trail
+  methods:    Reset
+
+### EdgePair  : Il2CppSystem.ValueType
+  properties: _e, _eSym
+  methods:    Create, Reset
+
+### Edge
+  properties: _Dnext, _Dprev, _Dst, _Lface, _Lnext, _Lprev, _Onext, _Oprev, _Org, _Rface, _Rnext, _Rprev, _Sym, _activeRegion, _next, _pair, _winding
+  methods:    EnsureFirst, Reset
+
+### LessOrEqual  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### HandleElem  : Il2CppSystem.Object
+  properties: _key, _node
+
+### StackItem  : Il2CppSystem.Object
+  properties: p, r
+
+### ActiveRegion  : Il2CppSystem.Object
+  properties: _dirty, _eUp, _fixUpperEdge, _inside, _nodeUp, _sentinel, _windingNumber
+
+### ShaderConstants  : Il2CppSystem.Object
+  properties: UDepthRanges, UPunctualLightBuffer, URelLightList, UTileList, _BitmaskTex, _ClearStencilReadMask, _ClearStencilRef, _ClearStencilWriteMask, _CookieLightIndex, _DepthRangeOffset, _DepthRanges, _DepthTex, _DepthTexSize, _DownsamplingHeight, _DownsamplingWidth, _InstanceOffset, _LightAttenuation, _LightColor, _LightDirection, _LightFlags, _LightLayerMask, _LightOcclusionProbInfo, _LightPosWS, _LitDirStencilReadMask, _LitDirStencilRef, _LitDirStencilWriteMask, _LitPunctualStencilReadMask, _LitPunctualStencilRef, _LitPunctualStencilWriteMask, _LitStencilReadMask, _LitStencilRef, _LitStencilWriteMask, _MainLightColor, _MainLightLayerMask, _MainLightPosition, _PunctualLightBuffer, _RelLightList, _ScreenToWorld, _ShadowLightIndex, _SimpleLitDirStencilReadMask, _SimpleLitDirStencilRef, _SimpleLitDirStencilWriteMask, _SimpleLitPunctualStencilReadMask, _SimpleLitPunctualStencilRef, _SimpleLitPunctualStencilWriteMask, _SimpleLitStencilReadMask, _SimpleLitStencilRef, _SimpleLitStencilWriteMask, _SourceShiftX, _SourceShiftY, _SpotLightBias, _SpotLightGuard, _SpotLightScale, _StencilReadMask, _StencilRef, _StencilWriteMask, _TileList, _TilePixelHeight, _TilePixelWidth, _TileShiftX, _TileShiftY, _tileXCount, _unproject0, _unproject1
+
+### CullLightsJob  : Il2CppSystem.ValueType
+  properties: coarseHeaderOffset, coarseTileHeaders, coarseTiles, iend, istart, jend, jstart, prePunctualLights, tiler
+  methods:    Execute
+
+### DrawCall  : Il2CppSystem.ValueType
+  properties: instanceCount, instanceOffset, punctualLightBuffer, punctualLightBufferSize, relLightList, relLightListSize, tileList, tileListSize
+
+### InitParams  : Il2CppSystem.ValueType
+  properties: lightCookieManager, stencilDeferredMaterial, tileDeferredMaterial, tileDepthInfoMaterial
+
+### PrePunctualLight  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### AdditionalShadowsConstantBuffer  : Il2CppSystem.Object
+  properties: _AdditionalLightsWorldToShadow, _AdditionalShadowFadeParams, _AdditionalShadowOffset0, _AdditionalShadowOffset1, _AdditionalShadowOffset2, _AdditionalShadowOffset3, _AdditionalShadowParams, _AdditionalShadowmapSize
+
+### ShadowResolutionRequest  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### LightConstantBuffer  : Il2CppSystem.Object
+  properties: _AdditionalLightOcclusionProbeChannel, _AdditionalLightsAttenuation, _AdditionalLightsColor, _AdditionalLightsCount, _AdditionalLightsLayerMasks, _AdditionalLightsPosition, _AdditionalLightsSpotDir, _MainLightColor, _MainLightLayerMask, _MainLightOcclusionProbesChannel, _MainLightPosition
+
+### InitParams  : Il2CppSystem.ValueType
+  properties: clusteredRendering, lightCookieManager, tileSize
+  methods:    GetDefault
+
+### ShaderConstants  : Il2CppSystem.Object
+  properties: _ChannelMixerBlue, _ChannelMixerGreen, _ChannelMixerRed, _ColorBalance, _ColorFilter, _CurveBlue, _CurveGreen, _CurveHueVsHue, _CurveHueVsSat, _CurveLumVsSat, _CurveMaster, _CurveRed, _CurveSatVsSat, _Gain, _Gamma, _Highlights, _HueSatCon, _Lift, _Lut_Params, _Midtones, _ShaHiLimits, _Shadows, _SplitHighlights, _SplitShadows
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__12_0
+
+### MainLightShadowConstantBuffer  : Il2CppSystem.Object
+  properties: _CascadeShadowSplitSphereRadii, _CascadeShadowSplitSpheres0, _CascadeShadowSplitSpheres1, _CascadeShadowSplitSpheres2, _CascadeShadowSplitSpheres3, _ShadowOffset0, _ShadowOffset1, _ShadowOffset2, _ShadowOffset3, _ShadowParams, _ShadowmapSize, _WorldToShadow
+
+### MaterialLibrary  : Il2CppSystem.Object
+  properties: bloom, bokehDepthOfField, cameraMotionBlur, easu, finalPass, gaussianDepthOfField, lensFlareDataDriven, paniniProjection, scalingSetup, stopNaN, subpixelMorphologicalAntialiasing, uber
+  methods:    Cleanup, Load
+
+### ShaderConstants  : Il2CppSystem.Object
+  properties: _AreaTexture, _BlendTexture, _BloomMipDown, _BloomMipUp, _Bloom_Params, _Bloom_RGBM, _Bloom_Texture, _BokehConstants, _BokehKernel, _Chroma_Params, _CoCParams, _ColorTexture, _Distortion_Params1, _Distortion_Params2, _DofTexture, _DownSampleScaleFactor, _EdgeTexture, _FlareColorValue, _FlareData0, _FlareData1, _FlareData2, _FlareData3, _FlareData4, _FlareData5, _FlareOcclusionIndex, _FlareOcclusionTex, _FlareTex, _FullCoCTexture, _FullscreenProjMat, _HalfCoCTexture, _InternalLut, _LensDirt_Intensity, _LensDirt_Params, _LensDirt_Texture, _Lut_Params, _Metrics, _Params, _PingTexture, _PongTexture, _ScalingSetupTexture, _SearchTexture, _SourceTexLowMip, _StencilMask, _StencilRef, _TempTarget, _TempTarget2, _UpscaledTexture, _UserLut, _UserLut_Params, _Vignette_Params1, _Vignette_Params2
+
+### __c__DisplayClass59_0  : Il2CppSystem.ValueType
+  properties: __4__this, amountOfPassesRemaining, cmd, destination, source, tempTarget2Used, tempTargetUsed
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__68_0
+
+### SwapBuffer  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### ValueTypeNPrivateSealed0  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### ValueTypeNPrivateSealed1  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### ValueTypeNPrivateSealed2  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### ValueTypeNPrivateSealed3  : System.ValueType
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__0_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__3_0, __9__3_1, __9__3_2
+
+### __c__DisplayClass0_0  : Il2CppSystem.Object
+  properties: data
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__0_1
+
+### __c__DisplayClass1_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass0_0  : Il2CppSystem.Object
+  properties: data
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__0_1, __9__1_1, __9__2_1, __9__2_4, __9__3_1, __9__3_4
+
+### __c__DisplayClass1_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass2_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass3_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass4_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass5_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass6_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass7_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass8_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass9_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass2_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass0_0  : Il2CppSystem.Object
+  properties: data
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__0_1, __9__1_2, __9__1_3, __9__2_1, __9__2_4, __9__8_1, __9__8_4, __9__9_1
+
+### __c__DisplayClass1_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass2_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass3_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass4_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass5_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass6_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass7_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass8_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass9_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass10_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass11_0  : Il2CppSystem.Object
+  properties: data
+
+### __c__DisplayClass2_0  : Il2CppSystem.Object
+  properties: data
+
+### Enumerator  : Il2CppSystem.Object
+  properties: Current, _Current_k__BackingField, m_CommandBuffer, m_Context, m_DebugHandler, m_Index, m_NumIterations
+  methods:    Dispose, MoveNext, Reset, System_Collections_IEnumerator_get_Current
+
+### RenderBlock  : Il2CppSystem.Object
+  properties: afterRendering, beforeRendering, k_Name, mainRenderingOpaque, mainRenderingTransparent
+
+### RenderPass  : Il2CppSystem.Object
+  properties: configure, k_Name
+
+### BlockRange  : System.ValueType
+  properties: Current
+  methods:    BoxIl2CppObject, Dispose, GetEnumerator, MoveNext
+
+### AtlasSettings  : System.ValueType
+  properties: isPow2, isSquare
+  methods:    BoxIl2CppObject
+
+### __c  : Il2CppSystem.Object
+  properties: __9
+
+### Pipeline  : Il2CppSystem.Object
+  properties: beginCameraRendering, beginContextRendering, endCameraRendering, endContextRendering, getMainLightIndex, getPerObjectLightFlags, initializeAdditionalCameraData, initializeCameraData, initializeLightData, initializeRenderingData, initializeShadowData, initializeStackedCameraData, k_Name, setupPerFrameShaderConstants
+
+### Renderer  : Il2CppSystem.Object
+  properties: k_Name, setup, setupCullingParameters
+
+### Context  : Il2CppSystem.Object
+  properties: k_Name, submit
+
+### XR  : Il2CppSystem.Object
+  properties: mirrorView
