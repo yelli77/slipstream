@@ -56,7 +56,25 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public class BillboardBehavior : MonoBehaviour
         {
-            // Billboard is static, rotation set at creation to face outward from gate.
+            private Camera mainCam = null;
+
+            public void Awake()
+            {
+                mainCam = Camera.main;
+            }
+
+            public void Update()
+            {
+                if (mainCam == null)
+                    mainCam = Camera.main;
+                if (mainCam == null) return;
+
+                Vector3 dir = transform.position - mainCam.transform.position;
+                if (dir.sqrMagnitude > 0.01f)
+                {
+                    transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+                }
+            }
         }
 
         private class GateBillboard
@@ -250,9 +268,6 @@ namespace StarTruckMP.StarTruckClient
 
             Vector3 corridorPoint = zone.transform.position + towardPlayer * BillboardDistance;
             root.transform.position = corridorPoint + sideAxis * SideOffset + Vector3.up * HeightOffset;
-            // Face outward from gate — approaching players see board front-on
-            root.transform.rotation = Quaternion.LookRotation(-zone.transform.forward, Vector3.up);
-
             var cam = Camera.main;
             float camDist = cam != null ? Vector3.Distance(root.transform.position, cam.transform.position) : -1f;
             StarTruckMP.Log.LogInfo($"WarpGateBillboard: placed '{gateName}' at {root.transform.position}, camDist={camDist:F0}m, gatePos={zone.transform.position}");
@@ -559,13 +574,8 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 gateWorldPos = bb.gateZone.transform.position;
                     float distToCamera = Vector3.Distance(camPos, gateWorldPos);
 
-                    if (distToCamera > MaxVisibleDistance)
-                    {
-                        if (bb.rootObj.activeSelf) bb.rootObj.SetActive(false);
-                        continue;
-                    }
-
-                    if (!bb.rootObj.activeSelf) bb.rootObj.SetActive(true);
+                    // Billboard stays visible at all distances — WorldSpace Canvas
+                    // handles its own visibility via camera clipping.
 
                     if (doTextUpdate)
                     {
