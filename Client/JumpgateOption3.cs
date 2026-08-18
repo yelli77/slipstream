@@ -21,7 +21,7 @@ namespace StarTruckMP.StarTruckClient
         private static bool sectorBillboardAvailable = false;
 
         // ─── Constants ───
-        private const float SideOffset = 57f;      // further to the side, spaced past Option 2 with a 4m gap (board is 8m wide)
+        private const float SideOffset = 300f;     // meters to the side, further out than Option 2
         private const float HeightOffset = 8f;
         private const float BillboardWidth = 8f;   // meters in world space
         private const float BillboardHeight = 6f;

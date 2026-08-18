@@ -22,7 +22,7 @@ namespace StarTruckMP.StarTruckClient
         private static bool initialized = false;
 
         // ─── Constants ───
-        private const float SideOffset = 15f;      // meters to the side of gate (board is 20m wide, centered here)
+        private const float SideOffset = 100f;     // meters to the side of gate, well clear of the gate ring
         private const float HeightOffset = 8f;     // meters above gate
         private const float SignWidth = 2000f;     // canvas units
         private const float SignHeight = 3000f;    // canvas units
