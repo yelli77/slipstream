@@ -811,6 +811,8 @@ namespace StarTruckMP.StarTruckClient
         /// the player has not selected a route at all, in which case they should not show
         /// up on any departure board.
         /// </summary>
+        private static float lastDestGateDiagLog = 0f;
+
         public static void DetectDestinationGates()
         {
             try
@@ -818,10 +820,17 @@ namespace StarTruckMP.StarTruckClient
                 if (!client.IsConnected) return;
 
                 string gateId = "";
+                string destSector = "";
+                bool gspFound = false;
                 try
                 {
                     var gsp = GameStatePersistence.instance;
-                    if (gsp != null) gateId = gsp.destinationEntryGate;
+                    if (gsp != null)
+                    {
+                        gspFound = true;
+                        gateId = gsp.destinationEntryGate;
+                        destSector = gsp.destinationSector;
+                    }
                 }
                 catch (System.Exception ex)
                 {
@@ -829,6 +838,29 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 currentDestinationGateId = gateId ?? "";
+
+                // Throttled diagnostics: dump raw values + every gate's entryGateId in scene
+                // so we can compare formats if the board doesn't pick up the local player.
+                float now = Time.realtimeSinceStartup;
+                if (now - lastDestGateDiagLog > 5f)
+                {
+                    lastDestGateDiagLog = now;
+                    StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG: gspFound={gspFound} destinationEntryGate='{gateId}' destinationSector='{destSector}' -> currentDestinationGateId='{currentDestinationGateId}'");
+                    try
+                    {
+                        var allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>();
+                        if (allGates != null)
+                        {
+                            foreach (var z in allGates)
+                            {
+                                if (z == null || z.gameObject == null) continue;
+                                string eid = JumpgateUtils.GetEntryGateIdForZone(z);
+                                StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG: scene gate entryGateId='{eid}' (match={eid == currentDestinationGateId})");
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
             catch { }
         }
