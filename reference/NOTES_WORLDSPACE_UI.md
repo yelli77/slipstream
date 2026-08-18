@@ -117,3 +117,32 @@ past — the camera-facing "billboard" trick above is the WRONG tool. Don't add
    rebind, active-state/alpha reset, `Canvas.ForceUpdateCanvases()`, and
    fontSize tuned in the low hundreds) still applies — that part was never the
    rotation-related issue.
+
+## Consider reusing the game's own native sign prefabs instead of building one
+
+`reference/api-dump/Assembly-CSharp.txt` has two native MonoBehaviours that
+ARE literal in-world signs, already styled to match the game's own visual
+language (this is what the reference screenshot's road sign actually is):
+
+```
+### CargoBay : TriggerZoneFullyInside
+  properties: ... bayIdSign ...
+
+### SpeedTrap : UnityEngine.MonoBehaviour
+  properties: ... m_signText, m_signMaintainedSpeedColor, m_signExceededSpeedColor ...
+```
+
+`SpeedTrap.m_signText` in particular looks like a direct handle to a native
+sign's text field with built-in color-state support (maintained/exceeded).
+Before building a from-scratch Canvas/TMP or mesh sign, it's worth spending
+15 minutes checking (via reflection, `field.FieldType`) what type
+`m_signText` actually is and whether the sign GameObject it lives on can be
+`Instantiate()`-d standalone and repurposed — that would automatically match
+the game's native sign art/material instead of hand-rolling a look-alike,
+and would sidestep the URP shader/TMP-clone issues in this doc entirely,
+since it's the game's own already-working sign object.
+
+Not yet attempted — this is a lead, not a verified solution. If it turns out
+`m_signText`/the sign GameObject depend on private detection/trigger logic
+that's awkward to instantiate standalone, fall back to the from-scratch
+recipe above.
