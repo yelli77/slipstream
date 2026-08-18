@@ -22,7 +22,7 @@ namespace StarTruckMP.StarTruckClient
         private static float nextUpdateTime = 0f;
         private static readonly float UpdateInterval = 0.5f;
         private static readonly float BillboardDistance = 50f;
-        private static readonly float SideOffset = 25f;   // pushes the board off the direct flight line
+        private static readonly float SideOffset = 125f;   // pushes the board off the direct flight line
         private static readonly float HeightOffset = 12f; // and up, like a roadside/gantry sign
         private static readonly float MaxVisibleDistance = 5000f;
 
@@ -320,7 +320,7 @@ namespace StarTruckMP.StarTruckClient
                 nameLabel.text = $"EXIT GATE: {gateName}";
                 nameLabel.fontSize = 260f;
                 nameLabel.color = GateNameColor;
-                nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
+                nameLabel.alignment = TMPro.TextAlignmentOptions.Right;
                 nameLabel.raycastTarget = false;
                 if (nameLabel.font == null && sourceTMP.font != null)
                     nameLabel.font = sourceTMP.font;
@@ -346,7 +346,7 @@ namespace StarTruckMP.StarTruckClient
                 sepTMP.text = "————————————";
                 sepTMP.fontSize = 140f;
                 sepTMP.color = SepColor;
-                sepTMP.alignment = TMPro.TextAlignmentOptions.Center;
+                sepTMP.alignment = TMPro.TextAlignmentOptions.Right;
                 sepTMP.raycastTarget = false;
                 if (sepTMP.font == null && sourceTMP.font != null)
                     sepTMP.font = sourceTMP.font;
@@ -372,7 +372,7 @@ namespace StarTruckMP.StarTruckClient
                 contentTMP.text = "FREE";
                 contentTMP.fontSize = 260f;
                 contentTMP.color = FreeColor;
-                contentTMP.alignment = TMPro.TextAlignmentOptions.Center;
+                contentTMP.alignment = TMPro.TextAlignmentOptions.Right;
                 contentTMP.raycastTarget = false;
                 if (contentTMP.font == null && sourceTMP.font != null)
                     contentTMP.font = sourceTMP.font;
