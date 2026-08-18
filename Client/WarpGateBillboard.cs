@@ -56,29 +56,7 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public class BillboardBehavior : MonoBehaviour
         {
-            private Camera mainCam = null;
-
-            private bool logged = false;
-            public void Awake()
-            {
-                mainCam = Camera.main;
-                var canvas = GetComponent<Canvas>();
-                StarTruckMP.Log.LogInfo($"WarpGateBillboard.BillboardBehavior.Awake: cam={mainCam != null}, canvas={canvas != null}, renderMode={canvas?.renderMode}, pos={transform.position}");
-                logged = true;
-            }
-
-            public void Update()
-            {
-                if (mainCam == null)
-                    mainCam = Camera.main;
-                if (mainCam == null) return;
-
-                Vector3 dir = transform.position - mainCam.transform.position;
-                if (dir.sqrMagnitude > 0.01f)
-                {
-                    transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
-                }
-            }
+            // Billboard is static, rotation set at creation to face outward from gate.
         }
 
         private class GateBillboard
@@ -272,6 +250,9 @@ namespace StarTruckMP.StarTruckClient
 
             Vector3 corridorPoint = zone.transform.position + towardPlayer * BillboardDistance;
             root.transform.position = corridorPoint + sideAxis * SideOffset + Vector3.up * HeightOffset;
+            // Face outward from gate — approaching players see board front-on
+            root.transform.rotation = Quaternion.LookRotation(-zone.transform.forward, Vector3.up);
+
             var cam = Camera.main;
             float camDist = cam != null ? Vector3.Distance(root.transform.position, cam.transform.position) : -1f;
             StarTruckMP.Log.LogInfo($"WarpGateBillboard: placed '{gateName}' at {root.transform.position}, camDist={camDist:F0}m, gatePos={zone.transform.position}");
@@ -285,7 +266,7 @@ namespace StarTruckMP.StarTruckClient
 
             // Canvas RectTransform sizing: 4500x7500 canvas units, scaled to 0.01 = 45m x 75m world
             RectTransform canvasRT = root.GetComponent<RectTransform>();
-            canvasRT.sizeDelta = new Vector2(4000f, 6000f);
+            canvasRT.sizeDelta = new Vector2(2000f, 6000f);
             root.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
             // Background Image (not Quad)
@@ -296,7 +277,7 @@ namespace StarTruckMP.StarTruckClient
             bgRT.anchorMax = Vector2.one;
             bgRT.offsetMin = Vector2.zero;
             bgRT.offsetMax = Vector2.zero;
-            bgRT.sizeDelta = new Vector2(4000f, 6000f);
+            bgRT.sizeDelta = new Vector2(2000f, 6000f);
             var bgImg = bg.AddComponent<UnityEngine.UI.Image>();
             bgImg.color = BgColor;
             bgImg.raycastTarget = false;
@@ -310,7 +291,7 @@ namespace StarTruckMP.StarTruckClient
                 nameRT.anchorMin = new Vector2(0.5f, 0.5f);
                 nameRT.anchorMax = new Vector2(0.5f, 0.5f);
                 nameRT.anchoredPosition = new Vector2(0f, 1800f);
-                nameRT.sizeDelta = new Vector2(3800f, 1000f);
+                nameRT.sizeDelta = new Vector2(1900f, 1000f);
                 nameRT.localScale = Vector3.one;
             }
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -336,7 +317,7 @@ namespace StarTruckMP.StarTruckClient
                 sepRT.anchorMin = new Vector2(0.5f, 0.5f);
                 sepRT.anchorMax = new Vector2(0.5f, 0.5f);
                 sepRT.anchoredPosition = new Vector2(0f, 1100f);
-                sepRT.sizeDelta = new Vector2(3800f, 400f);
+                sepRT.sizeDelta = new Vector2(1900f, 400f);
                 sepRT.localScale = Vector3.one;
             }
             var sepTMP = sepObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -362,7 +343,7 @@ namespace StarTruckMP.StarTruckClient
                 contentRT.anchorMin = new Vector2(0.5f, 0.5f);
                 contentRT.anchorMax = new Vector2(0.5f, 0.5f);
                 contentRT.anchoredPosition = new Vector2(0f, -400f);
-                contentRT.sizeDelta = new Vector2(3800f, 3600f);
+                contentRT.sizeDelta = new Vector2(1900f, 3600f);
                 contentRT.localScale = Vector3.one;
             }
             var contentTMP = contentObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -488,7 +469,7 @@ namespace StarTruckMP.StarTruckClient
                     sb.AppendLine($"... +{players.Count - 10} more");
 
                 bb.contentLabel.text = sb.ToString().TrimEnd();
-                bb.contentLabel.fontSize = 300f;
+                bb.contentLabel.fontSize = 600f;
                 bb.contentLabel.color = PlayerColor;
             }
 
