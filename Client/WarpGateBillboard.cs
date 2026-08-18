@@ -24,7 +24,6 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float BillboardDistance = 50f;
         private static readonly float SideOffset = 125f;   // pushes the board off the direct flight line
         private static readonly float HeightOffset = 12f; // and up, like a roadside/gantry sign
-        private static readonly float MaxVisibleDistance = 5000f;
 
         // How far / how aligned with a gate an NPC (or player) truck has to be
         // before it counts as "heading to" that gate. Mirrors Client.DetectDestinationGates().
@@ -367,18 +366,40 @@ namespace StarTruckMP.StarTruckClient
             Quaternion boardRotation = Quaternion.LookRotation(-zone.transform.forward, Vector3.up);
             root.transform.rotation = boardRotation;
 
-            // --- Back-to-back duplicate: second canvas flipped 180 degrees ---
-            // A WorldSpace Canvas is a flat plane — invisible from behind. By placing
-            // an identical copy rotated 180 degrees at the same position, the billboard
-            // is readable from both approach directions.
-            GameObject mirror = UnityEngine.Object.Instantiate(root, root.transform.parent);
-            mirror.name = $"Billboard_{gateName}_Mirror";
-            mirror.transform.position = root.transform.position;
-            mirror.transform.rotation = boardRotation * Quaternion.Euler(0f, 180f, 0f);
-            // Flip the canvas scale Z to reverse the face direction properly
-            var mirrorScale = mirror.transform.localScale;
-            mirrorScale.z = -Mathf.Abs(mirrorScale.z);
-            mirror.transform.localScale = mirrorScale;
+            // --- 3D billboard backing: solid box behind the canvas ---
+            // Gives the billboard physical presence (player can't fly through),
+            // looks like a real advertising board, and provides a visible backing
+            // so the billboard is readable from behind the canvas plane too.
+            GameObject backing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            backing.name = $"BillboardBacking_{gateName}";
+            backing.transform.SetParent(root.transform, false);
+            // Size in canvas-local units: 3500 wide, 6000 tall, 50 deep (thin slab)
+            backing.transform.localScale = new Vector3(3.5f, 6.0f, 0.05f);
+            // Slight offset behind the canvas so it doesn't z-fight
+            backing.transform.localPosition = new Vector3(0f, 0f, 0.02f);
+            // Dark semi-transparent material
+            var backingRenderer = backing.GetComponent<UnityEngine.MeshRenderer>();
+            if (backingRenderer != null)
+            {
+                // Use a material instance so we don't affect other objects
+                var mat = new UnityEngine.Material(UnityEngine.Shader.Find("Standard"));
+                if (mat.shader != null)
+                {
+                    mat.color = BgColor;
+                    mat.SetFloat("_Mode", 3f); // Transparent mode
+                    mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                    mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                    mat.SetInt("_ZWrite", 0);
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.EnableKeyword("_ALPHABLEND_ON");
+                    mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                    mat.renderQueue = 3000;
+                }
+                backingRenderer.material = mat;
+            }
+            // Remove the auto-added collider — we don't want physics interaction
+            var autoCollider = backing.GetComponent<UnityEngine.Collider>();
+            if (autoCollider != null) UnityEngine.Object.Destroy(autoCollider);
 
             if (!diagLogged)
             {
