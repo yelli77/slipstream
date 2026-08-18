@@ -23,7 +23,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 9000f;    // canvas units (9000x9000)
+        private const float SignWidth = 11000f;   // canvas units - widened so DISTANCE fits (was 9000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -203,9 +203,75 @@ namespace StarTruckMP.StarTruckClient
             }
             catch { }
 
-            // Sort by distance (closest first)
-            entries.Sort((a, b) => a.distanceFromGate.CompareTo(b.distanceFromGate));
+            // POS 1 is 'sticky': the player who was FIRST to come within arrival range of
+            // this gate keeps the top slot even if someone else is currently physically
+            // closer. Everyone else (and POS 1 itself, if nobody has arrived yet) is
+            // ordered by current distance.
+            ApplyStickyFirstArrivalOrdering(entryGateId, entries);
             return entries;
+        }
+
+        // Per-gate: playerName -> the Time.realtimeSinceStartup at which that player was
+        // FIRST seen within ArrivalThresholdMeters of this gate. Drives the sticky POS-1 rule.
+        private static readonly Dictionary<string, Dictionary<string, float>> arrivalTimes = new();
+        private const float ArrivalThresholdMeters = 500f;
+
+        private static void ApplyStickyFirstArrivalOrdering(string gateEntryId, List<PlayerEntry> entries)
+        {
+            if (!arrivalTimes.TryGetValue(gateEntryId, out var gateArrivals))
+            {
+                gateArrivals = new Dictionary<string, float>();
+                arrivalTimes[gateEntryId] = gateArrivals;
+            }
+
+            float now = Time.realtimeSinceStartup;
+            var currentKeys = new HashSet<string>();
+            foreach (var e in entries)
+            {
+                currentKeys.Add(e.playerName);
+                if (e.distanceFromGate < ArrivalThresholdMeters && !gateArrivals.ContainsKey(e.playerName))
+                {
+                    gateArrivals[e.playerName] = now;
+                }
+            }
+
+            // Forget players no longer registered to this gate, so a later unrelated
+            // player can't inherit a stale arrival slot.
+            if (gateArrivals.Count > 0)
+            {
+                List<string> stale = null;
+                foreach (var key in gateArrivals.Keys)
+                {
+                    if (!currentKeys.Contains(key))
+                    {
+                        stale ??= new List<string>();
+                        stale.Add(key);
+                    }
+                }
+                if (stale != null)
+                    foreach (var key in stale) gateArrivals.Remove(key);
+            }
+
+            // Default order: closest first.
+            entries.Sort((a, b) => a.distanceFromGate.CompareTo(b.distanceFromGate));
+
+            // Find whoever arrived earliest (if anyone has arrived at all) and bump them to POS 1.
+            PlayerEntry firstArrived = null;
+            float earliestTime = float.MaxValue;
+            foreach (var e in entries)
+            {
+                if (gateArrivals.TryGetValue(e.playerName, out var t) && t < earliestTime)
+                {
+                    earliestTime = t;
+                    firstArrived = e;
+                }
+            }
+
+            if (firstArrived != null && entries.Count > 0 && entries[0] != firstArrived)
+            {
+                entries.Remove(firstArrived);
+                entries.Insert(0, firstArrived);
+            }
         }
 
         /// <summary>
@@ -223,10 +289,21 @@ namespace StarTruckMP.StarTruckClient
         /// line 2 is a table header (POS / DRIVER / DISTANCE), followed by one row per
         /// player currently registered to this gate, ranked by distance.
         /// </summary>
+        // Hard character cap for driver names so a long name can never push the DISTANCE
+        // column (or, for POS 1's enlarged text, the board edge) out of alignment.
+        private const int DriverNameMaxChars = 6;
+
+        private static string TruncateName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            return name.Length > DriverNameMaxChars ? name.Substring(0, DriverNameMaxChars) : name;
+        }
+
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine("=== DEPARTURE GATE ===");
+            // Center just the title line; the table below stays left-aligned/monospaced.
+            sb.AppendLine("<align=center>=== DEPARTURE GATE ===</align>");
 
             // <mspace> forces fixed-width character spacing so the padded columns
             // actually line up despite the proportional font.
@@ -248,7 +325,10 @@ namespace StarTruckMP.StarTruckClient
                     else
                         distText = $"{entry.distanceFromGate / 1000f:F1}km";
 
-                    string driverPadded = entry.playerName.PadRight(18);
+                    // Always truncate to DriverNameMaxChars (6) first, THEN pad - a name
+                    // longer than 6 chars must never reach the column math below.
+                    string driverTrunc = TruncateName(entry.playerName);
+
                     // Highlight the top-of-board entry (POS 1): 3x size, yellow.
                     // NOTE: TMP's <mspace> fixes each character's advance width using the
                     // point size in effect when the tag was opened - it does NOT recompute
@@ -259,9 +339,23 @@ namespace StarTruckMP.StarTruckClient
                     // Fix: close the outer mspace, open a fresh one INSIDE the enlarged
                     // <size> span (so 0.6em is now evaluated at the 300% point size), then
                     // reopen the outer mspace afterwards so the DISTANCE column still lines up.
-                    string driverCell = (pos == 1)
-                        ? $"</mspace><size=300%><color=#FFE600><mspace=0.6em>{driverPadded}</mspace></color></size><mspace=0.6em>"
-                        : driverPadded;
+                    //
+                    // Column-width math: the DRIVER column is DriverNameMaxChars*3 = 18
+                    // 'normal' character-widths wide (matches the 18-wide PadRight used for
+                    // every other row). POS 1's name is padded to EXACTLY 6 chars (not more)
+                    // before being tripled in size, so 6 chars * 3x size = 18 normal-width
+                    // units - filling that budget exactly, so DISTANCE lines up on every row
+                    // regardless of how long/short the highlighted name is.
+                    string driverCell;
+                    if (pos == 1)
+                    {
+                        string driverPos1 = driverTrunc.PadRight(DriverNameMaxChars);
+                        driverCell = $"</mspace><size=300%><color=#FFE600><mspace=0.6em>{driverPos1}</mspace></color></size><mspace=0.6em>";
+                    }
+                    else
+                    {
+                        driverCell = driverTrunc.PadRight(18);
+                    }
                     sb.AppendLine(FormatRow(pos.ToString(), driverCell, distText));
                     pos++;
                 }
@@ -322,7 +416,7 @@ namespace StarTruckMP.StarTruckClient
             panelRT.offsetMax = Vector2.zero;
             panelRT.localScale = Vector3.one;
             var panelImg = panelObj.AddComponent<UnityEngine.UI.Image>();
-            panelImg.color = new Color(0.05f, 0.05f, 0.08f, 0.85f);
+            panelImg.color = new Color(0.05f, 0.05f, 0.08f, 0.35f);  // much more transparent than before (was 0.85)
             panelObj.transform.SetAsFirstSibling();
 
             // ── Clone TMP from source ──
