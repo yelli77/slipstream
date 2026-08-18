@@ -210,10 +210,12 @@ namespace StarTruckMP.StarTruckClient
 
         /// <summary>
         /// Build one fixed-width table row (monospaced via TMP's &lt;mspace&gt; tag).
+        /// `driverCell` must already be padded/formatted (plain text, or already wrapped
+        /// in rich-text tags with the padding applied to the plain text underneath).
         /// </summary>
-        private static string FormatRow(string pos, string driver, string distance)
+        private static string FormatRow(string pos, string driverCell, string distance)
         {
-            return pos.PadRight(4) + driver.PadRight(18) + distance;
+            return pos.PadRight(4) + driverCell + distance;
         }
 
         /// <summary>
@@ -229,7 +231,7 @@ namespace StarTruckMP.StarTruckClient
             // <mspace> forces fixed-width character spacing so the padded columns
             // actually line up despite the proportional font.
             sb.Append("<mspace=0.6em>");
-            sb.AppendLine(FormatRow("POS", "DRIVER", "DISTANCE"));
+            sb.AppendLine(FormatRow("POS", "DRIVER".PadRight(18), "DISTANCE"));
 
             if (entries.Count == 0)
             {
@@ -246,8 +248,12 @@ namespace StarTruckMP.StarTruckClient
                     else
                         distText = $"{entry.distanceFromGate / 1000f:F1}km";
 
-                    string driverName = entry.playerName;
-                    sb.AppendLine(FormatRow(pos.ToString(), driverName, distText));
+                    string driverPadded = entry.playerName.PadRight(18);
+                    // Highlight the top-of-board entry (POS 1): 3x size, yellow.
+                    string driverCell = (pos == 1)
+                        ? $"<size=300%><color=#FFE600>{driverPadded}</color></size>"
+                        : driverPadded;
+                    sb.AppendLine(FormatRow(pos.ToString(), driverCell, distText));
                     pos++;
                 }
             }

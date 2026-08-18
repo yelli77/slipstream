@@ -804,79 +804,31 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Auto-detect which warp gate each player is heading toward.
-        /// Uses proximity (1500m) + velocity direction (dot product > 0.3 toward gate).
-        /// Sets currentDestinationGateId for local player.
+        /// Reads the player's ACTUAL selected route from the galactic map (not a
+        /// proximity/velocity guess). GameStatePersistence.instance.destinationEntryGate
+        /// is the game's own "which gate am I currently making for" field, kept in sync
+        /// with the route the player picked on the map (JourneyTracker). Empty/null means
+        /// the player has not selected a route at all, in which case they should not show
+        /// up on any departure board.
         /// </summary>
         public static void DetectDestinationGates()
         {
             try
             {
                 if (!client.IsConnected) return;
-                if (myTruck == null) return;
 
-                WarpTriggerZone[] allGates;
-                try { allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>(); }
-                catch { return; }
-                if (allGates == null || allGates.Length == 0)
+                string gateId = "";
+                try
                 {
-                    currentDestinationGateId = "";
-                    return;
+                    var gsp = GameStatePersistence.instance;
+                    if (gsp != null) gateId = gsp.destinationEntryGate;
+                }
+                catch (System.Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"DetectDestinationGates: GameStatePersistence read failed: {ex.Message}");
                 }
 
-                Vector3 myPos = myTruck.transform.position;
-                Vector3 myVel = myTruckRigid != null ? myTruckRigid.velocity : Vector3.zero;
-                float bestScore = -1f;
-                string bestGateId = "";
-
-                foreach (var zone in allGates)
-                {
-                    if (zone == null || zone.gameObject == null) continue;
-                    Vector3 gatePos = zone.transform.position;
-                    float dist = Vector3.Distance(myPos, gatePos);
-                    if (dist > 1500f) continue;
-
-                    Vector3 toGate = (gatePos - myPos).normalized;
-                    float dot = Vector3.Dot(myVel.normalized, toGate);
-                    if (dot < 0.3f) continue;
-
-                    float score = (1f - dist / 1500f) * 0.5f + dot * 0.5f;
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        WarpGate gateComp = null;
-                        try { gateComp = zone.GetComponent<WarpGate>(); } catch { }
-                        if (gateComp == null) try { gateComp = zone.GetComponentInParent<WarpGate>(); } catch { }
-                        if (gateComp != null)
-                        {
-                            try
-                            {
-                                var fi = gateComp.GetType().GetField("entryGateId",
-                                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                                if (fi != null) bestGateId = fi.GetValue(gateComp) as string;
-                                if (string.IsNullOrEmpty(bestGateId))
-                                {
-                                    var pi = gateComp.GetType().GetProperty("entryGateId",
-                                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                                    if (pi != null) bestGateId = pi.GetValue(gateComp) as string;
-                                }
-                            }
-                            catch { }
-                        }
-                        if (string.IsNullOrEmpty(bestGateId))
-                        {
-                            bestGateId = zone.gameObject.name;
-                            int ci = bestGateId.IndexOf("(Clone)");
-                            if (ci > 0) bestGateId = bestGateId.Substring(0, ci).Trim();
-                        }
-                    }
-                }
-
-                // Only update when a qualifying gate is found — don't clear on
-                // every frame so the billboard keeps showing (Du) even when
-                // the truck slows down or drifts off the direct approach vector.
-                if (!string.IsNullOrEmpty(bestGateId))
-                    currentDestinationGateId = bestGateId;
+                currentDestinationGateId = gateId ?? "";
             }
             catch { }
         }
