@@ -159,7 +159,13 @@ namespace StarTruckMP.StarTruckClient
                     var p = kv.Value;
                     if (p.destinationGateId != entryGateId) continue;
 
-                    float dist = Vector3.Distance(gateWorldPos, p.truckTrans.Pos);
+                    // p.truckTrans.Pos is the network-synced ABSOLUTE position (origin + local),
+                    // while gateWorldPos is the local/recentered scene position — convert to the
+                    // same frame before comparing, same bug class as the local-player distance below.
+                    Vector3 remoteLocalPos = StarTruckClient.floatingOrigin != null
+                        ? p.truckTrans.Pos - StarTruckClient.floatingOrigin.m_currentOrigin
+                        : p.truckTrans.Pos;
+                    float dist = Vector3.Distance(gateWorldPos, remoteLocalPos);
                     entries.Add(new PlayerEntry
                     {
                         playerName = p.Name ?? $"Player_{kv.Key}",
@@ -180,9 +186,12 @@ namespace StarTruckMP.StarTruckClient
                     && StarTruckClient.currentDestinationGateId == entryGateId
                     && StarTruckClient.myTruck != null)
                 {
-                    Vector3 myPos = StarTruckClient.floatingOrigin != null
-                        ? StarTruckClient.floatingOrigin.m_currentOrigin + StarTruckClient.myTruck.transform.position
-                        : StarTruckClient.myTruck.transform.position;
+                    // NOTE: gateWorldPos (zone.transform.position) is already in the local/
+                    // recentered scene frame, same as myTruck.transform.position — do NOT add
+                    // floatingOrigin.m_currentOrigin here, that mixes local and absolute coordinate
+                    // spaces and produced a bogus constant offset (~size of the origin shift) in the
+                    // displayed distance, e.g. showing "2.5 km" while standing right at the gate.
+                    Vector3 myPos = StarTruckClient.myTruck.transform.position;
                     float dist = Vector3.Distance(gateWorldPos, myPos);
                     string myName = StarTruckClient.myPlayerName ?? "Du";
                     entries.Add(new PlayerEntry
