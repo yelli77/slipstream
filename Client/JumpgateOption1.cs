@@ -209,36 +209,50 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Build the multi-line departure text for a gate.
+        /// Build one fixed-width table row (monospaced via TMP's &lt;mspace&gt; tag).
+        /// </summary>
+        private static string FormatRow(string pos, string driver, string distance)
+        {
+            return pos.PadRight(4) + driver.PadRight(18) + distance;
+        }
+
+        /// <summary>
+        /// Build the multi-line departure text for a gate: header line 1 unchanged,
+        /// line 2 is a table header (POS / DRIVER / DISTANCE), followed by one row per
+        /// player currently registered to this gate, ranked by distance.
         /// </summary>
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("=== DEPARTURE GATE ===");
 
+            // <mspace> forces fixed-width character spacing so the padded columns
+            // actually line up despite the proportional font.
+            sb.Append("<mspace=0.6em>");
+            sb.AppendLine(FormatRow("POS", "DRIVER", "DISTANCE"));
+
             if (entries.Count == 0)
             {
-                sb.AppendLine("FREE");
-                return sb.ToString();
+                sb.AppendLine("---");
             }
-
-            int pos = 1;
-            foreach (var entry in entries)
+            else
             {
-                string distText;
-                if (entry.distanceFromGate < 1000f)
-                    distText = $"{entry.distanceFromGate:F0} m";
-                else
-                    distText = $"{entry.distanceFromGate / 1000f:F1} km";
+                int pos = 1;
+                foreach (var entry in entries)
+                {
+                    string distText;
+                    if (entry.distanceFromGate < 1000f)
+                        distText = $"{entry.distanceFromGate:F0}m";
+                    else
+                        distText = $"{entry.distanceFromGate / 1000f:F1}km";
 
-                if (entry.isLocal)
-                    sb.AppendLine($"(Du) --- {distText}");
-                else
-                    sb.AppendLine($"POS {pos}. {entry.playerName} --- {distText}");
-
-                pos++;
+                    string driverName = entry.isLocal ? "(Du)" : entry.playerName;
+                    sb.AppendLine(FormatRow(pos.ToString(), driverName, distText));
+                    pos++;
+                }
             }
 
+            sb.Append("</mspace>");
             return sb.ToString();
         }
 
