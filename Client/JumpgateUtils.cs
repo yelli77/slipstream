@@ -27,10 +27,6 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo($"JumpgateUtils: fi_entryGateId={(fi_entryGateId != null ? "found" : "null")}");
         }
 
-        /// <summary>
-        /// Get entryGateId from a WarpGate component via reflection.
-        /// Returns empty string if not found.
-        /// </summary>
         public static string GetEntryGateId(WarpGate gate)
         {
             if (gate == null) return "";
@@ -44,27 +40,37 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Detect which gate the local player is approaching, using the same
-        /// proximity + velocity logic as DetectDestinationGates() but independent
-        /// of currentDestinationGateId. Returns the entryGateId (or fallback name)
-        /// of the best gate, or empty string if none qualifies.
+        /// Detect which gate the local player is approaching.
+        /// Uses proximity + velocity vector (same as DetectDestinationGates).
+        /// Returns the gate ID (entryGateId or fallback name) or empty string.
         /// </summary>
         public static string DetectLocalPlayerApproachingGate()
         {
             try
             {
-                if (StarTruckClient.myTruck == null) return "";
+                if (StarTruckClient.myTruck == null)
+                {
+                    StarTruckMP.Log.LogInfo("JumpgateUtils.DetectLocalPlayerApproachingGate: myTruck=null");
+                    return "";
+                }
 
                 WarpTriggerZone[] allGates;
                 try { allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>(); }
                 catch { return ""; }
-                if (allGates == null || allGates.Length == 0) return "";
+                if (allGates == null || allGates.Length == 0)
+                {
+                    StarTruckMP.Log.LogInfo("JumpgateUtils.DetectLocalPlayerApproachingGate: no gates in scene");
+                    return "";
+                }
 
                 Vector3 myPos = StarTruckClient.floatingOrigin != null
                     ? StarTruckClient.floatingOrigin.m_currentOrigin + StarTruckClient.myTruck.transform.position
                     : StarTruckClient.myTruck.transform.position;
                 Vector3 myVel = StarTruckClient.myTruckRigid != null
                     ? StarTruckClient.myTruckRigid.velocity : Vector3.zero;
+                float mySpeed = myVel.magnitude;
+
+                StarTruckMP.Log.LogInfo($"JumpgateUtils: player at ({myPos.x:F0},{myPos.y:F0},{myPos.z:F0}) vel=({myVel.x:F0},{myVel.y:F0},{myVel.z:F0}) speed={mySpeed:F0} gates={allGates.Length}");
 
                 float bestScore = -1f;
                 string bestGateId = "";
@@ -74,11 +80,22 @@ namespace StarTruckMP.StarTruckClient
                     if (zone == null || zone.gameObject == null) continue;
                     Vector3 gatePos = zone.transform.position;
                     float dist = Vector3.Distance(myPos, gatePos);
-                    if (dist > 1500f) continue;
+                    if (dist > 1500f)
+                    {
+                        StarTruckMP.Log.LogInfo($"JumpgateUtils: gate '{zone.gameObject.name}' too far ({dist:F0}m > 1500)");
+                        continue;
+                    }
 
                     Vector3 toGate = (gatePos - myPos).normalized;
                     float dot = Vector3.Dot(myVel.normalized, toGate);
-                    if (dot < 0.3f) continue;
+
+                    StarTruckMP.Log.LogInfo($"JumpgateUtils: gate '{zone.gameObject.name}' dist={dist:F0}m dot={dot:F2} speed={mySpeed:F0}");
+
+                    if (dot < 0.3f)
+                    {
+                        StarTruckMP.Log.LogInfo($"JumpgateUtils: gate '{zone.gameObject.name}' dot={dot:F2} < 0.3 — REJECTED (not approaching)");
+                        continue;
+                    }
 
                     float score = (1f - dist / 1500f) * 0.5f + dot * 0.5f;
                     if (score > bestScore)
@@ -97,12 +114,18 @@ namespace StarTruckMP.StarTruckClient
                             if (ci > 0) gateId = gateId.Substring(0, ci).Trim();
                         }
                         bestGateId = gateId;
+                        StarTruckMP.Log.LogInfo($"JumpgateUtils: gate '{gateId}' score={score:F3} — new best");
                     }
                 }
 
+                StarTruckMP.Log.LogInfo($"JumpgateUtils: result = '{bestGateId}' (bestScore={bestScore:F3})");
                 return bestGateId;
             }
-            catch { return ""; }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateUtils.DetectLocalPlayerApproachingGate error: {ex}");
+                return "";
+            }
         }
     }
 }

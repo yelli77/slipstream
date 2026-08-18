@@ -137,10 +137,14 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogInfo($"JumpgateOption1: using fallback entryId '{entryId}' for gate '{zone.gameObject.name}'");
                     }
 
-                    // Find all players heading to this gate. Always build the board
-                    // even with 0 entries - a real airport departure board is always
-                    // there, it just shows nothing scheduled instead of vanishing.
+                    // Find all players heading to this gate
                     var playerEntries = CollectPlayersForGate(entryId, zone.transform.position);
+
+                    if (playerEntries.Count == 0)
+                    {
+                        // No players heading to this gate — skip
+                        continue;
+                    }
 
                     // Create the board
                     var board = CreateBoardForGate(entryId, zone.transform, playerEntries, sourceTMP);
