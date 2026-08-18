@@ -869,7 +869,11 @@ namespace StarTruckMP.StarTruckClient
                     }
                 }
 
-                currentDestinationGateId = bestGateId;
+                // Only update when a qualifying gate is found — don't clear on
+                // every frame so the billboard keeps showing (Du) even when
+                // the truck slows down or drifts off the direct approach vector.
+                if (!string.IsNullOrEmpty(bestGateId))
+                    currentDestinationGateId = bestGateId;
             }
             catch { }
         }
@@ -1011,6 +1015,7 @@ namespace StarTruckMP.StarTruckClient
             if (client.IsConnected)
             {
                 currentSector = GameObject.Find("[Sector]").scene.name;
+                currentDestinationGateId = "";  // reset on sector change
                 client.Send(Messages.updateSector(client.Id, currentSector));
                 StarTruckMP.Log.LogInfo($"Entered Sector: {currentSector}");
                 UpdateStatusOverlay();

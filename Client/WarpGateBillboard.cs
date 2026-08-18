@@ -285,7 +285,7 @@ namespace StarTruckMP.StarTruckClient
 
             // Canvas RectTransform sizing: 4500x7500 canvas units, scaled to 0.01 = 45m x 75m world
             RectTransform canvasRT = root.GetComponent<RectTransform>();
-            canvasRT.sizeDelta = new Vector2(2000f, 3000f);
+            canvasRT.sizeDelta = new Vector2(4000f, 6000f);
             root.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
 
             // Background Image (not Quad)
@@ -296,7 +296,7 @@ namespace StarTruckMP.StarTruckClient
             bgRT.anchorMax = Vector2.one;
             bgRT.offsetMin = Vector2.zero;
             bgRT.offsetMax = Vector2.zero;
-            bgRT.sizeDelta = new Vector2(2000f, 3000f);
+            bgRT.sizeDelta = new Vector2(4000f, 6000f);
             var bgImg = bg.AddComponent<UnityEngine.UI.Image>();
             bgImg.color = BgColor;
             bgImg.raycastTarget = false;
@@ -309,8 +309,8 @@ namespace StarTruckMP.StarTruckClient
             {
                 nameRT.anchorMin = new Vector2(0.5f, 0.5f);
                 nameRT.anchorMax = new Vector2(0.5f, 0.5f);
-                nameRT.anchoredPosition = new Vector2(0f, 900f);
-                nameRT.sizeDelta = new Vector2(1900f, 500f);
+                nameRT.anchoredPosition = new Vector2(0f, 1800f);
+                nameRT.sizeDelta = new Vector2(3800f, 1000f);
                 nameRT.localScale = Vector3.one;
             }
             var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -318,9 +318,9 @@ namespace StarTruckMP.StarTruckClient
             if (nameLabel != null)
             {
                 nameLabel.text = $"EXIT GATE: {gateName}";
-                nameLabel.fontSize = 260f;
+                nameLabel.fontSize = 520f;
                 nameLabel.color = GateNameColor;
-                nameLabel.alignment = TMPro.TextAlignmentOptions.Right;
+                nameLabel.alignment = TMPro.TextAlignmentOptions.Left;
                 nameLabel.raycastTarget = false;
                 if (nameLabel.font == null && sourceTMP.font != null)
                     nameLabel.font = sourceTMP.font;
@@ -335,8 +335,8 @@ namespace StarTruckMP.StarTruckClient
             {
                 sepRT.anchorMin = new Vector2(0.5f, 0.5f);
                 sepRT.anchorMax = new Vector2(0.5f, 0.5f);
-                sepRT.anchoredPosition = new Vector2(0f, 550f);
-                sepRT.sizeDelta = new Vector2(1900f, 200f);
+                sepRT.anchoredPosition = new Vector2(0f, 1100f);
+                sepRT.sizeDelta = new Vector2(3800f, 400f);
                 sepRT.localScale = Vector3.one;
             }
             var sepTMP = sepObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -344,9 +344,9 @@ namespace StarTruckMP.StarTruckClient
             if (sepTMP != null)
             {
                 sepTMP.text = "————————————";
-                sepTMP.fontSize = 140f;
+                sepTMP.fontSize = 280f;
                 sepTMP.color = SepColor;
-                sepTMP.alignment = TMPro.TextAlignmentOptions.Right;
+                sepTMP.alignment = TMPro.TextAlignmentOptions.Left;
                 sepTMP.raycastTarget = false;
                 if (sepTMP.font == null && sourceTMP.font != null)
                     sepTMP.font = sourceTMP.font;
@@ -361,8 +361,8 @@ namespace StarTruckMP.StarTruckClient
             {
                 contentRT.anchorMin = new Vector2(0.5f, 0.5f);
                 contentRT.anchorMax = new Vector2(0.5f, 0.5f);
-                contentRT.anchoredPosition = new Vector2(0f, -200f);
-                contentRT.sizeDelta = new Vector2(1900f, 1800f);
+                contentRT.anchoredPosition = new Vector2(0f, -400f);
+                contentRT.sizeDelta = new Vector2(3800f, 3600f);
                 contentRT.localScale = Vector3.one;
             }
             var contentTMP = contentObj.GetComponent<TMPro.TextMeshProUGUI>();
@@ -370,9 +370,9 @@ namespace StarTruckMP.StarTruckClient
             if (contentTMP != null)
             {
                 contentTMP.text = "FREE";
-                contentTMP.fontSize = 260f;
+                contentTMP.fontSize = 520f;
                 contentTMP.color = FreeColor;
-                contentTMP.alignment = TMPro.TextAlignmentOptions.Right;
+                contentTMP.alignment = TMPro.TextAlignmentOptions.Left;
                 contentTMP.raycastTarget = false;
                 if (contentTMP.font == null && sourceTMP.font != null)
                     contentTMP.font = sourceTMP.font;
@@ -488,7 +488,7 @@ namespace StarTruckMP.StarTruckClient
                     sb.AppendLine($"... +{players.Count - 10} more");
 
                 bb.contentLabel.text = sb.ToString().TrimEnd();
-                bb.contentLabel.fontSize = 150f;
+                bb.contentLabel.fontSize = 300f;
                 bb.contentLabel.color = PlayerColor;
             }
 
