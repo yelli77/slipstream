@@ -24,9 +24,9 @@ namespace StarTruckMP.StarTruckClient
         // ─── Constants ───
         private const float SideOffset = 100f;     // meters to the side of gate, well clear of the gate ring
         private const float HeightOffset = 8f;     // meters above gate
-        private const float SignWidth = 6000f;     // canvas units (3x wider)
-        private const float SignHeight = 9000f;    // canvas units (3x taller, matches 3x font)
-        private const float FontSizeValue = 540f;  // 3x larger for legibility
+        private const float SignWidth = 9000f;    // canvas units (9000x9000)
+        private const float SignHeight = 9000f;   // canvas units (9000x9000)
+        private const float FontSizeValue = 600f;  // as requested
 
         // ─── GateBoard: holds everything for one gate's departure board ───
         private class GateBoard

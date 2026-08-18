@@ -23,10 +23,10 @@ namespace StarTruckMP.StarTruckClient
         // ─── Constants ───
         private const float SideOffset = 300f;     // meters to the side, further out than Option 2
         private const float HeightOffset = 8f;
-        private const float BillboardWidth = 24f;   // meters in world space (3x wider)
-        private const float BillboardHeight = 18f;  // 3x taller, matches 3x font
-        private const int TexWidth = 3072;   // 3x resolution to fit 3x wider text
-        private const int TexHeight = 2304;  // 3x resolution to fit 3x taller font
+        private const float BillboardWidth = 90f;   // meters, matches 9000x9000 canvas boards
+        private const float BillboardHeight = 90f;  // meters, matches 9000x9000 canvas boards
+        private const int TexWidth = 6144;   // capped resolution — see note on Font size below
+        private const int TexHeight = 6144;  // capped resolution — see note on Font size below
 
         // ─── Internal types ───
         private struct PlayerEntry
@@ -214,13 +214,13 @@ namespace StarTruckMP.StarTruckClient
             bool fontRendered = false;
             try
             {
-                Font font = Font.CreateDynamicFontFromOSFont("Arial", 144); // 3x larger
+                Font font = Font.CreateDynamicFontFromOSFont("Arial", 220); // capped — 600pt would need a texture too large to render per-pixel without freezing
                 if (font != null && font.dynamic)
                 {
                     // Force the glyphs we need onto the atlas before reading it back
                     string[] lines = text.Split('\n');
                     string allChars = text.Replace("\n", "");
-                    font.RequestCharactersInTexture(allChars, 144, FontStyle.Normal);
+                    font.RequestCharactersInTexture(allChars, 220, FontStyle.Normal);
 
                     // Make a CPU-readable copy of the font's atlas texture (it usually isn't readable directly)
                     Texture srcAtlas = font.material.mainTexture;
@@ -240,9 +240,9 @@ namespace StarTruckMP.StarTruckClient
 
                     if (readableAtlas != null)
                     {
-                        float lineHeight = 144f; // 3x larger
-                        float startX = 60f;
-                        float startY = height - 150f;
+                        float lineHeight = 220f;
+                        float startX = 100f;
+                        float startY = height - 260f;
                         Color textColor = new Color(0.2f, 1f, 0.4f, 1f); // green
                         int atlasW = readableAtlas.width;
                         int atlasH = readableAtlas.height;
@@ -258,7 +258,7 @@ namespace StarTruckMP.StarTruckClient
 
                             foreach (char c in line)
                             {
-                                if (font.GetCharacterInfo(c, out CharacterInfo info, 144))
+                                if (font.GetCharacterInfo(c, out CharacterInfo info, 220))
                                 {
                                     int ax0 = Mathf.RoundToInt(Mathf.Min(info.uvBottomLeft.x, info.uvTopRight.x) * atlasW);
                                     int ax1 = Mathf.RoundToInt(Mathf.Max(info.uvBottomLeft.x, info.uvTopRight.x) * atlasW);
