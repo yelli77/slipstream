@@ -411,6 +411,9 @@ namespace StarTruckMP.StarTruckClient
                     bool changed = false;
                     if (boards.TryGetValue(entryId, out var board))
                     {
+                        // DIAG: verify Floating Origin drift hypothesis
+                        try { StarTruckMP.Log.LogInfo($"JumpgateOption1 DIAG: board='{entryId}' boardPos={board.rootObject.transform.position} gatePos={zone.transform.position} camPos={Camera.main?.transform.position} delta={Vector3.Distance(board.rootObject.transform.position, zone.transform.position):F0}m"); } catch { }
+
                         if (board.currentPlayerEntries.Count != currentEntries.Count)
                         {
                             changed = true;
