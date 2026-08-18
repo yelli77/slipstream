@@ -1,0 +1,404 @@
+# API dump of Assembly-CSharp-firstpass.dll (113 types with members)
+# Generated via metadata reflection (dnfile) from the BepInEx Il2CppInterop-generated
+# assembly - property/method NAMES only, no parameter/return types decoded.
+# Use: grep -i '<keyword>' this file to find candidate native types/members,
+# then confirm exact signature via C# reflection (GetType().GetProperty/GetMethod) at runtime.
+
+### Crosstales.ExtensionMethods  : Il2CppSystem.Object
+  properties: FLAT_VECTOR
+  methods:    CTAbort, CTAddNewLines, CTAddRange, CTClearLineEndings, CTClearSpaces, CTClearTags, CTColorRGB, CTColorRGBA, CTContains, CTContainsAll, CTContainsAny, CTCorrectLossyScale, CTDump, CTEndsWith, CTEquals, CTFind, CTFindAll, CTFlatten, CTFlipHorizontal, CTFlipVertical, CTFromBase64, CTFromBase64ToByteArray, CTGetBottom, CTGetBounds, CTGetLRTB, CTGetLeft, CTGetLocalCorners, CTGetRight, CTGetScreenCorners, CTGetTop, CTHasActiveClip, CTHasInvalidChars, CTHasLineEndings, CTHexToColor, CTHexToColor32, CTHexToString, CTIndexOf, CTIsAlphanumeric, CTIsCreditcard, CTIsEmail, CTIsIPv4, CTIsInteger, CTIsNumeric, CTIsVisibleFrom, CTIsWebsite, CTLastIndexOf, CTMultiply, CTQuaternion, CTReadFully, CTRemoveChars, CTRemoveNewLines, CTReplace, CTReverse, CTRotate180, CTRotate270, CTRotate90, CTSetBottom, CTSetLRTB, CTSetLeft, CTSetRight, CTSetTop, CTShuffle, CTStartsWith, CTToBase64, CTToByteArray, CTToEXR, CTToFloatArray, CTToHex, CTToHexRGB, CTToHexRGBA, CTToJPG, CTToPNG, CTToSprite, CTToString, CTToStringArray, CTToTGA, CTToTexture, CTToTexture2D, CTToTitleCase, CTVector3, CTVector4, CThasInvalidChars, CThasLineEndings, CTisAlphanumeric, CTisCreditcard, CTisEmail, CTisIPv4, CTisInteger, CTisNumeric, CTisWebsite, GetColumn, GetRow, bytesToFloat, deepSearch, getAllChildren
+
+### Crosstales.Radio.BasePlayer  : UnityEngine.MonoBehaviour
+  properties: BufferProgress, CacheStreamSize, CaptureDataStream, Channels, Codec, CurrentBufferSize, CurrentDownloadSpeed, DataStream, HandleFocus, LegacyMode, NextRecordDelay, NextRecordInfo, OnAudioEnd, OnAudioPlayTimeUpdate, OnAudioStart, OnBufferingEnd, OnBufferingProgressUpdate, OnBufferingStart, OnErrorInfo, OnNextRecordChange, OnNextRecordDelayUpdate, OnPlaybackEnd, OnPlaybackStart, OnRecordChange, OnRecordPlayTimeUpdate, Pitch, PlayTime, RecordInfo, RecordPlayTime, SampleRate, SkipPreBuffering, Source, Station, StereoPan, Volume, audioCount, audioCounter, isAnyAudioPlaying, isAnyPlayback, isAudioPlaying, isBuffering, isMuted, isPlayback, onAudioEnded, onAudioStarted, onBufferingEnded, onBufferingStarted, onError, onPlaybackEnded, onPlaybackStarted, onRecordChanged, playCount, playCounter
+  methods:    Mute, MuteOrUnMute, Play, PlayOrStop, Restart, Stop, UnMute, add_OnAudioEnd, add_OnAudioPlayTimeUpdate, add_OnAudioStart, add_OnBufferingEnd, add_OnBufferingProgressUpdate, add_OnBufferingStart, add_OnErrorInfo, add_OnNextRecordChange, add_OnNextRecordDelayUpdate, add_OnPlaybackEnd, add_OnPlaybackStart, add_OnRecordChange, add_OnRecordPlayTimeUpdate, onAudioEnd, onAudioPlayTimeUpdate, onAudioStart, onBufferingEnd, onBufferingProgressUpdate, onBufferingStart, onErrorInfo, onNextRecordChange, onNextRecordDelayUpdate, onPlaybackEnd, onPlaybackStart, onRecordChange, onRecordPlayTimeUpdate, remove_OnAudioEnd, remove_OnAudioPlayTimeUpdate, remove_OnAudioStart, remove_OnBufferingEnd, remove_OnBufferingProgressUpdate, remove_OnBufferingStart, remove_OnErrorInfo, remove_OnNextRecordChange, remove_OnNextRecordDelayUpdate, remove_OnPlaybackEnd, remove_OnPlaybackStart, remove_OnRecordChange, remove_OnRecordPlayTimeUpdate
+
+### Crosstales.Radio.PlaybackStart  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.PlaybackEnd  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.BufferingStart  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.BufferingEnd  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.BufferingProgressUpdate  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.AudioStart  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.AudioEnd  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.AudioPlayTimeUpdate  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.RecordChange  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.RecordPlayTimeUpdate  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.NextRecordChange  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.NextRecordDelayUpdate  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.ErrorInfo  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.StationChange  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.FilterChange  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.StationsChange  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.ProviderReady  : Il2CppSystem.MulticastDelegate
+  methods:    BeginInvoke, EndInvoke, Invoke, op_Addition, op_Implicit, op_Subtraction
+
+### Crosstales.Radio.IPlayer  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: BufferProgress, CacheStreamSize, CaptureDataStream, Channels, Codec, CurrentBufferSize, CurrentDownloadSpeed, DataStream, HandleFocus, LegacyMode, NextRecordDelay, NextRecordInfo, Pitch, PlayTime, RecordInfo, RecordPlayTime, SampleRate, SkipPreBuffering, Source, Station, StereoPan, Volume, isAudioPlaying, isBuffering, isMuted, isPlayback
+  methods:    Mute, MuteOrUnMute, Play, PlayOrStop, Restart, Stop, UnMute
+
+### Crosstales.Radio.RadioManager  : UnityEngine.MonoBehaviour
+  properties: CurrentRandomStationIndex, CurrentStationIndex, Filter, InstantiateRadioPlayers, LoadOnStart, LoadOnStartInEditor, OnFilterChange, OnFilterChanged, OnProviderReady, OnProviderReadyEvent, OnStationsChange, OnStationsChanged, Players, RadioPrefab, RandomStations, Set, Stations, clearedStation, clearedStationRandom, currentFilter, currentRadioPlayer, isAudioPlaying, isBuffering, isPlayback, isReady, isWorking, lastFilteredPlayers, lastFilteredRandomPlayers, lastPlayerFilter, lastRandomPlayerFilter, playerIndex, players, playersByBitrateAsc, playersByBitrateDesc, playersByBitrateFilterAsc, playersByBitrateFilterDesc, playersByFormatAsc, playersByFormatDesc, playersByFormatFilterAsc, playersByFormatFilterDesc, playersByGenresAsc, playersByGenresDesc, playersByGenresFilterAsc, playersByGenresFilterDesc, playersByNameAsc, playersByNameDesc, playersByNameFilterAsc, playersByNameFilterDesc, playersByRatingAsc, playersByRatingDesc, playersByRatingFilterAsc, playersByRatingFilterDesc, playersByStationAsc, playersByStationDesc, playersByStationFilterAsc, playersByStationFilterDesc, playersByURLAsc, playersByURLDesc, playersByURLFilterAsc, playersByURLFilterDesc, randomPlayerIndex, randomPlayers, tf
+  methods:    CountPlayers, CountStations, GetPlayers, GetStations, Load, Next, NextStation, OnDisable, OnEnable, PlayAll, PlayerFromIndex, PlayersByBitrate, PlayersByFormat, PlayersByGenres, PlayersByName, PlayersByRating, PlayersByStation, PlayersByURL, Previous, PreviousStation, RandomizePlayers, RandomizeStations, Save, Start, StationFromHashCode, StationFromIndex, StationsByBitrate, StationsByCities, StationsByCountries, StationsByFormat, StationsByGenres, StationsByLanguages, StationsByName, StationsByRating, StationsByStation, StationsByURL, StopAll, ToString, Update, add_OnFilterChange, add_OnProviderReady, add_OnStationsChange, clearFilters, filterPlayers, getFilter, nextPlayer, onFilterChange, onProviderReady, onStationsChange, play, playerByIndex, previousPlayer, remove_OnFilterChange, remove_OnProviderReady, remove_OnStationsChange, resetFilterLists
+
+### Crosstales.Radio.RadioPlayer  : Crosstales.Radio.BasePlayer
+  properties: BufferProgress, CacheStreamSize, CaptureDataStream, Channels, Codec, CurrentBufferSize, CurrentDownloadSpeed, DataStream, Delay, HandleFocus, Instance, LegacyMode, NextRecordDelay, NextRecordInfo, OnAudioEnded, OnAudioStarted, OnBufferingEnded, OnBufferingStarted, OnError, OnPlaybackEnded, OnPlaybackStarted, OnRecordChanged, Pitch, PlayOnStart, PlayTime, RecordInfo, RecordPlayTime, SampleRate, SkipPreBuffering, Source, Station, StereoPan, Volume, _BufferProgress_k__BackingField, _Codec_k__BackingField, _DataStream_k__BackingField, _PlayTime_k__BackingField, _RecordPlayTime_k__BackingField, _Source_k__BackingField, bufferAvailable, cacheStreamSize, captureDataStream, delay, error, errorMessage, handleFocus, ignoreExcludeCodec, instance, isAudioPlaying, isBuffering, isMuted, isPlayback, lastNextRecordDelay, lastNextRecordInfo, lastPlaytime, lastUrl, legacyMode, maxPlayTime, ms, nAudioReader, nLayerReader, nVorbisReader, nextRecordDelay, nextRecordInfo, oggCacheCleanFrameCount, onAudioEnded, onAudioStarted, onBufferingEnded, onBufferingStarted, onError, onPlaybackEnded, onPlaybackStarted, onRecordChanged, pitch, playOnStart, playback, recordInfo, restarted, skipPreBuffering, station, stopped, timer, wasRunning, worker
+  methods:    Awake, Load, Mute, OnApplicationFocus, OnDestroy, OnDisable, OnValidate, Play, Restart, Save, Start, Stop, ToShortString, ToString, UnMute, Update, killWorker, logDataError, logNoMoreData, logUnsupportedPlatform, onAudioEnd, onAudioStart, onBufferingEnd, onBufferingStart, onErrorInfo, onNextRecordChange, onNextRecordDelayUpdate, onPlaybackEnd, onPlaybackStart, onRecordChange, onRecordPlayTimeUpdate, playAudioFromUrl, readPCMData, readStream, readStreamLegacy, timerTask
+
+### Crosstales.Radio.SimplePlayer  : Crosstales.Radio.BasePlayer
+  properties: BufferProgress, CacheStreamSize, CaptureDataStream, Channels, Codec, CurrentBufferSize, CurrentDownloadSpeed, CurrentRandomStationIndex, CurrentStationIndex, DataStream, Filter, FollowDirection, HandleFocus, LegacyMode, NextRecordDelay, NextRecordInfo, OnAudioEnded, OnAudioStarted, OnBufferingEnded, OnBufferingStarted, OnError, OnFilterChange, OnFilterChanged, OnPlaybackEnded, OnPlaybackStarted, OnProviderReady, OnProviderReadyEvent, OnRecordChanged, OnStationChange, OnStationChanged, OnStationsChange, OnStationsChanged, Pitch, PlayEndless, PlayOnStart, PlayRandom, PlayTime, Player, RandomStations, RecordInfo, RecordPlayTime, Retries, RetryOnError, SampleRate, Set, SkipPreBuffering, Source, Station, Stations, StereoPan, Volume, _followDirection, currentFilter, filter, invokeDelayCounter, isAudioPlaying, isBuffering, isDirectionNext, isMuted, isPlayback, isReady, lastPlaytime, onAudioEnded, onAudioStarted, onBufferingEnded, onBufferingStarted, onError, onPlaybackEnded, onPlaybackStarted, onRecordChanged, playEndless, playOnStart, playRandom, playedOnStart, player, retries, retryOnError, set, started, stopped
+  methods:    CountStations, GetStations, Load, Mute, Next, NextStation, OnDestroy, OnValidate, Play, Previous, PreviousStation, RandomizeStations, Restart, Save, Start, StationFromHashCode, StationFromIndex, StationsByBitrate, StationsByCities, StationsByCountries, StationsByFormat, StationsByGenres, StationsByLanguages, StationsByName, StationsByRating, StationsByStation, StationsByURL, Stop, UnMute, Update, add_OnFilterChange, add_OnProviderReady, add_OnStationChange, add_OnStationsChange, getFilter, onAudioEnd, onAudioPlayTimeUpdate, onAudioStart, onErrorInfo, onFilterChange, onProviderReady, onStationChange, onStationsChange, play, playEndlessly, playInvoker, remove_OnFilterChange, remove_OnProviderReady, remove_OnStationChange, remove_OnStationsChange
+
+### Crosstales.Radio.Util.Config  : Il2CppSystem.Object
+  properties: DEBUG, DEFAULT_BITRATE, DEFAULT_BUFFERSIZE, DEFAULT_CACHESTREAMSIZE, DEFAULT_CHUNKSIZE, MAX_CACHESTREAMSIZE, isLoaded
+
+### Crosstales.Radio.Util.Constants  : Crosstales.Common.Util.BaseConstants
+  properties: ASSET_3P_APOLLO_VISUALIZER, ASSET_3P_AUDIO_VISUALIZER, ASSET_3P_RHYTHM_VISUALIZATOR, ASSET_3P_SOUND_SUITE, ASSET_3P_URL, ASSET_3P_VISUALIZER_STUDIO, ASSET_API_URL, ASSET_BUILD, ASSET_CHANGED, ASSET_CONTACT, ASSET_CREATED, ASSET_FORUM_URL, ASSET_MANUAL_URL, ASSET_NAME, ASSET_PRO_URL, ASSET_UPDATE_CHECK_URL, ASSET_VERSION, ASSET_VIDEO_PROMO, ASSET_VIDEO_TUTORIAL, ASSET_WEB_URL, DEFAULT_CODEC_MP3, DEFAULT_CODEC_MP3_WINDOWS, DEFAULT_DEFAULT_BITRATE, DEFAULT_DEFAULT_BUFFERSIZE, DEFAULT_DEFAULT_CACHESTREAMSIZE, DEFAULT_DEFAULT_CHUNKSIZE, DEFAULT_MAX_CACHESTREAMSIZE, INITIAL_LIST_SIZE, INVOKE_DELAY, KEY_DEBUG, KEY_DEFAULT_BITRATE, KEY_DEFAULT_BUFFERSIZE, KEY_DEFAULT_CACHESTREAMSIZE, KEY_DEFAULT_CHUNKSIZE, KEY_MAX_CACHESTREAMSIZE, KEY_PREFIX, M3U_EXT_ID, M3U_EXT_INF_ID, MAX_LOAD_WAIT_TIME, MAX_SHOUTCAST_LOAD_WAIT_TIME, MAX_WEB_LOAD_WAIT_TIME, MIN_OGG_BUFFERSIZE, OGG_CLEAN_INTERVAL_MAX, OGG_CLEAN_INTERVAL_MIN, PLAY_CALL_SPEED, PLS_FILE_ID, PLS_TITLE_ID, PREFIX_TEMP_PATH, SHOUTCAST, TAB, TEXT_BUFFER, TEXT_QUESTIONMARKS, TEXT_STOPPED, WFS_BUFFER
+
+### Crosstales.Radio.Util.Context  : Il2CppSystem.Object
+  properties: AllPlayedRecords, TotalDataRequests, TotalDataSize, TotalPlayTime
+
+### Crosstales.Radio.Util.Helper  : Crosstales.Common.Util.BaseHelper
+  properties: isSupportedPlatform, mp3Bitrates, oggBitrates
+  methods:    AudioCodecForAudioFormat, AudioCodecFromString, AudioFormatFromString, NearestBitrate, NearestMP3Bitrate, NearestOGGBitrate, SaveAsM3U, SaveAsPLS, SaveAsXSPF, cleanForXSPF, isSane, isValidBitrate, isValidFormat, isValidMP3Bitrate, isValidOGGBitrate
+
+### Crosstales.Radio.Set.ISet  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: CurrentRandomStationIndex, CurrentStationIndex, RandomStations, Stations, isReady
+  methods:    CountStations, GetStations, Load, NextStation, PreviousStation, RandomizeStations, Save, StationFromHashCode, StationFromIndex, StationsByBitrate, StationsByCities, StationsByCountries, StationsByFormat, StationsByGenres, StationsByLanguages, StationsByName, StationsByRating, StationsByStation, StationsByURL
+
+### Crosstales.Radio.Set.RadioSet  : UnityEngine.MonoBehaviour
+  properties: CurrentRandomStationIndex, CurrentStationIndex, Filter, OnFilterChange, OnFilterChanged, OnProviderReady, OnProviderReadyEvent, OnStationsChange, OnStationsChanged, Providers, RandomStations, Stations, _lastStationCount, allStations, cleared, clearedRandom, currentFilter, filter, isReady, lastFilteredRandomStations, lastFilteredStations, lastRandomStationFilter, lastStationFilter, providers, randomStationIndex, randomStations, stationIndex, stationsByBitrateAsc, stationsByBitrateDesc, stationsByBitrateFilterAsc, stationsByBitrateFilterDesc, stationsByCitiesAsc, stationsByCitiesDesc, stationsByCitiesFilterAsc, stationsByCitiesFilterDesc, stationsByCountriesAsc, stationsByCountriesDesc, stationsByCountriesFilterAsc, stationsByCountriesFilterDesc, stationsByFormatAsc, stationsByFormatDesc, stationsByFormatFilterAsc, stationsByFormatFilterDesc, stationsByGenresAsc, stationsByGenresDesc, stationsByGenresFilterAsc, stationsByGenresFilterDesc, stationsByLanguagesAsc, stationsByLanguagesDesc, stationsByLanguagesFilterAsc, stationsByLanguagesFilterDesc, stationsByNameAsc, stationsByNameDesc, stationsByNameFilterAsc, stationsByNameFilterDesc, stationsByRatingAsc, stationsByRatingDesc, stationsByRatingFilterAsc, stationsByRatingFilterDesc, stationsByStationAsc, stationsByStationDesc, stationsByStationFilterAsc, stationsByStationFilterDesc, stationsByURLAsc, stationsByURLDesc, stationsByURLFilterAsc, stationsByURLFilterDesc
+  methods:    CountStations, GetStations, Load, NextStation, OnDisable, OnEnable, PreviousStation, RandomizeStations, Save, Start, StationFromHashCode, StationFromIndex, StationsByBitrate, StationsByCities, StationsByCountries, StationsByFormat, StationsByGenres, StationsByLanguages, StationsByName, StationsByRating, StationsByStation, StationsByURL, ToString, Update, add_OnFilterChange, add_OnProviderReady, add_OnStationsChange, clearFilters, filterStations, getFilter, nextStation, onFilterChange, onProviderReady, onStationsChange, previousStation, register, remove_OnFilterChange, remove_OnProviderReady, remove_OnStationsChange, resetFilterLists, stationFromHashCode, stationFromIndex, unregister
+
+### Crosstales.Radio.Provider.BaseRadioProvider  : UnityEngine.MonoBehaviour
+  properties: AllowOnlyHTTPS, ClearStationsOnLoad, LoadOnStart, LoadOnStartInEditor, OnProviderReady, OnStationsChange, RadioEntries, Stations, allowOnlyHTTPS, clearStationsOnLoad, coRoutines, isReady, isReadySent, loadOnStart, loadOnStartInEditor, loadedInEditor, onProviderReadyEvent, onStationsChanged, splitCharColon, splitCharComma, splitCharEquals, splitCharText, stations
+  methods:    Load, OnValidate, Save, Start, Update, addCoRoutine, add_OnProviderReady, add_OnStationsChange, fillStationsFromM3U, fillStationsFromPLS, fillStationsFromText, init, isHTTPS, loadResource, loadShoutcast, loadWeb, onProviderReady, onStationsChange, remove_OnProviderReady, remove_OnStationsChange
+
+### Crosstales.Radio.Provider.IRadioProvider  : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+  properties: RadioEntries, Stations, isReady
+  methods:    Load, Save
+
+### Crosstales.Radio.Provider.RadioProviderResource  : Crosstales.Radio.Provider.BaseRadioProvider
+  properties: Entries, OnProviderReadyEvent, OnStationsChanged, RadioEntries, entries, onProviderReadyEvent, onStationsChanged
+  methods:    init
+
+### Crosstales.Radio.Provider.RadioProviderShoutcast  : Crosstales.Radio.Provider.BaseRadioProvider
+  properties: Entries, OnProviderReadyEvent, OnStationsChanged, RadioEntries, entries, onProviderReadyEvent, onStationsChanged
+  methods:    init
+
+### Crosstales.Radio.Provider.RadioProviderURL  : Crosstales.Radio.Provider.BaseRadioProvider
+  properties: Entries, OnProviderReadyEvent, OnStationsChanged, RadioEntries, entries, onProviderReadyEvent, onStationsChanged
+  methods:    init
+
+### Crosstales.Radio.Provider.RadioProviderUser  : Crosstales.Radio.Provider.BaseRadioProvider
+  properties: Entry, OnProviderReadyEvent, OnStationsChanged, RadioEntries, SaveOnDisable, entry, onProviderReadyEvent, onStationsChanged, saveOnDisable
+  methods:    Delete, EditFile, OnDisable, OnValidate, Save, ShowFile, init
+
+### Crosstales.Radio.Model.RadioFilter  : Il2CppSystem.Object
+  properties: BitrateMax, BitrateMin, Cities, Countries, ExcludeUnsupportedCodecs, Format, Genres, Languages, Limit, Names, RatingMax, RatingMin, Stations, Urls, bitrateMax, bitrateMin, isFiltering, ratingMax, ratingMin
+  methods:    Equals, GetHashCode, ToString
+
+### Crosstales.Radio.Model.RadioStation  : Il2CppSystem.Object
+  properties: Bitrate, BufferSize, Channels, ChunkSize, City, Country, Description, ExcludedCodec, Format, Genres, Icon, IconUrl, Language, Name, PlayedRecords, Rating, RequestHeaders, SampleRate, ServerInfo, Station, TotalDataRequests, TotalDataSize, TotalPlayTime, UNKNOWN_STATION, UpdateDataAtPlay, Url, splitCharText
+  methods:    Equals, GetHashCode, StationInfo, StationInfoLabels, ToShortString, ToString, ToTextLine, limitLength
+
+### Crosstales.Radio.Model.RequestHeaderTuple  : Il2CppSystem.Object
+  properties: Key, Value
+
+### Crosstales.Radio.Model.RecordInfo  : Il2CppSystem.Object
+  properties: Artist, Created, Duration, Icon, IconUrl, Info, LyricsUrl, Rating, SpotifyUrl, StreamTitle, StreamUrl, Title, artist, created, lyricsRegex, lyricsUrl, splitChar, spotifyUrl, streamTitle, streamTitleString, streamUrl, streamUrlString, title
+  methods:    Equals, GetHashCode, ToShortString, ToString, parseLyricsUrl, parseSpotifyUrl, parseStreamTitle, parseStreamUrl
+
+### Crosstales.Radio.Model.Entry.BaseRadioEntry  : Il2CppSystem.Object
+  properties: Bitrate, BufferSize, ChunkSize, City, Country, Description, EnableSource, ExcludedCodec, ForceName, Format, Genres, Icon, IconUrl, Language, Name, Rating, Station, isInitialized
+  methods:    ToString
+
+### Crosstales.Radio.Model.Entry.RadioEntryResource  : Crosstales.Radio.Model.Entry.BaseRadioEntry
+  properties: DataFormat, ReadNumberOfStations, Resource
+  methods:    ToString
+
+### Crosstales.Radio.Model.Entry.RadioEntryShoutcast  : Crosstales.Radio.Model.Entry.BaseRadioEntry
+  properties: ShoutcastID
+  methods:    ToString
+
+### Crosstales.Radio.Model.Entry.RadioEntryURL  : Crosstales.Radio.Model.Entry.BaseRadioEntry
+  properties: DataFormat, FinalURL, Prefix, ReadNumberOfStations, URL
+  methods:    ToString
+
+### Crosstales.Radio.Model.Entry.RadioEntryUser  : Crosstales.Radio.Model.Entry.BaseRadioEntry
+  properties: DataFormat, FinalPath, LoadOnlyOnce, Path, Prefix, ReadNumberOfStations, Resource
+  methods:    ToString
+
+### Crosstales.Radio.Tool.ChangeAudioCodec  : UnityEngine.MonoBehaviour
+  properties: Codec
+  methods:    Update
+
+### Crosstales.Radio.Tool.CrossFader  : UnityEngine.MonoBehaviour
+  properties: FaderPosition, SourceA, SourceB, volumeA, volumeB
+  methods:    Start
+
+### Crosstales.Radio.Tool.LoadIcon  : Il2CppSystem.Object
+  methods:    Load, load
+
+### Crosstales.Radio.Tool.StreamSaver  : UnityEngine.MonoBehaviour
+  properties: AddStationName, AddTimestamp, HEADER_SIZE, OutputPath, Player, RESCALE_FACTOR, RecordStartDelay, RecordStopDelay, SilenceSource, addStationName, addTimestamp, audioSource, dataPosition, fileName, fileStream, outputPath, player, recOutput, recordStartDelay, recordStopDelay, silenceSource, stopped
+  methods:    Awake, OnDisable, OnEnable, OnValidate, Start, Update, closeFile, convertAndWrite, onAudioEnd, onNextRecordChange, openFile, readPCMData, register, unregister
+
+### Crosstales.UI.Social  : UnityEngine.MonoBehaviour
+  methods:    Discord, Facebook, LinkedIn, Twitter, Youtube
+
+### Crosstales.UI.StaticManager  : UnityEngine.MonoBehaviour
+  methods:    OpenAssetstore, OpenCrosstales, Quit
+
+### Crosstales.UI.UIDrag  : UnityEngine.MonoBehaviour
+  properties: _offsetX, _offsetY, _tf
+  methods:    BeginDrag, OnDrag, Start
+
+### Crosstales.UI.UIFocus  : UnityEngine.MonoBehaviour
+  properties: ManagerName, _image, _manager, _tf
+  methods:    Awake, OnPanelEnter, Start
+
+### Crosstales.UI.UIHint  : UnityEngine.MonoBehaviour
+  properties: Delay, Disable, FadeAtStart, FadeTime, Group
+  methods:    FadeDown, FadeUp, Start, lerpAlphaDown, lerpAlphaUp
+
+### Crosstales.UI.UIResize  : UnityEngine.MonoBehaviour
+  properties: IgnoreMaxSize, MaxSize, MinSize, SpeedFactor, _originalLocalPointerPosition, _originalSize, _originalSizeDelta, _panelRectTransform
+  methods:    Awake, OnDrag, OnPointerDown
+
+### Crosstales.UI.UIWindowManager  : UnityEngine.MonoBehaviour
+  properties: Windows, _dontTouch, _image
+  methods:    ChangeState, Start
+
+### Crosstales.UI.WindowManager  : UnityEngine.MonoBehaviour
+  properties: ClosedAtStart, Dependencies, Speed, _centerPos, _close, _closeProgress, _focus, _lerpPos, _open, _openProgress, _panel, _startPos, _tf
+  methods:    ClosePanel, OpenPanel, Start, SwitchPanel, Update
+
+### Crosstales.UI.Util.FPSDisplay  : UnityEngine.MonoBehaviour
+  properties: FPS, FrameUpdate, GREEN, Key, ORANGE, RED, WAIT, _deltaTime, _elapsedTime, _fps, _msec
+  methods:    Update
+
+### Crosstales.UI.Util.ScrollRectHandler  : UnityEngine.MonoBehaviour
+  properties: MacSensitivity, Scroll, WindowsSensitivity
+  methods:    Start
+
+### Crosstales.UI.Audio.AudioFilterController  : UnityEngine.MonoBehaviour
+  properties: ChorusFilter, ChorusFilters, DistortionFilter, DistortionFilterValue, DistortionFilters, DistortionText, EchoFilter, EchoFilters, FindAllAudioFiltersOnStart, HighPassFilters, HighpassFilter, HighpassFilterValue, HighpassText, LowPassFilters, LowpassFilter, LowpassFilterValue, LowpassText, ResetAudioFiltersOnStart, ReverbFilterDropdown, ReverbFilters, _initialized, _reverbPresets
+  methods:    ChorusFilterEnabled, DistortionFilterChanged, DistortionFilterEnabled, EchoFilterEnabled, FindAllAudioFilters, HighPassFilterChanged, HighPassFilterEnabled, LowPassFilterChanged, LowPassFilterEnabled, ResetAudioFilters, ReverbFilterDropdownChanged, Start, Update
+
+### Crosstales.UI.Audio.AudioSourceController  : UnityEngine.MonoBehaviour
+  properties: AudioSources, FindAllAudioSourcesOnStart, Loop, Mute, Pitch, PitchText, ResetAudioSourcesOnStart, StereoPan, StereoPanText, Volume, VolumeText, _initialized
+  methods:    FindAllAudioSources, LoopEnabled, MuteEnabled, PitchChanged, ResetAllAudioSources, StereoPanChanged, Update, VolumeChanged
+
+### Crosstales.Common.Util.BackgroundController  : UnityEngine.MonoBehaviour
+  properties: Objects, _isFocused
+
+### Crosstales.Common.Util.PlatformController  : UnityEngine.MonoBehaviour
+  properties: Active, Objects, Platforms, Scripts, _currentPlatform
+  methods:    Awake, Start, activateGameObjects, activateScripts, selectPlatform
+
+### Crosstales.Common.Util.RandomColor  : UnityEngine.MonoBehaviour
+  properties: AlphaRange, COLOR_ID, ChangeInterval, GrayScale, HueRange, Material, RandomColorAtStart, SaturationRange, UseInterval, ValueRange, _changeTime, _currentRenderer, _elapsedTime, _endColor, _existsMaterial, _lerpProgress, _startColor
+  methods:    Start, Update
+
+### Crosstales.Common.Util.RandomRotator  : UnityEngine.MonoBehaviour
+  properties: ChangeInterval, RandomChangeIntervalPerAxis, RandomDirectionPerAxis, RandomRotationAtStart, SpeedMax, SpeedMin, UseInterval, _changeTime, _changeTimeAxis, _elapsedTime, _elapsedTimeAxis, _speed, _tf
+  methods:    Start, Update
+
+### Crosstales.Common.Util.RandomScaler  : UnityEngine.MonoBehaviour
+  properties: ChangeInterval, RandomScaleAtStart, ScaleMax, ScaleMin, Uniform, UseInterval, _changeTime, _elapsedTime, _endScale, _lerpTime, _startScale, _tf
+  methods:    Start, Update
+
+### Crosstales.Common.Util.SurviveSceneSwitch
+  properties: ENSURE_PARENT_TIME, Survivors, _ensureParentTimer, _tf
+  methods:    Start, Update
+
+### Crosstales.Common.Util.BaseConstants  : Il2CppSystem.Object
+  properties: ALPHABET_EXT_LOWERCASE, ALPHABET_EXT_UPPERCASE, ALPHABET_LATIN, ALPHABET_LATIN_LOWERCASE, ALPHABET_LATIN_UPPERCASE, APPLICATION_PATH, ASSET_3P_PLAYMAKER, ASSET_3P_ROCKTOMATE, ASSET_3P_RTFB, ASSET_3P_VOLUMETRIC_AUDIO, ASSET_AUTHOR, ASSET_AUTHOR_URL, ASSET_BWF, ASSET_CT_URL, ASSET_DJ, ASSET_FB, ASSET_OC, ASSET_RADIO, ASSET_RTV, ASSET_SOCIAL_DISCORD, ASSET_SOCIAL_FACEBOOK, ASSET_SOCIAL_LINKEDIN, ASSET_SOCIAL_TWITTER, ASSET_SOCIAL_YOUTUBE, ASSET_TB, ASSET_TPB, ASSET_TPS, ASSET_TR, CMD_WINDOWS_PATH, COMMON_BUILD, COMMON_CHANGED, COMMON_VERSION, DEFAULT_DEBUG, DEV_DEBUG, FACTOR_GB, FACTOR_KB, FACTOR_MB, FLOAT_32768, FLOAT_TOLERANCE, FORMAT_NO_DECIMAL_PLACES, FORMAT_PERCENT, FORMAT_TWO_DECIMAL_PLACES, NUMBERS, PATH_DELIMITER_UNIX, PATH_DELIMITER_WINDOWS, PREFIX_FILE, PREFIX_HTTP, PREFIX_HTTPS, PROCESS_KILL_TIME, REGEX_ALPHANUMERIC, REGEX_CLEAN_SPACES, REGEX_CLEAN_TAGS, REGEX_CREDITCARD, REGEX_DRIVE_LETTERS, REGEX_EMAIL, REGEX_FILE, REGEX_INVALID_CHARS, REGEX_IP_ADDRESS, REGEX_LINEENDINGS, REGEX_URL_WEB, SHOW_BWF_BANNER, SHOW_DJ_BANNER, SHOW_FB_BANNER, SHOW_OC_BANNER, SHOW_RADIO_BANNER, SHOW_RTV_BANNER, SHOW_TB_BANNER, SHOW_TPB_BANNER, SHOW_TPS_BANNER, SHOW_TR_BANNER, SIGNS, TEXT_TOSTRING_DELIMITER, TEXT_TOSTRING_DELIMITER_END, TEXT_TOSTRING_END, TEXT_TOSTRING_START, _regexAlpha, _regexCleanSpace, _regexCleanTags, _regexCreditCard, _regexDriveLetters, _regexEmail, _regexFile, _regexIPAddress, _regexInvalidChars, _regexLineEndings, _regexUrlWeb
+
+### Crosstales.Common.Util.BaseHelper  : Il2CppSystem.Object
+  properties: AndroidAPILevel, ApplicationIsPlaying, BaseCulture, CurrentPlatform, _androidAPILevel, _args, _rnd, isAndroidPlatform, isAppleBasedPlatform, isEditor, isEditorMode, isIL2CPP, isIOSBasedPlatform, isIOSPlatform, isLinuxEditor, isLinuxPlatform, isMacOSEditor, isMacOSPlatform, isMobilePlatform, isPS4Platform, isStandalonePlatform, isTvOSPlatform, isWSABasedPlatform, isWSAPlatform, isWebGLPlatform, isWebPlatform, isWindowsBasedPlatform, isWindowsEditor, isWindowsPlatform, isXboxOnePlatform
+  methods:    CreateString, FormatBytesToHRF, FormatSecondsToHRF, GenerateLoremIpsum, GetArgument, GetArguments, HSVToRGB, ISO639ToLanguage, InvokeMethod, LanguageToISO639, ParseJSON, SplitStringToLines, addLeadingZero, initialize
+
+### Crosstales.Common.Util.CTPlayerPrefs  : Il2CppSystem.Object
+  methods:    DeleteAll, DeleteKey, GetBool, GetColor, GetDate, GetFloat, GetInt, GetLanguage, GetQuaternion, GetString, GetVector2, GetVector3, GetVector4, HasKey, Save, SetBool, SetColor, SetDate, SetFloat, SetInt, SetLanguage, SetQuaternion, SetString, SetVector2, SetVector3, SetVector4
+
+### Crosstales.Common.Util.CTWebClient  : Il2CppSystem.Net.WebClient
+  properties: ConnectionLimit, Timeout, _ConnectionLimit_k__BackingField, _Timeout_k__BackingField
+  methods:    CTGetWebRequest, GetWebRequest
+
+### Crosstales.Common.Util.FileHelper  : Il2CppSystem.Object
+  properties: ApplicationDataPath, ApplicationPersistentPath, ApplicationTempPath, StreamingAssetsPath, TempFile, TempPath, _applicationDataPath, _applicationPersistentPath, _applicationTempPath, _invalidFilenameChars, _invalidPathChars
+  methods:    CopyDirectory, CopyFile, CopyPath, CreateDirectory, CreateFile, DeleteDirectory, DeleteFile, ExistsDirectory, ExistsFile, FileHasInvalidChars, GetCurrentDirectoryName, GetDirectories, GetDirectoryName, GetDrives, GetExtension, GetFileName, GetFiles, GetFilesForName, GetFilesize, GetLastModifiedDate, HasFileInvalidChars, HasPathInvalidChars, MoveDirectory, MoveFile, MovePath, OpenFile, PathHasInvalidChars, ReadAllBytes, ReadAllLines, ReadAllText, RenameDirectory, RenameFile, ShowFile, ShowPath, ValidateFile, ValidatePath, WriteAllBytes, WriteAllLines, WriteAllText, copyAll, initialize, isDirectory, isFile, isRoot, isUNCPath, isURL, isUnixPath, isWindowsPath
+
+### Crosstales.Common.Util.MemoryCacheStream  : Il2CppSystem.IO.Stream
+  properties: CanRead, CanSeek, CanWrite, Length, Position, _cache, _length, _maxSize, _readPosition, _size, _writePosition
+  methods:    Flush, Read, Seek, SetLength, Write, createCache, read, write
+
+### Crosstales.Common.Util.NetworkHelper  : Il2CppSystem.Object
+  properties: FILE_PREFIX, isInternetAvailable
+  methods:    CleanUrl, GetIP, GetURLFromFile, OpenURL, RemoteCertificateValidationCallback, ValidURLFromFilePath, ValidateURL, isIPv4, isURL, isValidURL, openURL
+
+### Crosstales.Common.Util.SingletonHelper  : Il2CppSystem.Object
+  properties: _isQuitting_k__BackingField, isInitialized, isQuitting
+  methods:    initialize, onQuitting, onSceneLoaded
+
+### Crosstales.Common.Util.XmlHelper  : Il2CppSystem.Object
+  methods:    DeserializeFromByteArray, DeserializeFromFile, DeserializeFromResource, DeserializeFromString, SerializeToByteArray, SerializeToFile, SerializeToString
+
+### Crosstales.Common.Audio.FFTAnalyzer  : UnityEngine.MonoBehaviour
+  properties: Channel, FFTMode, Samples
+  methods:    Update
+
+### Crosstales.Common.Audio.SpectrumVisualizer  : UnityEngine.MonoBehaviour
+  properties: Analyzer, Gain, LeftToRight, Opacity, VisualPrefab, Width, _samplesPerChannel, _tf, _visualPos, _visualTransforms
+  methods:    Start, Update
+
+### Crosstales.Common.Audio.WavMaster  : Il2CppSystem.Object
+  properties: BLOCK_SIZE_16_BIT
+  methods:    BitDepth, FromAudioClip, ToAudioClip, bytesPerSample, convert16BitByteArrayToAudioClipData, convert24BitByteArrayToAudioClipData, convert32BitByteArrayToAudioClipData, convert8BitByteArrayToAudioClipData, convertAudioClipDataToInt16ByteArray, formatCode, writeBytesToMemoryStream, writeFileData, writeFileFormat, writeFileHeader
+
+### _PrivateImplementationDetails_  : Il2CppSystem.Object
+  properties: ED399EF906487F964BE7DD21DB494E7CCE377F3867BD406E4FB11B14CF51FE17, _4761437F98761B6BB156A8D230F7B0C69E4CF0C66B62C3659271C089738BAF14
+  methods:    ComputeStringHash
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__4_0
+
+### __c__DisplayClass7_0  : Il2CppSystem.Object
+  properties: str
+
+### __c__DisplayClass8_0  : Il2CppSystem.Object
+  properties: str
+
+### __c__DisplayClass93_0  : Il2CppSystem.Object
+  properties: __9__0, uiScaleFactor
+
+### __c__DisplayClass104_0  : Il2CppSystem.Object
+  properties: name
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__51_0, __9__53_0, __9__55_0, __9__74_0, __9__78_0, __9__80_0, __9__80_1, __9__80_2, __9__80_3, __9__81_0, __9__81_1, __9__81_2, __9__81_3, __9__81_4, __9__81_5, __9__81_6, __9__81_7, __9__82_0, __9__82_1, __9__82_2, __9__82_3, __9__82_4, __9__82_5, __9__82_6, __9__82_7, __9__83_0, __9__83_1, __9__83_2, __9__83_3, __9__83_4, __9__83_5, __9__83_6, __9__83_7, __9__84_0, __9__84_1, __9__84_2, __9__84_3, __9__84_4, __9__84_5, __9__84_6, __9__84_7, __9__85_0, __9__85_1, __9__85_2, __9__85_3, __9__85_4, __9__85_5, __9__85_6, __9__85_7, __9__86_0, __9__86_1, __9__86_2, __9__86_3, __9__86_4, __9__86_5, __9__86_6, __9__86_7
+
+### __c__DisplayClass88_0  : Il2CppSystem.Object
+  properties: filter
+
+### __c__DisplayClass155_0  : Il2CppSystem.Object
+  properties: __4__this, _station
+
+### _playAudioFromUrl_d__155  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, __7__wrap4, __8__1, __bufferCurrentProgress_5__3, __success_5__4, _ac_5__2, _bufferSize_5__6
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### __c__DisplayClass13_0  : Il2CppSystem.Object
+  properties: bitrate
+
+### __c__DisplayClass14_0  : Il2CppSystem.Object
+  properties: bitrate
+
+### __c__DisplayClass61_0  : Il2CppSystem.Object
+  properties: __9__4, result
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__100_0, __9__100_1, __9__100_2, __9__100_3, __9__100_4, __9__100_5, __9__100_6, __9__100_7, __9__101_0, __9__101_1, __9__101_2, __9__101_3, __9__101_4, __9__101_5, __9__101_6, __9__101_7, __9__102_0, __9__102_1, __9__102_2, __9__102_3, __9__102_4, __9__102_5, __9__102_6, __9__102_7, __9__103_0, __9__103_1, __9__103_2, __9__103_3, __9__103_4, __9__103_5, __9__103_6, __9__103_7, __9__104_0, __9__104_1, __9__104_2, __9__104_3, __9__104_4, __9__104_5, __9__104_6, __9__104_7, __9__105_0, __9__105_1, __9__105_2, __9__105_3, __9__105_4, __9__105_5, __9__105_6, __9__105_7, __9__107_0, __9__108_0, __9__61_0, __9__61_1, __9__61_2, __9__61_3, __9__61_5, __9__63_0, __9__63_1, __9__63_2, __9__63_3, __9__63_5, __9__65_0, __9__88_0, __9__96_0, __9__96_1, __9__96_2, __9__96_3, __9__97_0, __9__97_1, __9__97_2, __9__97_3, __9__97_4, __9__97_5, __9__97_6, __9__97_7, __9__98_0, __9__98_1, __9__98_2, __9__98_3, __9__98_4, __9__98_5, __9__98_6, __9__98_7, __9__99_0, __9__99_1, __9__99_2, __9__99_3, __9__99_4, __9__99_5, __9__99_6, __9__99_7
+
+### __c__DisplayClass63_0  : Il2CppSystem.Object
+  properties: __9__4, result
+
+### __c__DisplayClass109_0  : Il2CppSystem.Object
+  properties: _filter
+
+### __c__DisplayClass113_0  : Il2CppSystem.Object
+  properties: hashCode
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__36_0
+
+### _loadWeb_d__47  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, _list_5__3, _www_5__2, entry, suppressDoubleStations, uid
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _loadResource_d__48  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, _list_5__2, entry, suppressDoubleStations, uid
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _loadShoutcast_d__49  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, _list_5__3, _www_5__2, entry, suppressDoubleStations, uid
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__12_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__12_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__12_0
+
+### _Load_d__0  : Il2CppSystem.Object
+  properties: __1__state, __2__current, station
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _Load_d__1  : Il2CppSystem.Object
+  properties: __1__state, __2__current, record
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _load_d__2  : Il2CppSystem.Object
+  properties: __1__state, __2__current, _texDl_5__3, _www_5__2, record, station, url
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _lerpAlphaDown_d__8  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, delay, endAlphaValue, gameObjectToFade, startAlphaValue, time
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### _lerpAlphaUp_d__9  : Il2CppSystem.Object
+  properties: __1__state, __2__current, __4__this, delay, endAlphaValue, gameObjectToFade, startAlphaValue, time
+  methods:    MoveNext, System_Collections_Generic_IEnumerator_System_Object__get_Current, System_Collections_IEnumerator_Reset, System_Collections_IEnumerator_get_Current, System_IDisposable_Dispose
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__8_0, __9__9_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__5_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__65_0
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__26_0, __9__26_1
+
+### __c  : Il2CppSystem.Object
+  properties: __9, __9__4_0
+
+### ValueTypeNPrivateSealedUnique  : System.ValueType
+  methods:    BoxIl2CppObject
