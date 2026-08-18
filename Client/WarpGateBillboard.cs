@@ -13,24 +13,23 @@ namespace StarTruckMP.StarTruckClient
     /// 3D World-Space Billboard near each WarpGate showing which players
     /// have marked this gate as their destination jumpgate.
     /// Shows: Gate Name, player list (sorted by distance), or "FREE" when empty.
-    /// Replaces the old screen-space WarpGateHUD overlay.
+    /// Uses WorldSpace Canvas + TextMeshProUGUI (proven DockingBayHUD pattern).
     /// </summary>
     public static class WarpGateBillboard
     {
         private static List<GateBillboard> billboards = new List<GateBillboard>();
         private static string lastSector = "none";
         private static float nextUpdateTime = 0f;
-        private static readonly float UpdateInterval = 0.5f; // 2 Hz text updates
-        private static readonly float BillboardDistance = 900f; // meters before gate
-        private static readonly float MaxVisibleDistance = 5000f; // hide if camera too far
+        private static readonly float UpdateInterval = 0.5f;
+        private static readonly float BillboardDistance = 900f;
+        private static readonly float MaxVisibleDistance = 5000f;
 
         // Colors
         private static readonly Color GateNameColor = Color.white;
-        private static readonly Color PlayerColor = new Color(0.2f, 1f, 0.8f, 1f);    // cyan-green
-        private static readonly Color DistColor = new Color(0.7f, 0.9f, 1f, 0.8f);     // light blue
-        private static readonly Color FreeColor = new Color(0f, 1f, 0.5f, 0.95f);      // bright green
-        private static readonly Color BgColor = new Color(0.05f, 0.08f, 0.15f, 0.85f); // dark blue-black
-        private static readonly Color SepColor = new Color(0.3f, 0.5f, 0.7f, 0.6f);    // separator
+        private static readonly Color PlayerColor = new Color(0.2f, 1f, 0.8f, 1f);
+        private static readonly Color FreeColor = new Color(0f, 1f, 0.5f, 0.95f);
+        private static readonly Color BgColor = new Color(0.05f, 0.08f, 0.15f, 0.85f);
+        private static readonly Color SepColor = new Color(0.3f, 0.5f, 0.7f, 0.6f);
 
         // Reflection cache for gate name resolution
         private static FieldInfo fi_entryGateName = null;
@@ -56,12 +55,10 @@ namespace StarTruckMP.StarTruckClient
                     mainCam = Camera.main;
                 if (mainCam == null) return;
 
-                // Billboard: face camera
-                Vector3 dir = mainCam.transform.position - transform.position;
+                Vector3 dir = transform.position - mainCam.transform.position;
                 if (dir.sqrMagnitude > 0.01f)
                 {
-                    // Face the camera, but keep upright (lock Y rotation if needed)
-                    transform.rotation = Quaternion.LookRotation(-dir, Vector3.up);
+                    transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
                 }
             }
         }
@@ -72,10 +69,9 @@ namespace StarTruckMP.StarTruckClient
             public string gateId;
             public string displayName;
             public GameObject rootObj;
-            public TMPro.TextMeshPro nameLabel;
-            public TMPro.TextMeshPro separator;
-            public TMPro.TextMeshPro contentLabel; // player list or "FREE"
-            public GameObject bgQuad;
+            public TMPro.TextMeshProUGUI nameLabel;
+            public TMPro.TextMeshProUGUI separator;
+            public TMPro.TextMeshProUGUI contentLabel;
         }
 
         /// <summary>
@@ -113,7 +109,6 @@ namespace StarTruckMP.StarTruckClient
                         if (!string.IsNullOrEmpty(val)) return val.Trim();
                     }
 
-                    // Try property too
                     var propId = gate.GetType().GetProperty("entryGateId",
                         BindingFlags.Public | BindingFlags.Instance);
                     if (propId != null)
@@ -125,7 +120,6 @@ namespace StarTruckMP.StarTruckClient
                 catch { }
             }
 
-            // Fallback: cleaned gameObject.name
             string raw = zone.gameObject?.name ?? "Gate";
             int cloneIdx = raw.IndexOf("(Clone)");
             if (cloneIdx > 0) raw = raw.Substring(0, cloneIdx).Trim();
@@ -174,11 +168,12 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Finds an existing TextMeshPro (3D) object in scene to clone as template.
+        /// Finds an existing TextMeshProUGUI object in scene to clone as template.
+        /// Same pattern as DockingBayHUD.FindSourceTMP().
         /// </summary>
-        private static TMPro.TextMeshPro FindSourceTMP()
+        private static TMPro.TextMeshProUGUI FindSourceTMP()
         {
-            var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshPro>();
+            var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
             if (allTMP == null) return null;
             foreach (var tmp in allTMP)
             {
@@ -189,64 +184,125 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Creates a world-space billboard for a single gate.
+        /// Creates a world-space billboard for a single gate using Canvas + TMPUGUI.
         /// </summary>
-        private static void CreateBillboard(WarpTriggerZone zone)
+        private static void CreateBillboard(WarpTriggerZone zone, TMPro.TextMeshProUGUI sourceTMP)
         {
             string gateId = GetGateId(zone);
             string gateName = GetGateName(zone);
 
-            // Root object
+            // Root object with WorldSpace Canvas
             GameObject root = new GameObject($"Billboard_{gateName}");
-            root.transform.SetParent(null); // world-space, not under any parent
-            // Position: between gate and nearest player (so player sees it when approaching)
-                Vector3 toPlayer = (StarTruckClient.myTruck != null)
-                    ? (StarTruckClient.myTruck.transform.position - zone.transform.position)
-                    : zone.transform.forward * -1f;
-                if (toPlayer.sqrMagnitude < 0.01f) toPlayer = zone.transform.forward * -1f;
-                root.transform.position = zone.transform.position + toPlayer.normalized * BillboardDistance;
+            root.transform.SetParent(null);
+
+            // Position: between gate and player (approach corridor)
+            Vector3 towardPlayer = (StarTruckClient.myTruck != null)
+                ? (StarTruckClient.myTruck.transform.position - zone.transform.position)
+                : zone.transform.forward * -1f;
+            if (towardPlayer.sqrMagnitude < 0.01f) towardPlayer = zone.transform.forward * -1f;
+            root.transform.position = zone.transform.position + towardPlayer.normalized * BillboardDistance;
 
             // Billboard behavior (faces camera)
             root.AddComponent<BillboardBehavior>();
 
-            // Background quad (dark panel behind text)
-            GameObject bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            bg.name = "BG";
+            // WorldSpace Canvas
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.sortingOrder = 500;
+            root.AddComponent<UnityEngine.UI.CanvasScaler>();
+
+            // Canvas RectTransform sizing: 4500x7500 canvas units, scaled to 0.01 = 45m x 75m world
+            RectTransform canvasRT = root.GetComponent<RectTransform>();
+            canvasRT.sizeDelta = new Vector2(4500f, 7500f);
+            root.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
+
+            // Background Image (not Quad)
+            GameObject bg = new GameObject("BG");
             bg.transform.SetParent(root.transform, false);
-            bg.transform.localPosition = Vector3.zero;
-            bg.transform.localScale = new Vector3(45f, 75f, 1f);
-            var bgRenderer = bg.GetComponent<MeshRenderer>();
-            if (bgRenderer != null)
+            var bgRT = bg.AddComponent<RectTransform>();
+            bgRT.anchorMin = Vector2.zero;
+            bgRT.anchorMax = Vector2.one;
+            bgRT.offsetMin = Vector2.zero;
+            bgRT.offsetMax = Vector2.zero;
+            bgRT.sizeDelta = new Vector2(4500f, 7500f);
+            var bgImg = bg.AddComponent<UnityEngine.UI.Image>();
+            bgImg.color = BgColor;
+            bgImg.raycastTarget = false;
+
+            // --- Name Label (clone from sourceTMP) ---
+            GameObject nameObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
+            nameObj.name = "NameLabel";
+            var nameRT = nameObj.GetComponent<RectTransform>();
+            if (nameRT != null)
             {
-                bgRenderer.material = new Material(Shader.Find("Standard"));
-                bgRenderer.material.color = BgColor;
-                bgRenderer.material.SetInt("_Cull", 0);
-                bgRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                bgRenderer.receiveShadows = false;
-                bgRenderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
-                bgRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+                nameRT.anchorMin = new Vector2(0.5f, 0.5f);
+                nameRT.anchorMax = new Vector2(0.5f, 0.5f);
+                nameRT.anchoredPosition = new Vector2(0f, 2700f);
+                nameRT.sizeDelta = new Vector2(4200f, 600f);
+                nameRT.localScale = Vector3.one;
             }
-            // Remove collider from quad
-            var bgCollider = bg.GetComponent<Collider>();
-            if (bgCollider != null) UnityEngine.Object.Destroy(bgCollider);
+            var nameLabel = nameObj.GetComponent<TMPro.TextMeshProUGUI>();
+            if (nameLabel != null)
+            {
+                nameLabel.text = $"EXIT GATE: {gateName}";
+                nameLabel.fontSize = 18f;
+                nameLabel.color = GateNameColor;
+                nameLabel.alignment = TMPro.TextAlignmentOptions.Center;
+                nameLabel.raycastTarget = false;
+                if (nameLabel.font == null && sourceTMP.font != null)
+                    nameLabel.font = sourceTMP.font;
+                nameLabel.ForceMeshUpdate();
+            }
 
-            // Gate name label (top area)
-            GameObject nameObj = CreateTMPObject(root.transform, "GateName",
-                new Vector3(0f, 27f, -0.1f), 6f, GateNameColor,
-                $"EXIT GATE: {gateName}", TMPro.TextAlignmentOptions.Center);
-            var nameTMP = nameObj != null ? nameObj.GetComponent<TMPro.TextMeshPro>() : null;
+            // --- Separator ---
+            GameObject sepObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
+            sepObj.name = "Separator";
+            var sepRT = sepObj.GetComponent<RectTransform>();
+            if (sepRT != null)
+            {
+                sepRT.anchorMin = new Vector2(0.5f, 0.5f);
+                sepRT.anchorMax = new Vector2(0.5f, 0.5f);
+                sepRT.anchoredPosition = new Vector2(0f, 2100f);
+                sepRT.sizeDelta = new Vector2(4200f, 300f);
+                sepRT.localScale = Vector3.one;
+            }
+            var sepTMP = sepObj.GetComponent<TMPro.TextMeshProUGUI>();
+            if (sepTMP != null)
+            {
+                sepTMP.text = "————————————";
+                sepTMP.fontSize = 9f;
+                sepTMP.color = SepColor;
+                sepTMP.alignment = TMPro.TextAlignmentOptions.Center;
+                sepTMP.raycastTarget = false;
+                if (sepTMP.font == null && sourceTMP.font != null)
+                    sepTMP.font = sourceTMP.font;
+                sepTMP.ForceMeshUpdate();
+            }
 
-            // Separator line
-            var sepObj = CreateTMPObject(root.transform, "Separator",
-                new Vector3(0f, 22f, -0.1f), 3f, SepColor,
-                "————————————————", TMPro.TextAlignmentOptions.Center);
-            var sepTMP = sepObj != null ? sepObj.GetComponent<TMPro.TextMeshPro>() : null;
-
-            // Content label (player list or "FREE")
-            var contentObj = CreateTMPObject(root.transform, "Content",
-                new Vector3(0f, 5f, -0.1f), 5f, FreeColor,
-                "FREE", TMPro.TextAlignmentOptions.Center);
-            var contentTMP = contentObj != null ? contentObj.GetComponent<TMPro.TextMeshPro>() : null;
+            // --- Content Label (player list or "FREE") ---
+            GameObject contentObj = UnityEngine.Object.Instantiate(sourceTMP.gameObject, root.transform);
+            contentObj.name = "ContentLabel";
+            var contentRT = contentObj.GetComponent<RectTransform>();
+            if (contentRT != null)
+            {
+                contentRT.anchorMin = new Vector2(0.5f, 0.5f);
+                contentRT.anchorMax = new Vector2(0.5f, 0.5f);
+                contentRT.anchoredPosition = new Vector2(0f, 0f);
+                contentRT.sizeDelta = new Vector2(4200f, 4000f);
+                contentRT.localScale = Vector3.one;
+            }
+            var contentTMP = contentObj.GetComponent<TMPro.TextMeshProUGUI>();
+            if (contentTMP != null)
+            {
+                contentTMP.text = "FREE";
+                contentTMP.fontSize = 24f;
+                contentTMP.color = FreeColor;
+                contentTMP.alignment = TMPro.TextAlignmentOptions.Center;
+                contentTMP.raycastTarget = false;
+                if (contentTMP.font == null && sourceTMP.font != null)
+                    contentTMP.font = sourceTMP.font;
+                contentTMP.ForceMeshUpdate();
+            }
 
             billboards.Add(new GateBillboard
             {
@@ -254,10 +310,9 @@ namespace StarTruckMP.StarTruckClient
                 gateId = gateId,
                 displayName = gateName,
                 rootObj = root,
-                nameLabel = nameTMP,
+                nameLabel = nameLabel,
                 separator = sepTMP,
-                contentLabel = contentTMP,
-                bgQuad = bg
+                contentLabel = contentTMP
             });
         }
 
@@ -269,7 +324,6 @@ namespace StarTruckMP.StarTruckClient
         {
             var result = new List<(string, float)>();
 
-            // Remote players
             if (StarTruckClient.playerList != null)
             {
                 foreach (var kv in StarTruckClient.playerList)
@@ -284,7 +338,6 @@ namespace StarTruckMP.StarTruckClient
                         kv.Value.truckTrans.Pos.y,
                         kv.Value.truckTrans.Pos.z
                     );
-                    // Floating origin correction
                     if (StarTruckClient.floatingOrigin != null)
                         playerPos += StarTruckClient.floatingOrigin.m_currentOrigin;
 
@@ -293,7 +346,6 @@ namespace StarTruckMP.StarTruckClient
                 }
             }
 
-            // Local player
             if (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
                 && StarTruckClient.currentDestinationGateId == gateId
                 && StarTruckClient.myTruck != null)
@@ -303,7 +355,6 @@ namespace StarTruckMP.StarTruckClient
                 result.Add(("(Du)", dist));
             }
 
-            // Sort by distance (closest first)
             result.Sort((a, b) => a.Item2.CompareTo(b.Item2));
             return result;
         }
@@ -321,7 +372,7 @@ namespace StarTruckMP.StarTruckClient
             if (players.Count == 0)
             {
                 bb.contentLabel.text = "FREE";
-                bb.contentLabel.fontSize = 8f;
+                bb.contentLabel.fontSize = 24f;
                 bb.contentLabel.color = FreeColor;
             }
             else
@@ -343,36 +394,11 @@ namespace StarTruckMP.StarTruckClient
                     sb.AppendLine($"... +{players.Count - 10} more");
 
                 bb.contentLabel.text = sb.ToString().TrimEnd();
-                bb.contentLabel.fontSize = 4f;
+                bb.contentLabel.fontSize = 12f;
                 bb.contentLabel.color = PlayerColor;
             }
-        }
 
-
-        /// <summary>
-        /// Creates a TextMeshPro 3D text object from scratch (no cloning needed).
-        /// </summary>
-        private static GameObject CreateTMPObject(UnityEngine.Transform parent, string name,
-            Vector3 localPos, float fontSize, UnityEngine.Color color, string text,
-            TMPro.TextAlignmentOptions alignment)
-        {
-            GameObject obj = new GameObject(name);
-            obj.transform.SetParent(parent, false);
-            obj.transform.localPosition = localPos;
-            obj.transform.localScale = Vector3.one;
-            var tmp = obj.AddComponent<TMPro.TextMeshPro>();
-            if (tmp != null)
-            {
-                tmp.text = text;
-                tmp.fontSize = fontSize;
-                tmp.color = color;
-                tmp.alignment = alignment;
-                tmp.enableAutoSizing = false;
-                tmp.overflowMode = TMPro.TextOverflowModes.Overflow;
-                tmp.enableWordWrapping = false;
-                tmp.raycastTarget = false;
-            }
-            return obj;
+            bb.contentLabel.ForceMeshUpdate();
         }
 
         public static void RefreshBillboards()
@@ -384,7 +410,6 @@ namespace StarTruckMP.StarTruckClient
                 string sector = StarTruckClient.currentSector;
                 if (string.IsNullOrEmpty(sector) || sector == "none") return;
 
-                // Only refresh on sector change
                 if (sector == lastSector) return;
                 lastSector = sector;
 
@@ -393,11 +418,10 @@ namespace StarTruckMP.StarTruckClient
                 var sourceTMP = FindSourceTMP();
                 if (sourceTMP == null)
                 {
-                    StarTruckMP.Log.LogWarning("WarpGateBillboard: no source TMP found, skipping.");
+                    StarTruckMP.Log.LogWarning("WarpGateBillboard: no source TMPUGUI found, skipping.");
                     return;
                 }
 
-                // Find all warp gates in scene
                 WarpTriggerZone[] allGates;
                 try
                 {
@@ -422,7 +446,7 @@ namespace StarTruckMP.StarTruckClient
                     if (zone == null || zone.gameObject == null) continue;
                     try
                     {
-                        CreateBillboard(zone);
+                        CreateBillboard(zone, sourceTMP);
                     }
                     catch (Exception ex)
                     {
@@ -460,7 +484,6 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 gateWorldPos = bb.gateZone.transform.position;
                     float distToCamera = Vector3.Distance(camPos, gateWorldPos);
 
-                    // Hide if camera too far
                     if (distToCamera > MaxVisibleDistance)
                     {
                         if (bb.rootObj.activeSelf) bb.rootObj.SetActive(false);
@@ -469,7 +492,6 @@ namespace StarTruckMP.StarTruckClient
 
                     if (!bb.rootObj.activeSelf) bb.rootObj.SetActive(true);
 
-                    // Update text (throttled to 2 Hz)
                     if (doTextUpdate)
                     {
                         UpdateBillboardContent(bb);
