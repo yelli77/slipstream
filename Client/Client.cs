@@ -804,12 +804,15 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Reads the player's ACTUAL selected route from the galactic map (not a
-        /// proximity/velocity guess). GameStatePersistence.instance.destinationEntryGate
-        /// is the game's own "which gate am I currently making for" field, kept in sync
-        /// with the route the player picked on the map (JourneyTracker). Empty/null means
-        /// the player has not selected a route at all, in which case they should not show
-        /// up on any departure board.
+        /// Reads the player's ACTUAL selected route from the galactic map.
+        /// GameStatePersistence.destinationEntryGate/destinationSector turned out to only be
+        /// populated during an active warp jump, NOT while a route is merely selected on the
+        /// map — confirmed empty via diagnostics while a route was clearly set (map showed a
+        /// highway-shield route marker). The real source of truth is the persisted
+        /// JourneyTracker route: GameStatePersistence.instance.journeyTrackerState.waypoints
+        /// is the ordered list of sector ids the player picked on the map; waypoints[0] is the
+        /// immediate next sector. We match that against each WarpGate's DestinationSectorId in
+        /// the current sector to find which physical gate leads there.
         /// </summary>
         private static float lastDestGateDiagLog = 0f;
 
@@ -820,32 +823,34 @@ namespace StarTruckMP.StarTruckClient
                 if (!client.IsConnected) return;
 
                 string gateId = "";
-                string destSector = "";
-                bool gspFound = false;
+                string nextSectorId = "";
+                int waypointCount = -1;
+
                 try
                 {
                     var gsp = GameStatePersistence.instance;
                     if (gsp != null)
                     {
-                        gspFound = true;
-                        gateId = gsp.destinationEntryGate;
-                        destSector = gsp.destinationSector;
+                        var jtd = gsp.journeyTrackerState;
+                        if (jtd != null)
+                        {
+                            var wps = jtd.waypoints;
+                            if (wps != null)
+                            {
+                                int wpCount = wps.Cast<Il2CppSystem.Collections.Generic.ICollection<string>>().Count;
+                                waypointCount = wpCount;
+                                if (wpCount > 0) nextSectorId = wps[0] ?? "";
+                            }
+                        }
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    StarTruckMP.Log.LogWarning($"DetectDestinationGates: GameStatePersistence read failed: {ex.Message}");
+                    StarTruckMP.Log.LogWarning($"DetectDestinationGates: journeyTrackerState read failed: {ex.Message}");
                 }
 
-                currentDestinationGateId = gateId ?? "";
-
-                // Throttled diagnostics: dump raw values + every gate's entryGateId in scene
-                // so we can compare formats if the board doesn't pick up the local player.
-                float now = Time.realtimeSinceStartup;
-                if (now - lastDestGateDiagLog > 5f)
+                if (!string.IsNullOrEmpty(nextSectorId))
                 {
-                    lastDestGateDiagLog = now;
-                    StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG: gspFound={gspFound} destinationEntryGate='{gateId}' destinationSector='{destSector}' -> currentDestinationGateId='{currentDestinationGateId}'");
                     try
                     {
                         var allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>();
@@ -854,8 +859,54 @@ namespace StarTruckMP.StarTruckClient
                             foreach (var z in allGates)
                             {
                                 if (z == null || z.gameObject == null) continue;
+                                WarpGate gateComp = null;
+                                try { gateComp = z.GetComponent<WarpGate>(); } catch { }
+                                if (gateComp == null) try { gateComp = z.GetComponentInParent<WarpGate>(); } catch { }
+                                if (gateComp == null) continue;
+                                string destSectorName = "";
+                                try { destSectorName = gateComp.DestinationSectorId != null ? gateComp.DestinationSectorId.name : ""; } catch { }
+                                if (!string.IsNullOrEmpty(destSectorName) && destSectorName == nextSectorId)
+                                {
+                                    gateId = JumpgateUtils.GetEntryGateIdForZone(z);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch (System.Exception ex2)
+                    {
+                        StarTruckMP.Log.LogWarning($"DetectDestinationGates: gate matching failed: {ex2.Message}");
+                    }
+                }
+
+                currentDestinationGateId = gateId;
+
+                // Throttled diagnostics
+                float now = Time.realtimeSinceStartup;
+                if (now - lastDestGateDiagLog > 5f)
+                {
+                    lastDestGateDiagLog = now;
+                    StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG v2: waypointCount={waypointCount} nextSectorId='{nextSectorId}' -> currentDestinationGateId='{gateId}'");
+                    try
+                    {
+                        var allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>();
+                        if (allGates != null)
+                        {
+                            foreach (var z in allGates)
+                            {
+                                if (z == null || z.gameObject == null) continue;
+                                WarpGate gateComp = null;
+                                try { gateComp = z.GetComponent<WarpGate>(); } catch { }
+                                if (gateComp == null) try { gateComp = z.GetComponentInParent<WarpGate>(); } catch { }
+                                string destName;
+                                if (gateComp != null)
+                                {
+                                    try { destName = gateComp.DestinationSectorId != null ? gateComp.DestinationSectorId.name : "(null)"; }
+                                    catch { destName = "(error)"; }
+                                }
+                                else destName = "(no WarpGate component)";
                                 string eid = JumpgateUtils.GetEntryGateIdForZone(z);
-                                StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG: scene gate entryGateId='{eid}' (match={eid == currentDestinationGateId})");
+                                StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG v2: gate entryGateId='{eid}' destinationSectorId='{destName}'");
                             }
                         }
                     }
