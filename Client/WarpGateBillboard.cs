@@ -56,25 +56,8 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public class BillboardBehavior : MonoBehaviour
         {
-            private Camera mainCam = null;
-
-            public void Awake()
-            {
-                mainCam = Camera.main;
-            }
-
-            public void Update()
-            {
-                if (mainCam == null)
-                    mainCam = Camera.main;
-                if (mainCam == null) return;
-
-                Vector3 dir = transform.position - mainCam.transform.position;
-                if (dir.sqrMagnitude > 0.01f)
-                {
-                    transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
-                }
-            }
+            // Empty — billboard is fully static, rotation set once at creation time.
+            // Class kept for IL2CPP registration.
         }
 
         private class GateBillboard
@@ -378,6 +361,24 @@ namespace StarTruckMP.StarTruckClient
             // Force an immediate layout/geometry rebuild instead of waiting an
             // indeterminate number of frames for IL2CPP's Canvas update loop.
             Canvas.ForceUpdateCanvases();
+
+            // --- Static rotation: face outward from gate (same direction always) ---
+            // Gate.forward points INTO the gate (warp exit), so face the opposite.
+            Quaternion boardRotation = Quaternion.LookRotation(-zone.transform.forward, Vector3.up);
+            root.transform.rotation = boardRotation;
+
+            // --- Back-to-back duplicate: second canvas flipped 180 degrees ---
+            // A WorldSpace Canvas is a flat plane — invisible from behind. By placing
+            // an identical copy rotated 180 degrees at the same position, the billboard
+            // is readable from both approach directions.
+            GameObject mirror = UnityEngine.Object.Instantiate(root, root.transform.parent);
+            mirror.name = $"Billboard_{gateName}_Mirror";
+            mirror.transform.position = root.transform.position;
+            mirror.transform.rotation = boardRotation * Quaternion.Euler(0f, 180f, 0f);
+            // Flip the canvas scale Z to reverse the face direction properly
+            var mirrorScale = mirror.transform.localScale;
+            mirrorScale.z = -Mathf.Abs(mirrorScale.z);
+            mirror.transform.localScale = mirrorScale;
 
             if (!diagLogged)
             {
