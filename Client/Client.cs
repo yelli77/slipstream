@@ -859,10 +859,8 @@ namespace StarTruckMP.StarTruckClient
                             foreach (var z in allGates)
                             {
                                 if (z == null || z.gameObject == null) continue;
-                                WarpGate gateComp = JumpgateUtils.FindWarpGateForZone(z);
-                                if (gateComp == null) continue;
                                 string destSectorName = "";
-                                try { destSectorName = gateComp.DestinationSectorId != null ? gateComp.DestinationSectorId.name : ""; } catch { }
+                                try { destSectorName = z.DestinationSectorId != null ? z.DestinationSectorId.name : ""; } catch { }
                                 if (!string.IsNullOrEmpty(destSectorName) && destSectorName == nextSectorId)
                                 {
                                     gateId = JumpgateUtils.GetEntryGateIdForZone(z);
@@ -893,14 +891,9 @@ namespace StarTruckMP.StarTruckClient
                             foreach (var z in allGates)
                             {
                                 if (z == null || z.gameObject == null) continue;
-                                WarpGate gateComp = JumpgateUtils.FindWarpGateForZone(z);
                                 string destName;
-                                if (gateComp != null)
-                                {
-                                    try { destName = gateComp.DestinationSectorId != null ? gateComp.DestinationSectorId.name : "(null)"; }
-                                    catch { destName = "(error)"; }
-                                }
-                                else destName = "(no WarpGate component)";
+                                try { destName = z.DestinationSectorId != null ? z.DestinationSectorId.name : "(null)"; }
+                                catch { destName = "(error)"; }
                                 string eid = JumpgateUtils.GetEntryGateIdForZone(z);
                                 StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG v2: gate entryGateId='{eid}' destinationSectorId='{destName}'");
                             }
