@@ -316,6 +316,11 @@ namespace StarTruckMP.StarTruckClient
             }
             else
             {
+                // Build every row first (still keyed by its real rank, pos 1 = best/next to
+                // jump), then render them BOTTOM-UP: pos 1 ends up as the last line (closest
+                // to the gate on the sign), higher/farther positions stack above it - easier
+                // to see who's up next while approaching.
+                var rows = new List<string>(entries.Count);
                 int pos = 1;
                 foreach (var entry in entries)
                 {
@@ -356,9 +361,12 @@ namespace StarTruckMP.StarTruckClient
                     {
                         driverCell = driverTrunc.PadRight(18);
                     }
-                    sb.AppendLine(FormatRow(pos.ToString(), driverCell, distText));
+                    rows.Add(FormatRow(pos.ToString(), driverCell, distText));
                     pos++;
                 }
+
+                for (int i = rows.Count - 1; i >= 0; i--)
+                    sb.AppendLine(rows[i]);
             }
 
             sb.Append("</mspace>");
