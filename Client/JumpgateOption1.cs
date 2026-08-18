@@ -22,8 +22,7 @@ namespace StarTruckMP.StarTruckClient
         private static bool initialized = false;
 
         // ─── Constants ───
-        private const float SideOffset = 100f;     // meters to the side of gate, well clear of the gate ring
-        private const float HeightOffset = 8f;     // meters above gate
+        private const float HeightOffset = 100f;   // meters directly above the gate, centered
         private const float SignWidth = 9000f;    // canvas units (9000x9000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
@@ -261,13 +260,8 @@ namespace StarTruckMP.StarTruckClient
                 approachDir = Vector3.forward;
             approachDir = approachDir.normalized;
 
-            // Position sign to the side and above the gate
-            Vector3 sideDir = Vector3.Cross(Vector3.up, approachDir).normalized;
-            // Ensure side direction is not degenerate (if approach is straight up)
-            if (sideDir.sqrMagnitude < 0.01f)
-                sideDir = Vector3.Cross(Vector3.right, approachDir).normalized;
-
-            Vector3 signPos = gatePos + sideDir * SideOffset + Vector3.up * HeightOffset;
+            // Position sign centered directly above the gate
+            Vector3 signPos = gatePos + Vector3.up * HeightOffset;
 
             // Orientation: face back along the approach direction (like a roadside sign)
             Quaternion fixedRot = Quaternion.LookRotation(-approachDir, Vector3.up);
@@ -349,7 +343,7 @@ namespace StarTruckMP.StarTruckClient
             tmp.alignment = TMPro.TextAlignmentOptions.TopLeft;
 
             // 5. Text color: bright yellow/green for visibility in space
-            tmp.color = new Color(0.2f, 1f, 0.4f, 1f); // bright green
+            tmp.color = new Color(0.85f, 0.85f, 0.85f, 1f); // light gray
 
             // 6. Re-assert active state and alpha
             tmpObj.SetActive(true);
