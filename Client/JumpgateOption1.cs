@@ -346,7 +346,10 @@ namespace StarTruckMP.StarTruckClient
             {
                 string colorHex = pos == 1 ? Pos1Color : pos == 2 ? Pos2Color : RestColor;
                 float sizePercent = pos == 1 ? Pos1SizePercent : pos == 2 ? Pos2SizePercent : 100f;
-                int nameFieldWidth = pos <= 2 ? DriverNameMaxChars : 18;
+                // POS 1/2 need a visual gap between the (short, 6-char) name and the
+                // distance - unlike the pos>=3 table rows, there's no PadRight(18) worth of
+                // trailing space naturally separating them, so add it explicitly.
+                int nameFieldWidth = pos <= 2 ? DriverNameMaxChars + 6 : 18;
 
                 string nameField;
                 string distField;
