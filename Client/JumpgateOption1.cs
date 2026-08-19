@@ -293,6 +293,10 @@ namespace StarTruckMP.StarTruckClient
         // column (or, for POS 1's enlarged text, the board edge) out of alignment.
         private const int DriverNameMaxChars = 6;
 
+        // DISTANCE column is right-aligned under its header; wide enough for the
+        // longest realistic value (e.g. "12.3km") plus a little breathing room.
+        private const int DistanceColumnWidth = 10;
+
         private static string TruncateName(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";
@@ -330,7 +334,7 @@ namespace StarTruckMP.StarTruckClient
             // <mspace> forces fixed-width character spacing so the padded columns
             // actually line up despite the proportional font.
             sb.Append("<mspace=0.6em>");
-            sb.AppendLine(FormatRow("POS", "DRIVER".PadRight(18), "DISTANCE"));
+            sb.AppendLine(FormatRow("POS", "DRIVER".PadRight(18), "DISTANCE".PadLeft(DistanceColumnWidth)));
 
             // Hard cut: only the first MaxBoardPositions entries (already ranked, POS 1
             // first) are shown on this board.
@@ -392,12 +396,12 @@ namespace StarTruckMP.StarTruckClient
                 else if (pos == 2)
                 {
                     // Same size/layout as POS 3-9 (normal table row), just yellow instead of blue.
-                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField);
+                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
                     row = $"<color={Pos2Color}>{rowPlain}</color>";
                 }
                 else
                 {
-                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField);
+                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
                     row = $"<color={RestColor}>{rowPlain}</color>";
                 }
                 rows.Add(row);
