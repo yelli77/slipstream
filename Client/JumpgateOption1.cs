@@ -327,7 +327,9 @@ namespace StarTruckMP.StarTruckClient
         // POS 1's "*NOW*  name  *NOW*" layout: *NOW* stays at normal size/color, only the
         // name is enlarged. Pos1SidePadChars is the (normal-size) gap kept on each side of
         // the enlarged name, between it and each *NOW*.
-        private const string Pos1NowText = "*NOW*";
+        // Same blinkState tick as the POS 2-9 marker: alternates the stars on/off (keeping
+        // the string a fixed 5 chars either way, so the name's position never shifts).
+        private static string Pos1NowText => blinkState ? "*NOW*" : " NOW ";
         private const int Pos1SidePadChars = 6;
 
         private static string BuildDepartureText(List<PlayerEntry> entries)
