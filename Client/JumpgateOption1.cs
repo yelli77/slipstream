@@ -23,7 +23,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 18000f;   // canvas units - narrowed back down now that only the name (not *NOW*) is 3x size (was 26000)
+        private const float SignWidth = 13000f;   // canvas units - narrowed again: POS 1 dropped its trailing *NOW*, only a leading '*NOW*  name' now (was 18000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -386,8 +386,7 @@ namespace StarTruckMP.StarTruckClient
                     string pad = new string(' ', Pos1SidePadChars);
                     string content =
                         Pos1NowText + pad
-                        + $"</mspace><size={Pos1SizePercent}%><mspace=0.6em>{namePadded}</mspace></size><mspace=0.6em>"
-                        + pad + Pos1NowText;
+                        + $"</mspace><size={Pos1SizePercent}%><mspace=0.6em>{namePadded}</mspace></size><mspace=0.6em>";
                     row = $"<color={Pos1Color}>{content}</color>";
                 }
                 else if (pos == 2)
