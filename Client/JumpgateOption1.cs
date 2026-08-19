@@ -346,18 +346,13 @@ namespace StarTruckMP.StarTruckClient
             {
                 string colorHex = pos == 1 ? Pos1Color : pos == 2 ? Pos2Color : RestColor;
                 float sizePercent = pos == 1 ? Pos1SizePercent : pos == 2 ? Pos2SizePercent : 100f;
-                // POS 1/2 need a visual gap between the (short, 6-char) name and the
-                // distance - unlike the pos>=3 table rows, there's no PadRight(18) worth of
-                // trailing space naturally separating them, so add it explicitly.
-                int nameFieldWidth = pos <= 2 ? DriverNameMaxChars + 6 : 18;
 
-                string nameField;
+                string nameRaw;
                 string distField;
                 if (pos <= shownCount)
                 {
                     var entry = entries[pos - 1];
-                    // Always truncate to DriverNameMaxChars (6) first, THEN pad.
-                    nameField = TruncateName(entry.playerName).PadRight(nameFieldWidth);
+                    nameRaw = TruncateName(entry.playerName);
                     distField = entry.distanceFromGate < 1000f
                         ? $"{entry.distanceFromGate:F0}m"
                         : $"{entry.distanceFromGate / 1000f:F1}km";
@@ -366,20 +361,26 @@ namespace StarTruckMP.StarTruckClient
                 {
                     // Empty slot - show FREE in that position's own color/size instead of
                     // a generic dimmed placeholder.
-                    nameField = "FREE".PadRight(nameFieldWidth);
+                    nameRaw = "FREE";
                     distField = "---";
                 }
 
-                string rowPlain = FormatRow(pos.ToString(), nameField, distField);
-
-                // NOTE: TMP's <mspace> fixes each character's advance width using the point
-                // size in effect when the tag was opened - it does NOT recompute when a
-                // nested <size> tag later changes the point size. So for enlarged rows we
-                // close the outer mspace, open a fresh one INSIDE the enlarged <size> span,
-                // then reopen the outer mspace afterwards for the next (normal-size) row.
-                string row = sizePercent != 100f
-                    ? $"</mspace><size={sizePercent}%><color={colorHex}><mspace=0.6em>{rowPlain}</mspace></color></size><mspace=0.6em>"
-                    : $"<color={colorHex}>{rowPlain}</color>";
+                string row;
+                if (pos <= 2)
+                {
+                    // POS 1/2 each only ever occupy a single row, so there's no other row
+                    // at that size to keep column-aligned with - just center the whole
+                    // "pos  name  distance" line as one block instead of fighting the
+                    // fixed-width table padding (which, at these enlarged sizes, produced a
+                    // huge/uneven gap between the name and the distance).
+                    string centeredContent = $"{pos}   {nameRaw}   {distField}";
+                    row = $"</mspace><size={sizePercent}%><color={colorHex}><mspace=0.6em><align=center>{centeredContent}</align></mspace></color></size><mspace=0.6em>";
+                }
+                else
+                {
+                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField);
+                    row = $"<color={colorHex}>{rowPlain}</color>";
+                }
                 rows.Add(row);
             }
 
