@@ -28,7 +28,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 8500f;    // canvas units - cropped tight to the table's content width (POS+DRIVER+DISTANCE), no leftover empty space on the right (was 13000)
+        private const float SignWidth = 12300f;   // canvas units - the 8500 crop was too aggressive (DISTANCE overflowed past the board edge); 13000 was known-good for the old 10-wide DISTANCE column, this accounts for narrowing that column to 8 (was 8500)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -300,7 +300,7 @@ namespace StarTruckMP.StarTruckClient
 
         // DISTANCE column is right-aligned under its header; wide enough for the
         // longest realistic value (e.g. "12.3km") plus a little breathing room.
-        private const int DistanceColumnWidth = 10;
+        private const int DistanceColumnWidth = 8;
 
         private static string TruncateName(string name)
         {
