@@ -21,9 +21,14 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float UpdateInterval = 1.5f; // seconds between text refreshes
         private static bool initialized = false;
 
+        // Alternates "* "/" *" in front of POS 2-9's position number each UpdatePositions
+        // tick (i.e. roughly every UpdateInterval seconds) for a slow blinking-light effect.
+        private static bool blinkState = false;
+        private static string BlinkMarker => blinkState ? "* " : " *";
+
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 13000f;   // canvas units - narrowed again: POS 1 dropped its trailing *NOW*, only a leading '*NOW*  name' now (was 18000)
+        private const float SignWidth = 8500f;    // canvas units - cropped tight to the table's content width (POS+DRIVER+DISTANCE), no leftover empty space on the right (was 13000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -281,7 +286,7 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         private static string FormatRow(string pos, string driverCell, string distance)
         {
-            return pos.PadRight(4) + driverCell + distance;
+            return pos.PadRight(6) + driverCell + distance;
         }
 
         /// <summary>
@@ -334,7 +339,7 @@ namespace StarTruckMP.StarTruckClient
             // <mspace> forces fixed-width character spacing so the padded columns
             // actually line up despite the proportional font.
             sb.Append("<mspace=0.6em>");
-            sb.AppendLine(FormatRow("POS", "DRIVER".PadRight(18), "DISTANCE".PadLeft(DistanceColumnWidth)));
+            sb.AppendLine(FormatRow("  POS", "DRIVER".PadRight(18), "DISTANCE".PadLeft(DistanceColumnWidth)));
 
             // Hard cut: only the first MaxBoardPositions entries (already ranked, POS 1
             // first) are shown on this board.
@@ -396,12 +401,14 @@ namespace StarTruckMP.StarTruckClient
                 else if (pos == 2)
                 {
                     // Same size/layout as POS 3-9 (normal table row), just yellow instead of blue.
-                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
+                    string posLabel = BlinkMarker + pos;
+                    string rowPlain = FormatRow(posLabel, nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
                     row = $"<color={Pos2Color}>{rowPlain}</color>";
                 }
                 else
                 {
-                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
+                    string posLabel = BlinkMarker + pos;
+                    string rowPlain = FormatRow(posLabel, nameRaw.PadRight(18), distField.PadLeft(DistanceColumnWidth));
                     row = $"<color={RestColor}>{rowPlain}</color>";
                 }
                 rows.Add(row);
@@ -588,6 +595,7 @@ namespace StarTruckMP.StarTruckClient
             float now = Time.realtimeSinceStartup;
             if (now - lastUpdate < UpdateInterval) return;
             lastUpdate = now;
+            blinkState = !blinkState; // drives the POS 2-9 blink marker; flips once per tick
 
             try
             {
@@ -618,29 +626,13 @@ namespace StarTruckMP.StarTruckClient
                     // Always keep board alive — update text to FREE when empty
                     // (boards are permanent, never destroyed)
 
-                    // Check if player list changed
-                    bool changed = false;
+                    // Always rebuild (the blink marker on POS 2-9 needs to flip every tick
+                    // regardless of whether the player list itself changed).
+                    bool changed = true;
                     if (boards.TryGetValue(entryId, out var board))
                     {
                         // DIAG: verify Floating Origin drift hypothesis
                         try { StarTruckMP.Log.LogInfo($"JumpgateOption1 DIAG: board='{entryId}' boardPos={board.rootObject.transform.position} gatePos={zone.transform.position} camPos={Camera.main?.transform.position} delta={Vector3.Distance(board.rootObject.transform.position, zone.transform.position):F0}m"); } catch { }
-
-                        if (board.currentPlayerEntries.Count != currentEntries.Count)
-                        {
-                            changed = true;
-                        }
-                        else
-                        {
-                            for (int i = 0; i < currentEntries.Count; i++)
-                            {
-                                if (board.currentPlayerEntries[i].playerName != currentEntries[i].playerName
-                                    || Mathf.Abs(board.currentPlayerEntries[i].distanceFromGate - currentEntries[i].distanceFromGate) > 10f)
-                                {
-                                    changed = true;
-                                    break;
-                                }
-                            }
-                        }
 
                         if (changed && board.tmpLabel != null)
                         {
