@@ -23,7 +23,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 26000f;   // canvas units - widened for POS 1's fixed 20-char '*NOW* name *NOW*' mspace row at 3x size (was 16000)
+        private const float SignWidth = 18000f;   // canvas units - narrowed back down now that only the name (not *NOW*) is 3x size (was 26000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -315,10 +315,11 @@ namespace StarTruckMP.StarTruckClient
         private const string RestColor = "#4DA6FF";
         private const float Pos1SizePercent = 300f;
 
-        // POS 1's "*NOW*  name  *NOW*" layout: fixed total character budget so the row
-        // width never depends on the actual name length (see BuildDepartureText).
+        // POS 1's "*NOW*  name  *NOW*" layout: *NOW* stays at normal size/color, only the
+        // name is enlarged. Pos1SidePadChars is the (normal-size) gap kept on each side of
+        // the enlarged name, between it and each *NOW*.
         private const string Pos1NowText = "*NOW*";
-        private const int Pos1MiddleWidth = 10;
+        private const int Pos1SidePadChars = 6;
 
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
@@ -370,20 +371,24 @@ namespace StarTruckMP.StarTruckClient
                 if (pos == 1)
                 {
                     // POS 1 special layout: "*NOW*   <name>   *NOW*" - *NOW* flush to each
-                    // edge, name centered between them. Built with a FIXED total character
-                    // budget (Pos1NowText.Length + Pos1MiddleWidth + Pos1NowText.Length) so
-                    // the row is always exactly the same width regardless of name length -
-                    // shorter names just get more padding on each side of themselves, not a
-                    // shorter/longer overall line. That keeps both *NOW*s pinned to the same
-                    // spot every time and lets SignWidth be sized for one known worst case
-                    // instead of guessing at proportional-font text widths.
-                    int totalPad = Pos1MiddleWidth - nameRaw.Length;
-                    if (totalPad < 0) totalPad = 0;
-                    int padLeft = totalPad / 2;
-                    int padRight = totalPad - padLeft;
-                    string middle = new string(' ', padLeft) + nameRaw + new string(' ', padRight);
-                    string content = Pos1NowText + middle + Pos1NowText;
-                    row = $"</mspace><size={Pos1SizePercent}%><color={Pos1Color}><mspace=0.6em>{content}</mspace></color></size><mspace=0.6em>";
+                    // edge (now at NORMAL size, same as POS 3-9) with just the name itself
+                    // enlarged (3x) and centered between them. Fixed character budget on
+                    // both sides so the *NOW*s always land in the same spot regardless of
+                    // name length.
+                    //
+                    // Mixed sizes on one line reproduces the same TMP <mspace>/<size>
+                    // interaction as the old table-highlight trick: <mspace> fixes each
+                    // character's advance width to the point size in effect when the tag
+                    // opened, so the enlarged name needs its OWN nested mspace scope (close
+                    // the outer one, open a fresh one inside <size>, close it, reopen the
+                    // outer one) rather than inheriting the outer mspace opened at normal size.
+                    string namePadded = nameRaw.PadRight(DriverNameMaxChars);
+                    string pad = new string(' ', Pos1SidePadChars);
+                    string content =
+                        Pos1NowText + pad
+                        + $"</mspace><size={Pos1SizePercent}%><mspace=0.6em>{namePadded}</mspace></size><mspace=0.6em>"
+                        + pad + Pos1NowText;
+                    row = $"<color={Pos1Color}>{content}</color>";
                 }
                 else if (pos == 2)
                 {
