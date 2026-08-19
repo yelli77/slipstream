@@ -373,8 +373,14 @@ namespace StarTruckMP.StarTruckClient
                     // "pos  name  distance" line as one block instead of fighting the
                     // fixed-width table padding (which, at these enlarged sizes, produced a
                     // huge/uneven gap between the name and the distance).
-                    string centeredContent = $"{pos}   {nameRaw}   {distField}";
-                    row = $"</mspace><size={sizePercent}%><color={colorHex}><mspace=0.6em><align=center>{centeredContent}</align></mspace></color></size><mspace=0.6em>";
+                    // NOTE: deliberately NOT using <mspace> here (unlike every other row).
+                    // <mspace=0.6em> forces every character - including narrow ones like "1"
+                    // and "." - to the same fixed advance width, which at 3x/1.5x size blew
+                    // the line width past the board's edge (content overflowed both sides,
+                    // making it look off-center rather than centered). Plain proportional
+                    // text is narrower and comfortably fits centered on the sign.
+                    string centeredContent = $"{pos}  {nameRaw}  {distField}";
+                    row = $"</mspace><size={sizePercent}%><color={colorHex}><align=center>{centeredContent}</align></size><mspace=0.6em>";
                 }
                 else
                 {
