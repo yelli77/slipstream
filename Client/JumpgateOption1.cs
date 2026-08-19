@@ -299,14 +299,22 @@ namespace StarTruckMP.StarTruckClient
             return name.Length > DriverNameMaxChars ? name.Substring(0, DriverNameMaxChars) : name;
         }
 
-        // Fixed number of position slots on the board - matches roughly how many rows fit
-        // in the sign's height before the top-most row would overflow past the board edge
-        // (title + header + one 3x-tall POS-1 row + up to 10 normal rows). This is a hard
-        // cap: any player beyond MaxBoardPositions simply isn't shown (they still count for
-        // gate-detection etc., just not on this particular sign), and unused slots below the
-        // cap are rendered as dimmed empty placeholder rows so the board always shows the
-        // same fixed layout.
-        private const int MaxBoardPositions = 11;
+        // Fixed number of position slots on the board (POS 1 = bottom/next to jump).
+        // Hard cap: any player beyond MaxBoardPositions simply isn't shown (they still
+        // count for gate-detection etc., just not on this particular sign), and unused
+        // slots below the cap are rendered as dimmed empty placeholder rows so the board
+        // always shows the same fixed layout.
+        private const int MaxBoardPositions = 9;
+
+        // Per-position color/size scheme:
+        //   POS 1        - green, 3x size (about to jump)
+        //   POS 2        - yellow, 1.5x size (up next)
+        //   POS 3..9     - blue, normal size
+        private const string Pos1Color = "#33FF66";
+        private const string Pos2Color = "#FFE600";
+        private const string RestColor = "#4DA6FF";
+        private const float Pos1SizePercent = 300f;
+        private const float Pos2SizePercent = 150f;
 
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
@@ -343,34 +351,43 @@ namespace StarTruckMP.StarTruckClient
                     // longer than 6 chars must never reach the column math below.
                     string driverTrunc = TruncateName(entry.playerName);
 
-                    // Highlight the top-of-board entry (POS 1): 3x size, yellow.
                     // NOTE: TMP's <mspace> fixes each character's advance width using the
                     // point size in effect when the tag was opened - it does NOT recompute
                     // when a nested <size> tag later changes the point size. Since the whole
                     // table is wrapped in one <mspace=0.6em> opened at the base size, text
-                    // enlarged via a nested <size=300%> ends up with 3x wider glyphs stuffed
-                    // into the original (non-scaled) advance slots, causing overlap/cramping.
+                    // enlarged via a nested <size> ends up with wider glyphs stuffed into the
+                    // original (non-scaled) advance slots, causing overlap/cramping.
                     // Fix: close the outer mspace, open a fresh one INSIDE the enlarged
-                    // <size> span (so 0.6em is now evaluated at the 300% point size), then
+                    // <size> span (so 0.6em is now evaluated at the enlarged point size), then
                     // reopen the outer mspace afterwards so the DISTANCE column still lines up.
                     //
-                    // Column-width math: the DRIVER column is DriverNameMaxChars*3 = 18
-                    // 'normal' character-widths wide (matches the 18-wide PadRight used for
-                    // every other row). POS 1's name is padded to EXACTLY 6 chars (not more)
-                    // before being tripled in size, so 6 chars * 3x size = 18 normal-width
-                    // units - filling that budget exactly, so DISTANCE lines up on every row
-                    // regardless of how long/short the highlighted name is.
+                    // Column-width math: the DRIVER column is always 18 'normal' character
+                    // widths wide (matches the 18-wide PadRight used for un-highlighted
+                    // rows). At Nx size, a padded field of (18 / N) characters occupies
+                    // exactly 18 normal-width units once scaled, so DISTANCE lines up on
+                    // every row no matter which position is enlarged:
+                    //   POS 1 (3x):   18/3 = 6 chars  (== DriverNameMaxChars, the full name budget)
+                    //   POS 2 (1.5x): 18/1.5 = 12 chars (6 real chars + blank padding)
                     string driverCell;
                     if (pos == 1)
                     {
                         string driverPos1 = driverTrunc.PadRight(DriverNameMaxChars);
-                        driverCell = $"</mspace><size=300%><color=#FFE600><mspace=0.6em>{driverPos1}</mspace></color></size><mspace=0.6em>";
+                        driverCell = $"</mspace><size={Pos1SizePercent}%><color={Pos1Color}><mspace=0.6em>{driverPos1}</mspace></color></size><mspace=0.6em>";
+                    }
+                    else if (pos == 2)
+                    {
+                        string driverPos2 = driverTrunc.PadRight(12);
+                        driverCell = $"</mspace><size={Pos2SizePercent}%><color={Pos2Color}><mspace=0.6em>{driverPos2}</mspace></color></size><mspace=0.6em>";
                     }
                     else
                     {
                         driverCell = driverTrunc.PadRight(18);
                     }
-                    rows.Add(FormatRow(pos.ToString(), driverCell, distText));
+
+                    string row = FormatRow(pos.ToString(), driverCell, distText);
+                    if (pos >= 3)
+                        row = $"<color={RestColor}>{row}</color>";
+                    rows.Add(row);
                 }
                 else
                 {
