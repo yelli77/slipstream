@@ -23,7 +23,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 16000f;   // canvas units - widened further: POS+DISTANCE are now scaled along with the name on POS 1/2 rows (was 11000)
+        private const float SignWidth = 26000f;   // canvas units - widened for POS 1's fixed 20-char '*NOW* name *NOW*' mspace row at 3x size (was 16000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -314,7 +314,11 @@ namespace StarTruckMP.StarTruckClient
         private const string Pos2Color = "#FFE600";
         private const string RestColor = "#4DA6FF";
         private const float Pos1SizePercent = 300f;
-        private const float Pos2SizePercent = 150f;
+
+        // POS 1's "*NOW*  name  *NOW*" layout: fixed total character budget so the row
+        // width never depends on the actual name length (see BuildDepartureText).
+        private const string Pos1NowText = "*NOW*";
+        private const int Pos1MiddleWidth = 10;
 
         private static string BuildDepartureText(List<PlayerEntry> entries)
         {
@@ -344,9 +348,6 @@ namespace StarTruckMP.StarTruckClient
             var rows = new List<string>(MaxBoardPositions);
             for (int pos = 1; pos <= MaxBoardPositions; pos++)
             {
-                string colorHex = pos == 1 ? Pos1Color : pos == 2 ? Pos2Color : RestColor;
-                float sizePercent = pos == 1 ? Pos1SizePercent : pos == 2 ? Pos2SizePercent : 100f;
-
                 string nameRaw;
                 string distField;
                 if (pos <= shownCount)
@@ -366,26 +367,34 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 string row;
-                if (pos <= 2)
+                if (pos == 1)
                 {
-                    // POS 1/2 each only ever occupy a single row, so there's no other row
-                    // at that size to keep column-aligned with - just center the whole
-                    // "pos  name  distance" line as one block instead of fighting the
-                    // fixed-width table padding (which, at these enlarged sizes, produced a
-                    // huge/uneven gap between the name and the distance).
-                    // NOTE: deliberately NOT using <mspace> here (unlike every other row).
-                    // <mspace=0.6em> forces every character - including narrow ones like "1"
-                    // and "." - to the same fixed advance width, which at 3x/1.5x size blew
-                    // the line width past the board's edge (content overflowed both sides,
-                    // making it look off-center rather than centered). Plain proportional
-                    // text is narrower and comfortably fits centered on the sign.
-                    string centeredContent = $"{pos}  {nameRaw}  {distField}";
-                    row = $"</mspace><size={sizePercent}%><color={colorHex}><align=center>{centeredContent}</align></size><mspace=0.6em>";
+                    // POS 1 special layout: "*NOW*   <name>   *NOW*" - *NOW* flush to each
+                    // edge, name centered between them. Built with a FIXED total character
+                    // budget (Pos1NowText.Length + Pos1MiddleWidth + Pos1NowText.Length) so
+                    // the row is always exactly the same width regardless of name length -
+                    // shorter names just get more padding on each side of themselves, not a
+                    // shorter/longer overall line. That keeps both *NOW*s pinned to the same
+                    // spot every time and lets SignWidth be sized for one known worst case
+                    // instead of guessing at proportional-font text widths.
+                    int totalPad = Pos1MiddleWidth - nameRaw.Length;
+                    if (totalPad < 0) totalPad = 0;
+                    int padLeft = totalPad / 2;
+                    int padRight = totalPad - padLeft;
+                    string middle = new string(' ', padLeft) + nameRaw + new string(' ', padRight);
+                    string content = Pos1NowText + middle + Pos1NowText;
+                    row = $"</mspace><size={Pos1SizePercent}%><color={Pos1Color}><mspace=0.6em>{content}</mspace></color></size><mspace=0.6em>";
+                }
+                else if (pos == 2)
+                {
+                    // Same size/layout as POS 3-9 (normal table row), just yellow instead of blue.
+                    string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField);
+                    row = $"<color={Pos2Color}>{rowPlain}</color>";
                 }
                 else
                 {
                     string rowPlain = FormatRow(pos.ToString(), nameRaw.PadRight(18), distField);
-                    row = $"<color={colorHex}>{rowPlain}</color>";
+                    row = $"<color={RestColor}>{rowPlain}</color>";
                 }
                 rows.Add(row);
             }
