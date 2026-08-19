@@ -23,7 +23,7 @@ namespace StarTruckMP.StarTruckClient
 
         // ─── Constants ───
         private const float HeightOffset = 100f;   // meters directly above the gate, centered
-        private const float SignWidth = 11000f;   // canvas units - widened so DISTANCE fits (was 9000)
+        private const float SignWidth = 16000f;   // canvas units - widened further: POS+DISTANCE are now scaled along with the name on POS 1/2 rows (was 11000)
         private const float SignHeight = 9000f;   // canvas units (9000x9000)
         private const float FontSizeValue = 600f;  // as requested
 
@@ -335,66 +335,49 @@ namespace StarTruckMP.StarTruckClient
             // jump), then render them BOTTOM-UP: pos 1 ends up as the last line (closest
             // to the gate on the sign), higher/farther positions stack above it - easier
             // to see who's up next while approaching.
+            //
+            // The WHOLE row (POS number, name/FREE, and distance) is colored and sized
+            // together per position tier now - POS 1 and POS 2 each only ever occupy one
+            // row, so there's no cross-row column alignment to preserve for them; POS 3-9
+            // all share the same normal size, so the usual PadRight-based table alignment
+            // still applies among themselves.
             var rows = new List<string>(MaxBoardPositions);
             for (int pos = 1; pos <= MaxBoardPositions; pos++)
             {
+                string colorHex = pos == 1 ? Pos1Color : pos == 2 ? Pos2Color : RestColor;
+                float sizePercent = pos == 1 ? Pos1SizePercent : pos == 2 ? Pos2SizePercent : 100f;
+                int nameFieldWidth = pos <= 2 ? DriverNameMaxChars : 18;
+
+                string nameField;
+                string distField;
                 if (pos <= shownCount)
                 {
                     var entry = entries[pos - 1];
-                    string distText;
-                    if (entry.distanceFromGate < 1000f)
-                        distText = $"{entry.distanceFromGate:F0}m";
-                    else
-                        distText = $"{entry.distanceFromGate / 1000f:F1}km";
-
-                    // Always truncate to DriverNameMaxChars (6) first, THEN pad - a name
-                    // longer than 6 chars must never reach the column math below.
-                    string driverTrunc = TruncateName(entry.playerName);
-
-                    // NOTE: TMP's <mspace> fixes each character's advance width using the
-                    // point size in effect when the tag was opened - it does NOT recompute
-                    // when a nested <size> tag later changes the point size. Since the whole
-                    // table is wrapped in one <mspace=0.6em> opened at the base size, text
-                    // enlarged via a nested <size> ends up with wider glyphs stuffed into the
-                    // original (non-scaled) advance slots, causing overlap/cramping.
-                    // Fix: close the outer mspace, open a fresh one INSIDE the enlarged
-                    // <size> span (so 0.6em is now evaluated at the enlarged point size), then
-                    // reopen the outer mspace afterwards so the DISTANCE column still lines up.
-                    //
-                    // Column-width math: the DRIVER column is always 18 'normal' character
-                    // widths wide (matches the 18-wide PadRight used for un-highlighted
-                    // rows). At Nx size, a padded field of (18 / N) characters occupies
-                    // exactly 18 normal-width units once scaled, so DISTANCE lines up on
-                    // every row no matter which position is enlarged:
-                    //   POS 1 (3x):   18/3 = 6 chars  (== DriverNameMaxChars, the full name budget)
-                    //   POS 2 (1.5x): 18/1.5 = 12 chars (6 real chars + blank padding)
-                    string driverCell;
-                    if (pos == 1)
-                    {
-                        string driverPos1 = driverTrunc.PadRight(DriverNameMaxChars);
-                        driverCell = $"</mspace><size={Pos1SizePercent}%><color={Pos1Color}><mspace=0.6em>{driverPos1}</mspace></color></size><mspace=0.6em>";
-                    }
-                    else if (pos == 2)
-                    {
-                        string driverPos2 = driverTrunc.PadRight(12);
-                        driverCell = $"</mspace><size={Pos2SizePercent}%><color={Pos2Color}><mspace=0.6em>{driverPos2}</mspace></color></size><mspace=0.6em>";
-                    }
-                    else
-                    {
-                        driverCell = driverTrunc.PadRight(18);
-                    }
-
-                    string row = FormatRow(pos.ToString(), driverCell, distText);
-                    if (pos >= 3)
-                        row = $"<color={RestColor}>{row}</color>";
-                    rows.Add(row);
+                    // Always truncate to DriverNameMaxChars (6) first, THEN pad.
+                    nameField = TruncateName(entry.playerName).PadRight(nameFieldWidth);
+                    distField = entry.distanceFromGate < 1000f
+                        ? $"{entry.distanceFromGate:F0}m"
+                        : $"{entry.distanceFromGate / 1000f:F1}km";
                 }
                 else
                 {
-                    // Empty slot - dimmed placeholder, same column widths as a real row.
-                    string emptyDriver = "---".PadRight(18);
-                    rows.Add($"<color=#5a5a5a>{FormatRow(pos.ToString(), emptyDriver, "---")}</color>");
+                    // Empty slot - show FREE in that position's own color/size instead of
+                    // a generic dimmed placeholder.
+                    nameField = "FREE".PadRight(nameFieldWidth);
+                    distField = "---";
                 }
+
+                string rowPlain = FormatRow(pos.ToString(), nameField, distField);
+
+                // NOTE: TMP's <mspace> fixes each character's advance width using the point
+                // size in effect when the tag was opened - it does NOT recompute when a
+                // nested <size> tag later changes the point size. So for enlarged rows we
+                // close the outer mspace, open a fresh one INSIDE the enlarged <size> span,
+                // then reopen the outer mspace afterwards for the next (normal-size) row.
+                string row = sizePercent != 100f
+                    ? $"</mspace><size={sizePercent}%><color={colorHex}><mspace=0.6em>{rowPlain}</mspace></color></size><mspace=0.6em>"
+                    : $"<color={colorHex}>{rowPlain}</color>";
+                rows.Add(row);
             }
 
             for (int i = rows.Count - 1; i >= 0; i--)
