@@ -43,7 +43,6 @@ namespace StarTruckMP.Encoding
                 newRigid.inertiaTensorRotation = myRigid.inertiaTensorRotation;
                 newRigid.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
                 newRigid.interpolation = RigidbodyInterpolation.Interpolate;
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 2: truck rigidbody copied");
 
                 GameObject exteriorObj = GameObject.Find("Exterior");
                 if (exteriorObj == null)
@@ -58,7 +57,6 @@ namespace StarTruckMP.Encoding
                     // the parent's layer or keep the prefab's layer?
                     string extLayerName = UnityEngine.LayerMask.LayerToName(newExterior.layer);
                     StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: newExterior layer = '{extLayerName}' ({newExterior.layer}) — truckLayer={truckLayer}");
-                    StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 3: exterior instantiated");
 
                     TryDisable(newExterior.transform, "StarTruck_Hatch/Marker", playerId);
                     TryDestroyComponent<DoorAnimator>(newExterior.transform, "StarTruck_Hatch", playerId);
@@ -84,7 +82,6 @@ namespace StarTruckMP.Encoding
                     {
                         item.enabled = false;
                     }
-                    StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 4: exterior cosmetics done");
 
                     // --- Collision fix: single convex BoxCollider on truck root ---
                     // Original mesh colliders on exterior stay disabled (unusable for
@@ -117,7 +114,6 @@ namespace StarTruckMP.Encoding
                 GameObject newPlayer = new GameObject("RemotePlayer" + playerId);
                 SceneManager.MoveGameObjectToScene(newPlayer, sectorGO.scene);
                 newPlayer.transform.SetParent(null);
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 5: player object spawned");
 
                 var localSpaceSuitObj = StarTruckClient.StarTruckClient.spaceSuitObj;
                 if (localSpaceSuitObj == null)
@@ -142,7 +138,6 @@ namespace StarTruckMP.Encoding
                 }
                 newSuit.active = true;
                 newSuit.name = "ClientSuit" + playerId;
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 6: suit instantiated");
 
                 TryDestroyComponent<SpaceSuitController>(newSuit.transform, "(suit root)", playerId);
                 TryDestroyComponent<UnityEngine.CapsuleCollider>(newSuit.transform, "(suit root)", playerId);
@@ -152,7 +147,6 @@ namespace StarTruckMP.Encoding
                 TryDestroyComponent<MaterialSwitcher>(newSuit.transform, "(suit root)", playerId);
                 TryDestroyComponent<InteractTarget>(newSuit.transform, "(suit root)", playerId);
                 TryDestroyComponent<DoorController>(newSuit.transform, "(suit root)", playerId);
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 7: suit components stripped");
 
                 myRigid = StarTruckClient.StarTruckClient.myPlayer.GetComponent<Rigidbody>();
                 var newPlayerRigid = newPlayer.AddComponent<Rigidbody>();
@@ -167,7 +161,6 @@ namespace StarTruckMP.Encoding
                 newPlayerRigid.maxDepenetrationVelocity = myRigid.maxDepenetrationVelocity;
                 newPlayerRigid.inertiaTensor = myRigid.inertiaTensor;
                 newPlayerRigid.inertiaTensorRotation = myRigid.inertiaTensorRotation;
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 8: player rigidbody copied, spawn complete");
 
                 newTruck.transform.position = position - StarTruckClient.StarTruckClient.floatingOrigin.m_currentOrigin;
                 newTruck.transform.eulerAngles = rotation;

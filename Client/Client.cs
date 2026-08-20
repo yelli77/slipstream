@@ -890,30 +890,7 @@ namespace StarTruckMP.StarTruckClient
                 }
                 currentDestinationGateId = gateId;
 
-                // Throttled diagnostics
-                float now = Time.realtimeSinceStartup;
-                if (now - lastDestGateDiagLog > 5f)
-                {
-                    lastDestGateDiagLog = now;
-                    StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG v2: waypointCount={waypointCount} nextSectorId='{nextSectorId}' -> currentDestinationGateId='{gateId}'");
-                    try
-                    {
-                        var allGates = UnityEngine.Object.FindObjectsOfType<WarpTriggerZone>();
-                        if (allGates != null)
-                        {
-                            foreach (var z in allGates)
-                            {
-                                if (z == null || z.gameObject == null) continue;
-                                string destName;
-                                try { destName = z.DestinationSectorId != null ? z.DestinationSectorId.name : "(null)"; }
-                                catch { destName = "(error)"; }
-                                string eid = JumpgateUtils.GetEntryGateIdForZone(z);
-                                StarTruckMP.Log.LogInfo($"DetectDestinationGates DIAG v2: gate entryGateId='{eid}' destinationSectorId='{destName}'");
-                            }
-                        }
-                    }
-                    catch { }
-                }
+
             }
             catch { }
         }
@@ -1618,23 +1595,6 @@ namespace StarTruckMP.StarTruckClient
                     var btn = allButtons[i];
                     if (btn == null) continue;
 
-                    // DIAGNOSTIC: dump ALL sprites on ALL buttons (only first 3 to avoid log flood)
-                    if (i < 3)
-                    {
-                        var allImgs = btn.GetComponentsInChildren<UnityEngine.UI.Image>();
-                        int imgCount = allImgs != null ? allImgs.Length : 0;
-                        StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': {imgCount} images");
-                        if (allImgs != null)
-                        {
-                            for (int ii = 0; ii < allImgs.Length; ii++)
-                            {
-                                var img = allImgs[ii];
-                                string spriteName = img.sprite != null ? img.sprite.name : "NULL";
-                                StarTruckMP.Log.LogInfo($"    Image[{ii}] '{img.gameObject.name}': sprite='{spriteName}' color=({img.color.r:F2},{img.color.g:F2},{img.color.b:F2},{img.color.a:F2})");
-                            }
-                        }
-                    }
-
                     string btnSectorName = "";
                     try
                     {
@@ -1884,7 +1844,6 @@ namespace StarTruckMP.StarTruckClient
                 imgComp.preserveAspect = true;
                 imgComp.raycastTarget = false;
 
-                StarTruckMP.Log.LogInfo($"  CreateMapIndicator: dot centered on node, size=80x80");
 
                 // Player count text centered on the dot
                 try
@@ -1926,7 +1885,6 @@ namespace StarTruckMP.StarTruckClient
                             labelTMP.raycastTarget = false;
                         }
                         mapIndicators.Add(labelClone);
-                        StarTruckMP.Log.LogInfo($"  CreateMapIndicator: count label '{playerCount}' created");
                     }
                 }
                 catch (System.Exception ex2)
