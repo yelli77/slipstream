@@ -24,4 +24,5 @@ public class PlayerState
     public string TrailerModel { get; set; } = "";
     public ulong SteamId { get; set; }
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
+    public string DestinationGateId { get; set; } = "";
 }

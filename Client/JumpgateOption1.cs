@@ -514,13 +514,16 @@ namespace StarTruckMP.StarTruckClient
             // 1. Disable auto-sizing BEFORE setting fontSize (IL2CPP quirk)
             try { tmp.enableAutoSizing = false; } catch { }
 
-            // 2. Re-bind font and material from source
+            // 2. Re-bind font and material from source — ALWAYS copy (not just when null),
+            //    because IL2CPP Instantiate can leave a non-null but broken reference.
             try
             {
-                if (tmp.font == null && sourceTMP.font != null)
+                if (sourceTMP.font != null)
                     tmp.font = sourceTMP.font;
-                if (tmp.fontSharedMaterial == null && sourceTMP.fontSharedMaterial != null)
+                if (sourceTMP.fontSharedMaterial != null)
                     tmp.fontSharedMaterial = sourceTMP.fontSharedMaterial;
+                if (sourceTMP.fontMaterial != null)
+                    tmp.fontMaterial = sourceTMP.fontMaterial;
             }
             catch { }
 
@@ -543,23 +546,13 @@ namespace StarTruckMP.StarTruckClient
             try { tmp.enableWordWrapping = false; } catch { }
             try { tmp.overflowMode = TMPro.TextOverflowModes.Overflow; } catch { }
 
-            // 5. Text color: keep the source's default color, just halve opacity
-            //    (explicitly overriding the color didn't visually take effect before).
+            // 5. Text color: explicit white — Rich Text <color> tags handle per-line colors.
+            //    IL2CPP clones can inherit a dark/black default that makes text invisible
+            //    on the near-black background panel.
+            tmp.color = new UnityEngine.Color(1f, 1f, 1f, 0.8f);
 
-            // 6. Re-assert active state and alpha
+            // 6. Re-assert active state
             tmpObj.SetActive(true);
-            try
-            {
-                var renderer = tmpObj.GetComponent<CanvasRenderer>();
-                if (renderer != null) renderer.SetAlpha(0.5f);
-            }
-            catch { }
-            try
-            {
-                var cg = tmpObj.GetComponent<CanvasGroup>();
-                if (cg != null) cg.alpha = 0.5f;
-            }
-            catch { }
 
             // 7. Raycast target off
             tmp.raycastTarget = false;

@@ -433,11 +433,14 @@ namespace StarTruckMP.StarTruckClient
                     Vector3 pRot = new Vector3(e.Message.GetFloat(), e.Message.GetFloat(), e.Message.GetFloat());
                     string sector = e.Message.GetString();
                     string remoteName = e.Message.GetString();
+                    string remoteDestGate = "";
+                    try { remoteDestGate = e.Message.GetString(); } catch { }
                     if (!playerList.ContainsKey(id))
                     {
                         playerInfo newPlayer = new playerInfo();
                         newPlayer.sector = sector;
                         newPlayer.Name = remoteName;
+                        newPlayer.destinationGateId = remoteDestGate;
                         newPlayer.truckTrans.Pos = pPos;
                         newPlayer.truckTrans.Rot = pRot;
                         newPlayer.playerTrans.Pos = pPos;
@@ -1049,7 +1052,6 @@ namespace StarTruckMP.StarTruckClient
 
         public static void RemoveFromSector(ushort clientId, playerInfo clientInfo)
         {
-            StarTruckMP.Log.LogInfo($"RemoveFromSector check: player {clientId}, theirSector='{clientInfo.sector}', mySector='{currentSector}', hasTruck={clientInfo.Truck != null}");
 
             if (clientInfo.sector != currentSector)
             {
@@ -1633,7 +1635,6 @@ namespace StarTruckMP.StarTruckClient
                         catch { }
                     }
 
-                    StarTruckMP.Log.LogInfo($"  Button[{i}] '{btn.name}': sectorText='{btnSectorName}'");
 
                     // Count players in this sector (remote + local)
                     int playerCount = 0;
@@ -1661,14 +1662,7 @@ namespace StarTruckMP.StarTruckClient
                     }
                 }
 
-                if (mapIndicators.Count == 0)
-                {
-                    StarTruckMP.Log.LogInfo("SpawnMapIndicators: no player-sector matches. Player sectors:");
-                    foreach (var kv in playerList)
-                    {
-                        StarTruckMP.Log.LogInfo($"    Player {kv.Key}: sector='{kv.Value.sector}' -> display='{SectorToDisplayName(kv.Value.sector)}'");
-                    }
-                }
+
             }
             catch (System.Exception ex)
             {
@@ -2032,7 +2026,6 @@ namespace StarTruckMP.StarTruckClient
                 if (go != null) GameObject.Destroy(go);
             }
             mapIndicators.Clear();
-            StarTruckMP.Log.LogInfo("ClearMapIndicators: destroyed all map indicators");
         }
     }
 }

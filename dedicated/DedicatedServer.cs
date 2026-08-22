@@ -119,6 +119,7 @@ public class DedicatedServer
             joinMsg.AddFloat(pl.TruckRotation.X); joinMsg.AddFloat(pl.TruckRotation.Y); joinMsg.AddFloat(pl.TruckRotation.Z);
             joinMsg.AddString(pl.Sector);
             joinMsg.AddString(pl.Name ?? "");
+            joinMsg.AddString(pl.DestinationGateId ?? "");
         }
         _server.Send(joinMsg, e.Client);
         foreach (var kv in _players)
