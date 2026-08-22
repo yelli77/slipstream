@@ -119,7 +119,6 @@ namespace StarTruckMP.StarTruckClient
                     {
                         var nativeFieldPtr = (System.IntPtr)nativeField.GetValue(null);
                         var objPtr = IL2CPP.Il2CppObjectBaseToPtr(il2cppObj);
-                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': native-read objPtr={objPtr!=System.IntPtr.Zero} nativePtr={nativeFieldPtr!=System.IntPtr.Zero}");
                         if (objPtr != System.IntPtr.Zero && nativeFieldPtr != System.IntPtr.Zero)
                         {
                             int ptrSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(System.IntPtr));
@@ -131,7 +130,6 @@ namespace StarTruckMP.StarTruckClient
                                     IL2CPP.il2cpp_field_get_value(objPtr, nativeFieldPtr, (void*)buf);
                                 }
                                 var fieldValPtr = System.Runtime.InteropServices.Marshal.ReadIntPtr(buf);
-                                StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': fieldValPtr={fieldValPtr!=System.IntPtr.Zero}");
                                 if (fieldValPtr != System.IntPtr.Zero)
                                 {
                                     return System.Activator.CreateInstance(fi.FieldType, new object[] { fieldValPtr });
@@ -150,7 +148,6 @@ namespace StarTruckMP.StarTruckClient
                 }
                 else
                 {
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': no NativeFieldInfoPtr_ on {declType?.FullName}");
                 }
             }
 
@@ -170,7 +167,6 @@ namespace StarTruckMP.StarTruckClient
                         // Prefer Il2CppObjectBase as target to avoid type mismatch
                         object invokeTarget = il2cppObj != null ? il2cppObj : target;
                         var result = getter.Invoke(invokeTarget, null);
-                        StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': Property-Getter OK, result={result!=null} type={result?.GetType()?.FullName}");
                         return result;
                     }
                 }
@@ -184,7 +180,6 @@ namespace StarTruckMP.StarTruckClient
             try
             {
                 var fallback = GetMemberValue(member, target);
-                StarTruckMP.Log.LogInfo($"DockingBayHUD.ReadIl2CppField '{memberName}': reflection fallback result={fallback!=null} type={fallback?.GetType()?.FullName}");
                 return fallback;
             }
             catch (Exception fex)
@@ -211,7 +206,6 @@ namespace StarTruckMP.StarTruckClient
                     if (val != null)
                     {
                         int amenityInt = System.Convert.ToInt32(val);
-                        StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} amenityType={amenityInt}");
                         return amenityInt == 1; // StationAmenity.JobsBoard
                     }
                 }
@@ -225,7 +219,6 @@ namespace StarTruckMP.StarTruckClient
                     if (val2 != null)
                     {
                         int amenityInt2 = System.Convert.ToInt32(val2);
-                        StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} AmenityType={amenityInt2}");
                         return amenityInt2 == 1;
                     }
                 }
@@ -236,7 +229,6 @@ namespace StarTruckMP.StarTruckClient
                 if (questProp != null)
                 {
                     bool isQuest = (bool)questProp.GetValue(bay);
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.IsJobsBoard: bay={bay.gameObject?.name} IsQuestBay={isQuest}");
                     return isQuest;
                 }
 
@@ -608,8 +600,6 @@ namespace StarTruckMP.StarTruckClient
         {
             diagCounter++;
             if (markers.Count == 0) {
-                if (diagCounter % 600 == 1)
-                    StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: markers.Count=0, skipping");
                 return;
             }
             if (gameCam == null || gameCam == null)
@@ -619,8 +609,6 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning("DockingBayHUD.UpdatePos: gameCam=null");
                 return;
             }
-            if (diagCounter % 600 == 1)
-                StarTruckMP.Log.LogInfo($"DockingBayHUD.UpdatePos: {markers.Count} markers, cam={gameCam.name}, camPos=({gameCam.transform.position.x:F0},{gameCam.transform.position.y:F0},{gameCam.transform.position.z:F0})");
             
 
             Vector3 camPos = gameCam.transform.position;
@@ -647,11 +635,7 @@ namespace StarTruckMP.StarTruckClient
                         bayWorldPos = bayRenderer.bounds.center;
                     float distance = Vector3.Distance(camPos, bayWorldPos);
 
-                    if (diagCounter % 600 == 1)
-                    {
-                        Vector3 sp = gameCam.WorldToScreenPoint(bayWorldPos);
-                        StarTruckMP.Log.LogInfo($"  DockBay [{m.bayName}]: world=({bayWorldPos.x:F0},{bayWorldPos.y:F0},{bayWorldPos.z:F0}) dist={distance:F0}m screen=({sp.x:F0},{sp.y:F0}) z={sp.z:F0} active={m.rootObj.activeSelf}");
-                    }
+
 
 
                     // Hide marker when too close (< 300m — bay is directly visible)

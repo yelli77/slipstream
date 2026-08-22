@@ -13,7 +13,6 @@ namespace StarTruckMP.Encoding
             {
                 GameObject sectorGO = GameObject.Find("[Sector]");
                 var myRigid = StarTruckClient.StarTruckClient.myTruck.GetComponent<Rigidbody>();
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 1: sectorGO={sectorGO != null}, myRigid={myRigid != null}");
 
                 //Spawn new Truck GameObject
                 GameObject newTruck = new GameObject("RemoteTruck" + playerId);
@@ -27,7 +26,6 @@ namespace StarTruckMP.Encoding
                 int truckLayer = StarTruckClient.StarTruckClient.myTruck.layer;
                 newTruck.layer = truckLayer;
                 string layerName = UnityEngine.LayerMask.LayerToName(truckLayer);
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: remote truck layer = '{layerName}' ({truckLayer}) — copied from myTruck");
 
                 var newRigid = newTruck.AddComponent<Rigidbody>();
                 newRigid.useGravity = myRigid.useGravity;
@@ -56,7 +54,6 @@ namespace StarTruckMP.Encoding
                     // Diagnostic: does the instantiated exterior inherit
                     // the parent's layer or keep the prefab's layer?
                     string extLayerName = UnityEngine.LayerMask.LayerToName(newExterior.layer);
-                    StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: newExterior layer = '{extLayerName}' ({newExterior.layer}) — truckLayer={truckLayer}");
 
                     TryDisable(newExterior.transform, "StarTruck_Hatch/Marker", playerId);
                     TryDestroyComponent<DoorAnimator>(newExterior.transform, "StarTruck_Hatch", playerId);
@@ -98,7 +95,6 @@ namespace StarTruckMP.Encoding
                         boxCol.center = combinedBounds.center - newTruck.transform.position;
                         boxCol.size = combinedBounds.size * 0.9f;
                         boxCol.enabled = false;
-                        StarTruckMP.Log.LogInfo($"createPlayer[{playerId}]: BoxCollider center={boxCol.center}, size={boxCol.size} (from {allRenderers.Length} renderers)");
                     }
                     else
                     {
@@ -166,7 +162,6 @@ namespace StarTruckMP.Encoding
                 newTruck.transform.eulerAngles = rotation;
                 newPlayer.transform.position = position - StarTruckClient.StarTruckClient.floatingOrigin.m_currentOrigin;
                 newPlayer.transform.eulerAngles = rotation;
-                StarTruckMP.Log.LogInfo($"createPlayer[{playerId}] checkpoint 9: initial transform set to ({position.x:F2}, {position.y:F2}, {position.z:F2}) (world pos was ({newTruck.transform.position.x:F2}, {newTruck.transform.position.y:F2}, {newTruck.transform.position.z:F2}))");
 
 
                 playerInfo currentPlayer = new playerInfo();
@@ -534,7 +529,6 @@ namespace StarTruckMP.Encoding
 
                 // Diagnostic: find all text components in scene
                 var allTMP = GameObject.FindObjectsOfType<TMPro.TextMeshPro>();
-                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTMP?.Length ?? 0} TextMeshPro (3D) objects");
                 if (allTMP != null && allTMP.Length > 0)
                 {
                     for (int t = 0; t < Mathf.Min(allTMP.Length, 5); t++)
@@ -545,7 +539,6 @@ namespace StarTruckMP.Encoding
                 }
 
                 var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
-                StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: found {allTMPUGUI?.Length ?? 0} TextMeshProUGUI (Canvas) objects");
 
                 // If we find a 3D TextMeshPro, clone it
                 if (allTMP != null && allTMP.Length > 0)
@@ -573,7 +566,6 @@ namespace StarTruckMP.Encoding
                     if (renderer != null) renderer.enabled = true;
                     // Scale up the clone
                     clone.transform.localScale = new Vector3(5f, 5f, 5f);
-                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: clone ready, scale={clone.transform.localScale}");
                     return clone;
                 }
 
