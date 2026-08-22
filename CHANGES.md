@@ -1,3 +1,13 @@
+## Neu in custom-build-278: Departure Board — Server-Sync + TMP-Rendering Fix
+
+- Server leitet jetzt destinationGateId in Movement-Updates weiter (war vorher gestrippt).
+- Alle Clients sehen jetzt die richtigen Spielernamen auf dem Departure Board (nicht mehr nur FREE).
+- Client clientJoin liest und speichert destinationGateId für spät hinzukommende Spieler.
+- TMP-Rendering: Font/Material wird immer vom Source kopiert (nicht nur bei null) — behebt IL2CPP-Klon-Bug.
+- TMP-Textfarbe explizit Weiss (0.8 Alpha) statt dunkler Default-Inheritance.
+- CanvasRenderer.SetAlpha(0.5f) entfernt — machte Text fast unsichtbar auf schwarzem Hintergrund.
+- Server-Container-Docker-Image mit neuem Code neugebaut und deployed.
+
 ## Neu in custom-build-216: WarpGateBillboard — 3D-Anzeigetafel an WarpGates
 
 - WarpGateHUD (Screen-Space Overlay) komplett ersetzt durch WarpGateBillboard (3D World-Space).
