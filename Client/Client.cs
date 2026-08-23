@@ -507,6 +507,45 @@ namespace StarTruckMP.StarTruckClient
                     {
                         if (isTruck)
                         {
+                            // DEFERRED SPAWN: if truck doesn't exist yet (e.g. playerConnected
+                            // sent no position, RemoveFromSector deferred), create it here at
+                            // the correct position from the first movementUpdate.
+                            if (currentPlayer.Truck == null)
+                            {
+                                StarTruckMP.Log.LogInfo($"movementUpdate: deferred spawn for player {playerId} at {playerPos}");
+                                playerInfo spawned = Messages.createPlayer(playerId, playerPos, playerRot, currentPlayer.sector, currentPlayer.Name);
+                                currentPlayer.Truck = spawned.Truck;
+                                currentPlayer.Player = spawned.Player;
+                                currentPlayer.NameLabel = spawned.NameLabel;
+                                currentPlayer.truckTargetPos = playerPos;
+                                currentPlayer.truckTargetRot = playerRot;
+                                currentPlayer.spawnTime = UnityEngine.Time.time;
+                                currentPlayer.isColliding = false;
+                                // Hide spacesuit
+                                if (currentPlayer.Player != null)
+                                {
+                                    var suitR = currentPlayer.Player.GetComponentInChildren<MeshRenderer>();
+                                    if (suitR != null) suitR.enabled = false;
+                                }
+                                // Attach collision helper
+                                if (currentPlayer.Truck != null)
+                                {
+                                    var helper = currentPlayer.Truck.AddComponent<RemoteTruckCollisionHelper>();
+                                    if (helper != null) helper.Init(playerId);
+                                }
+                                // Hard-snap to correct position - no spring correction needed
+                                currentPlayer.Truck.transform.position = playerPos - floatingOrigin.m_currentOrigin;
+                                currentPlayer.Truck.transform.eulerAngles = playerRot;
+                                var spawnedRb = currentPlayer.Truck.GetComponent<Rigidbody>();
+                                if (spawnedRb != null)
+                                {
+                                    spawnedRb.position = playerPos - floatingOrigin.m_currentOrigin;
+                                    spawnedRb.rotation = Quaternion.Euler(playerRot);
+                                    spawnedRb.velocity = playerVel;
+                                    spawnedRb.angularVelocity = playerAngVel;
+                                }
+                                playerList[playerId] = currentPlayer;
+                            }
                             // Store target for smooth truck interpolation (no hard snap)
                             currentPlayer.truckTargetPos = playerPos;
                             currentPlayer.truckTargetRot = playerRot;
@@ -1070,11 +1109,21 @@ namespace StarTruckMP.StarTruckClient
             }
             else if (clientInfo.sector == currentSector && clientInfo.Truck == null)
             {
+                // DEFER: playerConnected sends no position data, so truckTrans.Pos
+                // defaults to zero. Don't spawn at origin - the first movementUpdate
+                // will create the truck at the correct position instead.
+                if (clientInfo.truckTrans.Pos.sqrMagnitude < 1f)
+                {
+                    StarTruckMP.Log.LogInfo($"RemoveFromSector: deferring spawn for player {clientId} - position not yet received (pos={clientInfo.truckTrans.Pos})");
+                    return;
+                }
                 StarTruckMP.Log.LogInfo($"Spawning player {clientId} in sector '{currentSector}' at pos {playerList[clientId].truckTrans.Pos}");
                 playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector, playerList[clientId].Name);
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
                 clientInfo.NameLabel = player.NameLabel;
+                clientInfo.truckTargetPos = player.truckTargetPos;
+                clientInfo.truckTargetRot = player.truckTargetRot;
                 clientInfo.spawnTime = UnityEngine.Time.time;
                 clientInfo.isColliding = false;
                 // Hide spacesuit by default — only show when player is outside truck (EVA)
