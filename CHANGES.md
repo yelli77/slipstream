@@ -1,3 +1,11 @@
+## Neu in custom-build-280: Truck-Spawn-Fix fuer spaet dazukommende Spieler
+
+- Behebt: Andere Spieler sehen nur den Anhanger (~1 Min), dann fliegt der LKW von der Seite rein.
+- Ursache: playerConnected schickt keine Position, RemoveFromSector spawnte den Truck bei (0,0,0).
+- Fix: Truck wird deferred gespawnt bei der ersten movementUpdate mit gueltiger Position (hard-snap).
+- RemoveFromSector spawnt nicht mehr wenn truckTrans.Pos == zero (skip auf movementUpdate).
+- truckTargetPos/Rot wird jetzt korrekt vom gespawnten Player zurueckkopiert.
+
 ## Neu in custom-build-278: Departure Board — Server-Sync + TMP-Rendering Fix
 
 - Server leitet jetzt destinationGateId in Movement-Updates weiter (war vorher gestrippt).
