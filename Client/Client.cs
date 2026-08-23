@@ -612,6 +612,8 @@ namespace StarTruckMP.StarTruckClient
                 {
                     bool hitched = e.Message.GetBool();
                     float[] tt = e.Message.GetFloats();
+                    // containerType is now embedded in the movement packet (timing-race fix)
+                    string remoteTrailerModel = e.Message.GetString();
 
                     Vector3 trailerPos;
                     trailerPos.x = tt[0];
@@ -630,6 +632,12 @@ namespace StarTruckMP.StarTruckClient
                         currentPlayer.trailerHitched = hitched;
                         currentPlayer.trailerTrans.Pos = trailerPos;
                         currentPlayer.trailerTrans.Rot = trailerRot;
+
+                        // Update trailerModel from embedded containerType (always fresh)
+                        if (!string.IsNullOrEmpty(remoteTrailerModel))
+                        {
+                            currentPlayer.trailerModel = remoteTrailerModel;
+                        }
 
                         if (hitched && currentPlayer.Trailer == null)
                         {
@@ -1016,11 +1024,10 @@ namespace StarTruckMP.StarTruckClient
 
             bool hitched = hitchedCargo != null;
 
-            // Send container model update when hitched container changes
+            // Determine container type identifier for this hitched cargo
             string currentTrailerModel = "";
             if (hitched && hitchedCargo != null)
             {
-                // Use stable type identifier instead of gameObject.name (per-instance ID)
                 string typeId = Messages.GetContainerTypeIdentifier(hitchedCargo);
                 if (!string.IsNullOrEmpty(typeId))
                 {
@@ -1028,15 +1035,13 @@ namespace StarTruckMP.StarTruckClient
                 }
                 else
                 {
-                    // Fallback: warn and use gameObject.name as last resort
                     currentTrailerModel = hitchedCargo.gameObject?.name?.Replace("(Clone)", "").Trim() ?? "";
                     StarTruckMP.Log.LogWarning($"SendTrailerMovement: cargo.record.cargoType.containerType is null! Falling back to GO.name='{currentTrailerModel}' — trailer model sync may not match correctly.");
                 }
             }
             if (hitched && currentTrailerModel != lastTrailerModel)
             {
-                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: sending model='{currentTrailerModel}' (old='{lastTrailerModel}')");
-                client.Send(Messages.createTrailerModelMessage(client.Id, currentTrailerModel));
+                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: model='{currentTrailerModel}' (old='{lastTrailerModel}') — now embedded in movement packet");
                 lastTrailerModel = currentTrailerModel;
             }
             else if (!hitched && lastTrailerModel != "")
@@ -1051,7 +1056,8 @@ namespace StarTruckMP.StarTruckClient
                               + floatingOrigin.m_currentOrigin;
                 Vector3 rot = hitchedCargo.transform.eulerAngles;
 
-                client.Send(Messages.createTrailerMovementMessage(client.Id, true, pos, rot));
+                // containerType is now embedded in the movement packet (fixes timing race)
+                client.Send(Messages.createTrailerMovementMessage(client.Id, true, pos, rot, currentTrailerModel));
                 trailerHitchedLastSent = true;
             }
             else if (trailerHitchedLastSent)

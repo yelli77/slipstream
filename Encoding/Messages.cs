@@ -386,7 +386,7 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
-        public static Message createTrailerMovementMessage(ushort playerId, bool hitched, Vector3 position, Vector3 rotation)
+        public static Message createTrailerMovementMessage(ushort playerId, bool hitched, Vector3 position, Vector3 rotation, string containerType = null)
         {
             float[] trailerTransform = { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z };
 
@@ -394,6 +394,7 @@ namespace StarTruckMP.Encoding
             message.AddUShort(playerId);
             message.AddBool(hitched);
             message.AddFloats(trailerTransform);
+            message.AddString(containerType ?? "");
 
             return message;
         }
