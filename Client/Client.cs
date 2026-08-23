@@ -441,6 +441,8 @@ namespace StarTruckMP.StarTruckClient
                     if (!playerList.ContainsKey(id))
                     {
                         playerInfo newPlayer = new playerInfo();
+                        newPlayer.Trailers = new Dictionary<long, GameObject>();
+                        newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                         newPlayer.sector = sector;
                         newPlayer.Name = remoteName;
                         newPlayer.destinationGateId = remoteDestGate;
@@ -463,6 +465,8 @@ namespace StarTruckMP.StarTruckClient
                 if (!playerList.ContainsKey(id))
                 {
                     playerInfo newPlayer = new playerInfo();
+                    newPlayer.Trailers = new Dictionary<long, GameObject>();
+                    newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                     newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
                     newPlayer.Name = remoteName;
                     playerList.Add(id, newPlayer);
@@ -642,37 +646,100 @@ namespace StarTruckMP.StarTruckClient
                 {
                     bool hitched = e.Message.GetBool();
                     float[] tt = e.Message.GetFloats();
-                    // containerType is now embedded in the movement packet (timing-race fix)
                     string remoteTrailerModel = e.Message.GetString();
-
-                    Vector3 trailerPos;
-                    trailerPos.x = tt[0];
-                    trailerPos.y = tt[1];
-                    trailerPos.z = tt[2];
-
-                    Vector3 trailerRot;
-                    trailerRot.x = tt[3];
-                    trailerRot.y = tt[4];
-                    trailerRot.z = tt[5];
 
                     playerInfo currentPlayer;
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
-                    if (foundPlayer)
+                    if (!foundPlayer) goto skipTrailer;
+
+                    // v1 multi-trailer detection: px < 0 and sentinel string "MULTI"
+                    bool isMultiTrailer = tt[0] < -0.5f && remoteTrailerModel == "MULTI";
+
+                    if (isMultiTrailer)
                     {
+                        // v1 format: read trailer array
+                        int trailerCount = (int)tt[1];
+                        e.Message.GetUShort(); // skip sentinel ushort (was already read as part of the 6 floats)
+                        // Actually, the ushort trailerCount is AFTER the string
+                        ushort countFromMsg = e.Message.GetUShort();
+                        trailerCount = countFromMsg;
+
+                        // Track which tracking IDs we see this frame
+                        var seenIds = new System.Collections.Generic.HashSet<long>();
+
+                        for (int i = 0; i < trailerCount; i++)
+                        {
+                            long trackingId = e.Message.GetLong();
+                            string containerType = e.Message.GetString();
+                            float[] tpos = e.Message.GetFloats();
+                            seenIds.Add(trackingId);
+
+                            GameObject trailerObj;
+                            bool hadTrailer = currentPlayer.Trailers.TryGetValue(trackingId, out trailerObj);
+
+                            if (!hadTrailer || trailerObj == null)
+                            {
+                                // Spawn new trailer
+                                trailerObj = Messages.createTrailerMesh(playerId, containerType);
+                                if (trailerObj != null)
+                                {
+                                    trailerObj.transform.position = new Vector3(tpos[0], tpos[1], tpos[2]) - floatingOrigin.m_currentOrigin;
+                                    trailerObj.transform.eulerAngles = new Vector3(tpos[3], tpos[4], tpos[5]);
+                                }
+                                currentPlayer.Trailers[trackingId] = trailerObj;
+                                StarTruckMP.Log.LogInfo($"MultiTrailer: spawned trailer {trackingId} type='{containerType}' for player {playerId}");
+                            }
+
+                            // Update position target for smoothing
+                            if (trailerObj != null)
+                            {
+                                // Store target in a per-trailer dict (reuse trailerTrans for first, extra for dict)
+                                if (!currentPlayer.trailerExtraTargets.ContainsKey(trackingId))
+                                    currentPlayer.trailerExtraTargets[trackingId] = new movementTrans();
+                                var et = currentPlayer.trailerExtraTargets[trackingId];
+                                et.Pos = new Vector3(tpos[0], tpos[1], tpos[2]);
+                                et.Rot = new Vector3(tpos[3], tpos[4], tpos[5]);
+                                currentPlayer.trailerExtraTargets[trackingId] = et;
+                            }
+                        }
+
+                        // Destroy trailers no longer in the list
+                        var toRemove = new System.Collections.Generic.List<long>();
+                        foreach (var kv in currentPlayer.Trailers)
+                        {
+                            if (!seenIds.Contains(kv.Key))
+                            {
+                                if (kv.Value != null) GameObject.Destroy(kv.Value);
+                                toRemove.Add(kv.Key);
+                            }
+                        }
+                        foreach (var rid in toRemove)
+                        {
+                            currentPlayer.Trailers.Remove(rid);
+                            currentPlayer.trailerExtraTargets.Remove(rid);
+                            StarTruckMP.Log.LogInfo($"MultiTrailer: destroyed trailer {rid} for player {playerId}");
+                        }
+
+                        currentPlayer.trailerHitched = trailerCount > 0;
+                    }
+                    else
+                    {
+                        // v0 legacy single-trailer format
+                        Vector3 trailerPos;
+                        trailerPos.x = tt[0]; trailerPos.y = tt[1]; trailerPos.z = tt[2];
+                        Vector3 trailerRot;
+                        trailerRot.x = tt[3]; trailerRot.y = tt[4]; trailerRot.z = tt[5];
+
                         currentPlayer.trailerHitched = hitched;
                         currentPlayer.trailerTrans.Pos = trailerPos;
                         currentPlayer.trailerTrans.Rot = trailerRot;
 
-                        // Update trailerModel from embedded containerType (always fresh)
                         if (!string.IsNullOrEmpty(remoteTrailerModel))
-                        {
                             currentPlayer.trailerModel = remoteTrailerModel;
-                        }
 
                         if (hitched && currentPlayer.Trailer == null)
                         {
                             currentPlayer.Trailer = Messages.createTrailerMesh(playerId, currentPlayer.trailerModel);
-                            // Set initial position immediately so smoothing starts from the right place
                             if (currentPlayer.Trailer != null)
                             {
                                 currentPlayer.Trailer.transform.position = trailerPos - floatingOrigin.m_currentOrigin;
@@ -690,13 +757,13 @@ namespace StarTruckMP.StarTruckClient
 
                         if (currentPlayer.Trailer != null)
                         {
-                            // Set target for per-frame smoothing (no hard-set here)
                             currentPlayer.trailerTargetPos = trailerPos;
                             currentPlayer.trailerTargetRot = trailerRot;
                         }
-
-                        playerList[playerId] = currentPlayer;
                     }
+
+                    playerList[playerId] = currentPlayer;
+                    skipTrailer:;
                 }
             }
 
@@ -1030,70 +1097,74 @@ namespace StarTruckMP.StarTruckClient
         {
             if (myTruck == null || floatingOrigin == null) return;
 
-            CargoContainer hitchedCargo = null;
             try
             {
-                // Find the closest CargoContainer to our truck — distance-based hitch detection
+                // Find ALL CargoContainers near our truck (not just the closest)
                 var allCargo = GameObject.FindObjectsOfType<CargoContainer>();
-                float bestDist = HitchDistanceThreshold;
+                var nearbyTrailers = new System.Collections.Generic.List<Messages.TrailerData>();
+
                 foreach (var cargo in allCargo)
                 {
                     if (cargo == null) continue;
                     float dist = Vector3.Distance(myTruck.transform.position, cargo.transform.position);
-                    if (dist < bestDist)
+                    if (dist < HitchDistanceThreshold)
                     {
-                        bestDist = dist;
-                        hitchedCargo = cargo;
+                        string typeId = Messages.GetContainerTypeIdentifier(cargo);
+                        if (string.IsNullOrEmpty(typeId))
+                        {
+                            typeId = cargo.gameObject?.name?.Replace("(Clone)", "").Trim() ?? "";
+                        }
+                        Vector3 pos = (cargo.rb != null ? cargo.rb.position : cargo.transform.position)
+                                      + floatingOrigin.m_currentOrigin;
+                        Vector3 rot = cargo.transform.eulerAngles;
+                        long trackingId = 0;
+                        try { trackingId = cargo.record.trackingId; } catch { }
+
+                        nearbyTrailers.Add(new Messages.TrailerData
+                        {
+                            trackingId = trackingId,
+                            containerType = typeId,
+                            px = pos.x, py = pos.y, pz = pos.z,
+                            rx = rot.x, ry = rot.y, rz = rot.z
+                        });
                     }
+                }
+
+                bool hitched = nearbyTrailers.Count > 0;
+
+                if (hitched && nearbyTrailers.Count > 0)
+                {
+                    string modelStr = nearbyTrailers[0].containerType;
+                    if (modelStr != lastTrailerModel)
+                    {
+                        StarTruckMP.Log.LogInfo($"SendTrailerMovement: {nearbyTrailers.Count} trailer(s) nearby, model='{modelStr}'");
+                        lastTrailerModel = modelStr;
+                    }
+
+                    if (nearbyTrailers.Count == 1)
+                    {
+                        // Single trailer — use legacy format for backward compat
+                        var t = nearbyTrailers[0];
+                        client.Send(Messages.createTrailerMovementMessage(client.Id, true,
+                            new Vector3(t.px, t.py, t.pz), new Vector3(t.rx, t.ry, t.rz), t.containerType));
+                    }
+                    else
+                    {
+                        // Multi-trailer — use v1 array format
+                        client.Send(Messages.createMultiTrailerMovementMessage(client.Id, nearbyTrailers.ToArray()));
+                    }
+                    trailerHitchedLastSent = true;
+                }
+                else if (trailerHitchedLastSent)
+                {
+                    client.Send(Messages.createTrailerMovementMessage(client.Id));
+                    lastTrailerModel = "";
+                    trailerHitchedLastSent = false;
                 }
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"SendTrailerMovement: cargo lookup failed: {ex.Message}");
-            }
-
-            bool hitched = hitchedCargo != null;
-
-            // Determine container type identifier for this hitched cargo
-            string currentTrailerModel = "";
-            if (hitched && hitchedCargo != null)
-            {
-                string typeId = Messages.GetContainerTypeIdentifier(hitchedCargo);
-                if (!string.IsNullOrEmpty(typeId))
-                {
-                    currentTrailerModel = typeId;
-                }
-                else
-                {
-                    currentTrailerModel = hitchedCargo.gameObject?.name?.Replace("(Clone)", "").Trim() ?? "";
-                    StarTruckMP.Log.LogWarning($"SendTrailerMovement: cargo.record.cargoType.containerType is null! Falling back to GO.name='{currentTrailerModel}' — trailer model sync may not match correctly.");
-                }
-            }
-            if (hitched && currentTrailerModel != lastTrailerModel)
-            {
-                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: model='{currentTrailerModel}' (old='{lastTrailerModel}') — now embedded in movement packet");
-                lastTrailerModel = currentTrailerModel;
-            }
-            else if (!hitched && lastTrailerModel != "")
-            {
-                StarTruckMP.Log.LogInfo($"SendTrailerModelUpdate: unhitched, clearing model (was '{lastTrailerModel}')");
-                lastTrailerModel = "";
-            }
-
-            if (hitched)
-            {
-                Vector3 pos = (hitchedCargo.rb != null ? hitchedCargo.rb.position : hitchedCargo.transform.position)
-                              + floatingOrigin.m_currentOrigin;
-                Vector3 rot = hitchedCargo.transform.eulerAngles;
-
-                // containerType is now embedded in the movement packet (fixes timing race)
-                client.Send(Messages.createTrailerMovementMessage(client.Id, true, pos, rot, currentTrailerModel));
-                trailerHitchedLastSent = true;
-            }
-            else if (trailerHitchedLastSent)
-            {
-                client.Send(Messages.createTrailerMovementMessage(client.Id, false, Vector3.zero, Vector3.zero));
-                trailerHitchedLastSent = false;
+                StarTruckMP.Log.LogWarning($"SendTrailerMovement error: {ex.Message}");
             }
         }
 

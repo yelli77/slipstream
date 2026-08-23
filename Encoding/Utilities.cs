@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace StarTruckMP.Utilities
@@ -20,7 +21,8 @@ namespace StarTruckMP.Utilities
         clientVersion,
         jobBoardSync,
         cargoSync,
-        setDestinationGate
+        setDestinationGate,
+        multiTrailerMovementUpdate
     }
 
     public struct playerInfo
@@ -37,10 +39,12 @@ namespace StarTruckMP.Utilities
         public bool seated;
         public string livery;
         public string trailerModel;
+        public Dictionary<long, GameObject> Trailers;
         public GameObject NameLabel;
         public Vector3 trailerSmoothVel;
         public Vector3 trailerTargetPos;
         public Vector3 trailerTargetRot;
+        public Dictionary<long, movementTrans> trailerExtraTargets;
         public Vector3 truckTargetPos;
         public Vector3 truckTargetRot;
         public float spawnTime;

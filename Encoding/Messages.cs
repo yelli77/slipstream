@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Riptide;
 using StarTruckMP.Utilities;
 using UnityEngine;
@@ -407,6 +408,7 @@ namespace StarTruckMP.Encoding
             return message;
         }
 
+        // Version 1: multi-trailer array format
         public static Message createTrailerMovementMessage(ushort playerId, bool hitched, Vector3 position, Vector3 rotation, string containerType = null)
         {
             float[] trailerTransform = { position.x, position.y, position.z, rotation.x, rotation.y, rotation.z };
@@ -417,6 +419,49 @@ namespace StarTruckMP.Encoding
             message.AddFloats(trailerTransform);
             message.AddString(containerType ?? "");
 
+            return message;
+        }
+
+        // New: multi-trailer array message (v1)
+        public struct TrailerData
+        {
+            public long trackingId;
+            public string containerType;
+            public float px, py, pz, rx, ry, rz;
+        }
+
+        public static Message createMultiTrailerMovementMessage(ushort playerId, TrailerData[] trailers)
+        {
+            Message message = Message.Create(MessageSendMode.Unreliable, (ushort)messageType.trailerMovementUpdate);
+            message.AddUShort(playerId);
+            message.AddBool(true);  // hitched = true (has trailers)
+            // v1 marker: use first float of the 6-float block as version indicator
+            // Old format: px,py,pz,rx,ry,rz — we send trailerCount as px (will be negative to signal v1)
+            message.AddFloats(new float[] {
+                -1f,  // version marker: negative px means v1 multi-trailer
+                (float)trailers.Length,  // trailer count in py slot
+                0f, 0f, 0f, 0f  // padding
+            });
+            message.AddString("MULTI");  // sentinel to distinguish from old format on receiver
+            // Per-trailer data
+            message.AddUShort((ushort)trailers.Length);
+            foreach (var t in trailers)
+            {
+                message.AddLong(t.trackingId);
+                message.AddString(t.containerType ?? "");
+                message.AddFloats(new float[] { t.px, t.py, t.pz, t.rx, t.ry, t.rz });
+            }
+            return message;
+        }
+
+        // Unhitched message (no trailers)
+        public static Message createTrailerMovementMessage(ushort playerId)
+        {
+            Message message = Message.Create(MessageSendMode.Unreliable, (ushort)messageType.trailerMovementUpdate);
+            message.AddUShort(playerId);
+            message.AddBool(false);
+            message.AddFloats(new float[] { 0f, 0f, 0f, 0f, 0f, 0f });
+            message.AddString("");
             return message;
         }
 
