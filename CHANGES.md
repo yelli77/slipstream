@@ -1,3 +1,11 @@
+## Neu in custom-build-283: Multi-Trailer Protocol (v1 Array-Format)
+
+- trailerMovementUpdate unterstuetzt jetzt v1 Array-Format fuer mehrere Anhaenger pro Spieler.
+- Sender erkennt alle CargoContainers im 50m Radius (nicht nur den naechsten) und sendet Array.
+- Receiver verwaltet Dictionary<trackingId, GameObject> pro Spieler — spawnt/destroynt Anhaenger dynamisch.
+- Backward-compat: v0 Format (1 Trailer) bleibt als Legacy-Fallback erhalten.
+- Version-Byte (px < 0 + sentinel) distinguishes v0 vs v1 Format.
+
 ## Neu in custom-build-281: Trailer Timing-Race Fix — containerType im Movement-Packet
 
 - containerType wird jetzt direkt im trailerMovementUpdate-Packet mitgesendet (statt als separates reliable Update).
