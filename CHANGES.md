@@ -1,3 +1,10 @@
+## Neu in custom-build-281: Trailer Timing-Race Fix — containerType im Movement-Packet
+
+- containerType wird jetzt direkt im trailerMovementUpdate-Packet mitgesendet (statt als separates reliable Update).
+- Behebt den Timing-Race, bei dem die erste Bewegungsmeldung ankam BEVOR der Container-Typ uebertragen wurde.
+- Empfaenger liest containerType direkt aus der Bewegungsmeldung und nutzt ihn fuer den Spawn.
+- Separiertes updateTrailerModel-Senden wird nicht mehr benoetigt (Backup-Handler bleibt erhalten).
+
 ## Neu in custom-build-280: Truck-Spawn-Fix fuer spaet dazukommende Spieler
 
 - Behebt: Andere Spieler sehen nur den Anhanger (~1 Min), dann fliegt der LKW von der Seite rein.
