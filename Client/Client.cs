@@ -1065,7 +1065,7 @@ namespace StarTruckMP.StarTruckClient
                         truckTrans.AngVel = myTruckRigid.angularVelocity;
                     }
                 }
-                if (myPlayer != null && playerLocation != null)
+                if (myPlayer != null && playerLocation != null && myPlayerRigid != null)
                 {
                     if (!sentFirstUpdate || PlayerLocation.worldPosition != playerTrans.Pos || playerCam.transform.eulerAngles != playerTrans.Rot || myPlayerRigid.velocity != playerTrans.Vel || myPlayerRigid.angularVelocity != playerTrans.AngVel)
                     {

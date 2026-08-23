@@ -164,7 +164,27 @@ namespace StarTruckMP.Encoding
                 TryDestroyComponent<InteractTarget>(newSuit.transform, "(suit root)", playerId);
                 TryDestroyComponent<DoorController>(newSuit.transform, "(suit root)", playerId);
 
-                myRigid = StarTruckClient.StarTruckClient.myPlayer.GetComponent<Rigidbody>();
+                // Null-guard: myPlayer may be destroyed during sector transitions.
+                var localMyPlayer = StarTruckClient.StarTruckClient.myPlayer;
+                if (localMyPlayer == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: myPlayer is null (sector transition?), deferring spawn.");
+                    GameObject.Destroy(newTruck);
+                    GameObject.Destroy(newPlayer);
+                    playerInfo defer3 = new playerInfo();
+                    defer3.sector = sector;
+                    return defer3;
+                }
+                myRigid = localMyPlayer.GetComponent<Rigidbody>();
+                if (myRigid == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: myPlayer has no Rigidbody (sector transition?), deferring spawn.");
+                    GameObject.Destroy(newTruck);
+                    GameObject.Destroy(newPlayer);
+                    playerInfo defer4 = new playerInfo();
+                    defer4.sector = sector;
+                    return defer4;
+                }
                 var newPlayerRigid = newPlayer.AddComponent<Rigidbody>();
                 newPlayerRigid.useGravity = myRigid.useGravity;
                 newPlayerRigid.drag = myRigid.drag;
