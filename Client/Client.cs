@@ -50,6 +50,9 @@ namespace StarTruckMP.StarTruckClient
         private static bool loggedPlayOverload = false;
         private static System.Collections.Generic.Dictionary<ushort, bool> lastRemoteHonking
             = new System.Collections.Generic.Dictionary<ushort, bool>();
+        // Cooldown for deferred spawn retries during sector transitions.
+        private static System.Collections.Generic.Dictionary<ushort, float> deferredSpawnLastAttempt
+            = new System.Collections.Generic.Dictionary<ushort, float>();
         private static float hornMaxLength = 0f;
         private static bool hornMaxLengthFetched = false;
         private static System.Collections.Generic.Dictionary<ushort, float> honkPlayingUntil
@@ -512,8 +515,31 @@ namespace StarTruckMP.StarTruckClient
                             // the correct position from the first movementUpdate.
                             if (currentPlayer.Truck == null)
                             {
+                                // Throttle retries during sector transitions: createPlayer may
+                                // return a fallback (Truck=null) when [Sector]/myTruck are null.
+                                float lastTry;
+                                deferredSpawnLastAttempt.TryGetValue(playerId, out lastTry);
+                                if (UnityEngine.Time.time - lastTry < 1.0f)
+                                {
+                                    // Too soon — just store latest position for next attempt
+                                    currentPlayer.truckTrans.Pos = playerPos;
+                                    currentPlayer.truckTrans.Rot = playerRot;
+                                    currentPlayer.destinationGateId = remoteDestGate;
+                                }
+                                else
+                                {
+                                deferredSpawnLastAttempt[playerId] = UnityEngine.Time.time;
                                 StarTruckMP.Log.LogInfo($"movementUpdate: deferred spawn for player {playerId} at {playerPos}");
                                 playerInfo spawned = Messages.createPlayer(playerId, playerPos, playerRot, currentPlayer.sector, currentPlayer.Name);
+                                if (spawned.Truck == null)
+                                {
+                                    // createPlayer deferred (sector transition) — try again next tick
+                                    currentPlayer.truckTrans.Pos = playerPos;
+                                    currentPlayer.truckTrans.Rot = playerRot;
+                                    currentPlayer.destinationGateId = remoteDestGate;
+                                }
+                                else
+                                {
                                 currentPlayer.Truck = spawned.Truck;
                                 currentPlayer.Player = spawned.Player;
                                 currentPlayer.NameLabel = spawned.NameLabel;
@@ -534,17 +560,21 @@ namespace StarTruckMP.StarTruckClient
                                     if (helper != null) helper.Init(playerId);
                                 }
                                 // Hard-snap to correct position - no spring correction needed
-                                currentPlayer.Truck.transform.position = playerPos - floatingOrigin.m_currentOrigin;
+                                var origin = floatingOrigin;
+                                Vector3 localPos = (origin != null) ? playerPos - origin.m_currentOrigin : playerPos;
+                                currentPlayer.Truck.transform.position = localPos;
                                 currentPlayer.Truck.transform.eulerAngles = playerRot;
                                 var spawnedRb = currentPlayer.Truck.GetComponent<Rigidbody>();
                                 if (spawnedRb != null)
                                 {
-                                    spawnedRb.position = playerPos - floatingOrigin.m_currentOrigin;
+                                    spawnedRb.position = localPos;
                                     spawnedRb.rotation = Quaternion.Euler(playerRot);
                                     spawnedRb.velocity = playerVel;
                                     spawnedRb.angularVelocity = playerAngVel;
                                 }
                                 playerList[playerId] = currentPlayer;
+                                } // end else (Truck != null)
+                                } // end else (cooldown)
                             }
                             // Store target for smooth truck interpolation (no hard snap)
                             currentPlayer.truckTargetPos = playerPos;

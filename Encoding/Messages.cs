@@ -11,8 +11,27 @@ namespace StarTruckMP.Encoding
         {
             try
             {
+                // Null-guard: during sector transitions [Sector] or myTruck may be temporarily
+                // unavailable.  Return a fallback instead of crashing - the caller retries on
+                // the next movementUpdate.
                 GameObject sectorGO = GameObject.Find("[Sector]");
-                var myRigid = StarTruckClient.StarTruckClient.myTruck.GetComponent<Rigidbody>();
+                if (sectorGO == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: [Sector] not found (sector transition?), deferring spawn.");
+                    playerInfo defer1 = new playerInfo();
+                    defer1.sector = sector;
+                    return defer1;
+                }
+
+                var myTruck = StarTruckClient.StarTruckClient.myTruck;
+                if (myTruck == null)
+                {
+                    StarTruckMP.Log.LogWarning($"createPlayer[{playerId}]: myTruck is null (sector transition?), deferring spawn.");
+                    playerInfo defer2 = new playerInfo();
+                    defer2.sector = sector;
+                    return defer2;
+                }
+                var myRigid = myTruck.GetComponent<Rigidbody>();
 
                 //Spawn new Truck GameObject
                 GameObject newTruck = new GameObject("RemoteTruck" + playerId);
@@ -158,9 +177,11 @@ namespace StarTruckMP.Encoding
                 newPlayerRigid.inertiaTensor = myRigid.inertiaTensor;
                 newPlayerRigid.inertiaTensorRotation = myRigid.inertiaTensorRotation;
 
-                newTruck.transform.position = position - StarTruckClient.StarTruckClient.floatingOrigin.m_currentOrigin;
+                var origin = StarTruckClient.StarTruckClient.floatingOrigin;
+                Vector3 localPos = (origin != null) ? position - origin.m_currentOrigin : position;
+                newTruck.transform.position = localPos;
                 newTruck.transform.eulerAngles = rotation;
-                newPlayer.transform.position = position - StarTruckClient.StarTruckClient.floatingOrigin.m_currentOrigin;
+                newPlayer.transform.position = localPos;
                 newPlayer.transform.eulerAngles = rotation;
 
 
