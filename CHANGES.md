@@ -1,3 +1,8 @@
+## Neu in custom-build-284: createPlayer NullRef Fix (Sector Transitions)
+
+- Guard fuer myPlayer/myRigid waehrend Sector-Transitions hinzugefuegt.
+- Verhindert NullRef wenn Spieler waehrend Sektorenwechsels ein neues Object erstellt.
+
 ## Neu in custom-build-283: Multi-Trailer Protocol (v1 Array-Format)
 
 - trailerMovementUpdate unterstuetzt jetzt v1 Array-Format fuer mehrere Anhaenger pro Spieler.
