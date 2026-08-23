@@ -21,11 +21,11 @@ public static class ServerMessages
         return msg;
     }
 
-        public static Message CreateTrailerMovement(ushort playerId, bool hitched, Vector3f pos, Vector3f rot)
+        public static Message CreateTrailerMovement(ushort playerId, bool hitched, Vector3f pos, Vector3f rot, string containerType = "")
     {
         float[] t = { pos.X,pos.Y,pos.Z, rot.X,rot.Y,rot.Z };
         var msg = Message.Create(MessageSendMode.Unreliable, (ushort)MessageType.TrailerMovementUpdate);
-        msg.AddUShort(playerId); msg.AddBool(hitched); msg.AddFloats(t);
+        msg.AddUShort(playerId); msg.AddBool(hitched); msg.AddFloats(t); msg.AddString(containerType ?? "");
         return msg;
     }
 }

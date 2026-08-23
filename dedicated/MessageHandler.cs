@@ -152,10 +152,12 @@ public class MessageHandler
         if (!_players.TryGetValue(e.FromConnection.Id, out var p)) return;
         e.Message.GetUShort();
         bool hitched=e.Message.GetBool(); float[] t=e.Message.GetFloats();
+        string containerType = "";
+        try { containerType = e.Message.GetString(); } catch { }
         var pos=new Vector3f(t[0],t[1],t[2]); var rot=new Vector3f(t[3],t[4],t[5]);
-        p.TrailerHitched=hitched;p.TrailerPosition=pos;p.TrailerRotation=rot;p.LastUpdate=DateTime.UtcNow;
+        p.TrailerHitched=hitched;p.TrailerPosition=pos;p.TrailerRotation=rot;p.TrailerModel=containerType;p.LastUpdate=DateTime.UtcNow;
         _players[e.FromConnection.Id]=p;
-        server.SendToAll(ServerMessages.CreateTrailerMovement(e.FromConnection.Id,hitched,pos,rot));
+        server.SendToAll(ServerMessages.CreateTrailerMovement(e.FromConnection.Id,hitched,pos,rot,containerType));
     }
 
     private void HandleSector(MessageReceivedEventArgs e, Riptide.Server server)
