@@ -1,3 +1,10 @@
+## Neu in custom-build-285: Coordinated Client+Server Deploy (containerType Sync)
+
+- Server leitet containerType jetzt korrekt weiter (Messages.cs, MessageHandler.cs, DedicatedServer.cs).
+- PlayerState.TrailerModel wird beim Join-Sync mitgesendet.
+- Client: createPlayer NullRef Fix (build-284) bleibt enthalten.
+- Backward-Compat: aeltere Clients ohne containerType String crashen nicht.
+
 ## Neu in custom-build-284: createPlayer NullRef Fix (Sector Transitions)
 
 - Guard fuer myPlayer/myRigid waehrend Sector-Transitions hinzugefuegt.
