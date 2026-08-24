@@ -125,6 +125,12 @@ namespace StarTruckMP.StarTruckClient
                 var questSave = new QuestSaveData();
                 questSave.availableJobs = jobs.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
 
+                if (!QuestTracker.ready)
+                {
+                    StarTruckMP.Log.LogInfo("JobBoardSync: QuestTracker not ready, skipping RestoreAvailableJobs.");
+                    return;
+                }
+
                 QuestTracker.Get()?.RestoreAvailableJobs(questSave);
                 StarTruckMP.Log.LogInfo($"JobBoardSync: Jobs fuer Sektor '{sector}' uebernommen ({jobs.Count}).");
             }

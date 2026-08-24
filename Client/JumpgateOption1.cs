@@ -694,5 +694,14 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"JumpgateOption1.Cleanup error: {ex}");
             }
         }
+
+        /// <summary>
+        /// Force the next UpdatePositions() tick to run immediately.
+        /// Call when destinationGateId changes so boards refresh without the 1.5s delay.
+        /// </summary>
+        public static void ForceRefresh()
+        {
+            lastUpdate = 0f;
+        }
     }
 }

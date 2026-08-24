@@ -446,6 +446,7 @@ namespace StarTruckMP.StarTruckClient
                         newPlayer.sector = sector;
                         newPlayer.Name = remoteName;
                         newPlayer.destinationGateId = remoteDestGate;
+                        JumpgateOption1.ForceRefresh();
                         newPlayer.truckTrans.Pos = pPos;
                         newPlayer.truckTrans.Rot = pRot;
                         newPlayer.playerTrans.Pos = pPos;
@@ -529,6 +530,7 @@ namespace StarTruckMP.StarTruckClient
                                     currentPlayer.truckTrans.Pos = playerPos;
                                     currentPlayer.truckTrans.Rot = playerRot;
                                     currentPlayer.destinationGateId = remoteDestGate;
+                                    if (remoteDestGate != currentPlayer.destinationGateId) JumpgateOption1.ForceRefresh();
                                 }
                                 else
                                 {
@@ -541,6 +543,7 @@ namespace StarTruckMP.StarTruckClient
                                     currentPlayer.truckTrans.Pos = playerPos;
                                     currentPlayer.truckTrans.Rot = playerRot;
                                     currentPlayer.destinationGateId = remoteDestGate;
+                                    if (remoteDestGate != currentPlayer.destinationGateId) JumpgateOption1.ForceRefresh();
                                 }
                                 else
                                 {
@@ -633,7 +636,15 @@ namespace StarTruckMP.StarTruckClient
                         else if (!remoteIsHonking && wasRemoteHonking && currentPlayer.Truck != null)
                             HandleRemoteHonkStop(playerId);
                         lastRemoteHonking[playerId] = remoteIsHonking;
-                        currentPlayer.destinationGateId = remoteDestGate;
+                        if (remoteDestGate != currentPlayer.destinationGateId)
+                        {
+                            currentPlayer.destinationGateId = remoteDestGate;
+                            JumpgateOption1.ForceRefresh();
+                        }
+                        else
+                        {
+                            currentPlayer.destinationGateId = remoteDestGate;
+                        }
                         playerList[playerId] = currentPlayer;
                     }
                 }
@@ -1036,6 +1047,7 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogInfo($"DetectDestinationGates CHANGE: '{currentDestinationGateId}' -> '{gateId}' (nextSectorId='{nextSectorId}', waypointCount={waypointCount})");
                 }
                 currentDestinationGateId = gateId;
+                JumpgateOption1.ForceRefresh();
 
 
             }
@@ -1182,6 +1194,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 currentSector = GameObject.Find("[Sector]").scene.name;
                 currentDestinationGateId = "";  // reset on sector change
+                JumpgateOption1.ForceRefresh();
                 client.Send(Messages.updateSector(client.Id, currentSector));
                 StarTruckMP.Log.LogInfo($"Entered Sector: {currentSector}");
                 UpdateStatusOverlay();
