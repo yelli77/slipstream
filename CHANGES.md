@@ -1,3 +1,9 @@
+## Neu in custom-build-287: JobBoardSync Fix — gleiche Auftraege pro Sektor
+
+- BUG: eingehende Job-Syncs wurden beim Empfaenger still verworfen, wenn QuestTracker im Sync-Moment noch nicht ready war (Race nach Sektorwechsel). Jeder Spieler sah sein eigenes, lokal generiertes Board -> Auftraege unterschiedlich zwischen Spielern im gleichen Sektor.
+- FIX: HandleIncoming puffert den Sync-Blob bei !QuestTracker.ready (pendingRestoreSector/pendingRestoreJobs) und Client.FixedUpdate() holt ihn ueber JobBoardSync.TryApplyPending() nach, sobald QuestTracker.ready true ist.
+- Kein anderes Feature betroffen (identisch zu 286 ausser JobBoardSync-Pfad).
+
 ## Neu in custom-build-285: Coordinated Client+Server Deploy (containerType Sync)
 
 - Server leitet containerType jetzt korrekt weiter (Messages.cs, MessageHandler.cs, DedicatedServer.cs).

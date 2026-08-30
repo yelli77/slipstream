@@ -125,14 +125,20 @@ namespace StarTruckMP.StarTruckClient
                 var questSave = new QuestSaveData();
                 questSave.availableJobs = jobs.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
 
+                // QuestTracker kann beim Empfaenger im Sync-Moment noch nicht ready sein
+                // (Ready-Flag hinkt der lokalen Generierung hinterher). Frueher wurde der
+                // Blob hier hart verworfen -> Sync ging still verloren, jeder sah sein
+                // eigenes Board. Stattdessen puffern und Frame-fuer-Frame uebernehmen,
+                // sobald QuestTracker.ready ist.
                 if (!QuestTracker.ready)
                 {
-                    StarTruckMP.Log.LogInfo("JobBoardSync: QuestTracker not ready, skipping RestoreAvailableJobs.");
+                    pendingRestoreSector = sector;
+                    pendingRestoreJobs = questSave;
+                    StarTruckMP.Log.LogInfo($"JobBoardSync: QuestTracker noch nicht ready, Sync fuer Sektor '{sector}' gepuffert (Retry ueber FixedUpdate).");
                     return;
                 }
 
-                QuestTracker.Get()?.RestoreAvailableJobs(questSave);
-                StarTruckMP.Log.LogInfo($"JobBoardSync: Jobs fuer Sektor '{sector}' uebernommen ({jobs.Count}).");
+                ApplyRestore(sector, questSave);
             }
             catch (Exception ex)
             {
@@ -150,6 +156,30 @@ namespace StarTruckMP.StarTruckClient
                     lowest = kv.Key;
             }
             return lowest == myId;
+        }
+
+        // Gepufferter Sync, falls QuestTracker beim Empfang noch nicht ready war.
+        // Wird ueber Client.FixedUpdate() -> TryApplyPending() nachgeholt.
+        private static string pendingRestoreSector = null;
+        private static QuestSaveData pendingRestoreJobs = null;
+
+        private static void ApplyRestore(string sector, QuestSaveData questSave)
+        {
+            if (sector != StarTruckClient.currentSector) return;
+            if (IsAuthorityForCurrentSector()) return;
+            QuestTracker.Get()?.RestoreAvailableJobs(questSave);
+            StarTruckMP.Log.LogInfo($"JobBoardSync: Jobs fuer Sektor '{sector}' uebernommen ({(questSave.availableJobs != null ? Il2CppCount(questSave.availableJobs) : 0)}).");
+        }
+
+        public static void TryApplyPending()
+        {
+            if (pendingRestoreJobs == null) return;
+            if (!QuestTracker.ready) return;
+            var sector = pendingRestoreSector;
+            var jobs = pendingRestoreJobs;
+            pendingRestoreSector = null;
+            pendingRestoreJobs = null;
+            ApplyRestore(sector, jobs);
         }
 
         // ---- Serialisierung (eigenes Blob-Format, unabhaengig von Riptide-Feld-API) ----

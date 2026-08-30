@@ -86,6 +86,7 @@ namespace StarTruckMP.StarTruckClient
             BillboardNameLabels();
             UpdateMapIndicators();
             DetectDestinationGates();
+            JobBoardSync.TryApplyPending();
 
             if (pendingSectorRetry && client.IsConnected && Time.realtimeSinceStartup >= nextSectorRetryTime)
             {
