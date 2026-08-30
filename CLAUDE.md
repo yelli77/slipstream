@@ -59,6 +59,10 @@ until all of these are done and pushed:**
    must be bumped or the in-game overlay shows the previous number even
    though new code is running — this alone isn't a functional bug, just
    confusing when verifying a fix landed).
+   **Automated guard:** run `scripts/check-build-number.sh` before committing.
+   It compares `Plugin.cs`'s `customBuildNumber` against `version.json`'s
+   `build` field and exits non-zero on mismatch — wire it as a pre-push /
+   pre-commit hook so this step can never be skipped silently again.
 2. Build: `docker exec starttruckmp-dotnet-build-1 bash -lc "cd /src && dotnet build StarTruckMP.csproj -c Release"`
    (a long-running `dotnet-build` container with the SDK is already up via
    `docker-compose.yml` — don't try to install dotnet locally).
