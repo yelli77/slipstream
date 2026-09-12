@@ -702,6 +702,7 @@ namespace StarTruckMP.StarTruckClient
         public static void ForceRefresh()
         {
             lastUpdate = 0f;
+            StarTruckMP.Log.LogInfo("JumpgateOption1: ForceRefresh requested - departure boards rebuild on next UpdatePositions tick.");
         }
     }
 }

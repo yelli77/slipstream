@@ -22,6 +22,11 @@ namespace StarTruckMP.StarTruckClient
         public static bool trailerHitchedLastSent = false;
         private static string lastTrailerModel = "";
         public static bool sentFirstUpdate = false;
+        // Set when a new client joined (playerConnected/clientJoin received): forces exactly
+        // ONE full movementUpdate snapshot on the next SendMovement tick, so parked/stationary
+        // clients re-announce position + destinationGateId to the newcomer (bug: newcomer saw
+        // existing trucks only after they moved).
+        public static bool forceStateResend = false;
         public static bool inTruck = true;
         public static GameObject myPlayer = null;
         public static Rigidbody myPlayerRigid = null;
@@ -448,6 +453,7 @@ namespace StarTruckMP.StarTruckClient
                         newPlayer.Name = remoteName;
                         newPlayer.destinationGateId = remoteDestGate;
                         JumpgateOption1.ForceRefresh();
+                        forceStateResend = true;
                         newPlayer.truckTrans.Pos = pPos;
                         newPlayer.truckTrans.Rot = pRot;
                         newPlayer.playerTrans.Pos = pPos;
@@ -472,6 +478,7 @@ namespace StarTruckMP.StarTruckClient
                     newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
                     newPlayer.Name = remoteName;
                     playerList.Add(id, newPlayer);
+                    forceStateResend = true;
                 }
             }
 
@@ -528,10 +535,11 @@ namespace StarTruckMP.StarTruckClient
                                 if (UnityEngine.Time.time - lastTry < 1.0f)
                                 {
                                     // Too soon — just store latest position for next attempt
+                                    bool gateChanged = remoteDestGate != currentPlayer.destinationGateId;
                                     currentPlayer.truckTrans.Pos = playerPos;
                                     currentPlayer.truckTrans.Rot = playerRot;
                                     currentPlayer.destinationGateId = remoteDestGate;
-                                    if (remoteDestGate != currentPlayer.destinationGateId) JumpgateOption1.ForceRefresh();
+                                    if (gateChanged) JumpgateOption1.ForceRefresh();
                                 }
                                 else
                                 {
@@ -541,10 +549,11 @@ namespace StarTruckMP.StarTruckClient
                                 if (spawned.Truck == null)
                                 {
                                     // createPlayer deferred (sector transition) — try again next tick
+                                    bool gateChanged = remoteDestGate != currentPlayer.destinationGateId;
                                     currentPlayer.truckTrans.Pos = playerPos;
                                     currentPlayer.truckTrans.Rot = playerRot;
                                     currentPlayer.destinationGateId = remoteDestGate;
-                                    if (remoteDestGate != currentPlayer.destinationGateId) JumpgateOption1.ForceRefresh();
+                                    if (gateChanged) JumpgateOption1.ForceRefresh();
                                 }
                                 else
                                 {
@@ -1069,7 +1078,7 @@ namespace StarTruckMP.StarTruckClient
                     bool honkJustEnded = !isHonking && wasHonking;
                     bool sendHonk = honkJustStarted || honkJustEnded;
                     if (honkJustStarted || honkJustEnded) wasHonking = isHonking;
-                    if (!sentFirstUpdate || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
+                    if (!sentFirstUpdate || forceStateResend || sendHonk || (floatingOrigin.m_currentOrigin + myTruck.transform.position) != truckTrans.Pos || myTruck.transform.eulerAngles != truckTrans.Rot || myTruckRigid.velocity != truckTrans.Vel || myTruckRigid.angularVelocity != truckTrans.AngVel)
                     {
                         client.Send(Messages.createMovementMessage(client.Id, floatingOrigin.m_currentOrigin + myTruck.transform.position, myTruck.transform.eulerAngles, myTruckRigid.velocity, myTruckRigid.angularVelocity, true, false, sendHonk, currentDestinationGateId));
                         truckTrans.Pos = floatingOrigin.m_currentOrigin + myTruck.transform.position;
@@ -1080,7 +1089,7 @@ namespace StarTruckMP.StarTruckClient
                 }
                 if (myPlayer != null && playerLocation != null && myPlayerRigid != null)
                 {
-                    if (!sentFirstUpdate || PlayerLocation.worldPosition != playerTrans.Pos || playerCam.transform.eulerAngles != playerTrans.Rot || myPlayerRigid.velocity != playerTrans.Vel || myPlayerRigid.angularVelocity != playerTrans.AngVel)
+                    if (!sentFirstUpdate || forceStateResend || PlayerLocation.worldPosition != playerTrans.Pos || playerCam.transform.eulerAngles != playerTrans.Rot || myPlayerRigid.velocity != playerTrans.Vel || myPlayerRigid.angularVelocity != playerTrans.AngVel)
                     {
                         client.Send(Messages.createMovementMessage(client.Id, PlayerLocation.worldPosition + new Vector3(0, -1, 0), playerCam.transform.eulerAngles, myPlayerRigid.velocity, myPlayerRigid.angularVelocity, false, false, false, currentDestinationGateId));
                         playerTrans.Pos = PlayerLocation.worldPosition;
@@ -1094,6 +1103,12 @@ namespace StarTruckMP.StarTruckClient
                 {
                     sentFirstUpdate = true;
                     StarTruckMP.Log.LogInfo($"SendMovement: forced initial position sync sent (truckPos=({truckTrans.Pos.x:F2}, {truckTrans.Pos.y:F2}, {truckTrans.Pos.z:F2}))");
+                }
+
+                if (forceStateResend)
+                {
+                    forceStateResend = false;
+                    StarTruckMP.Log.LogInfo($"SendMovement: forced state re-send after player join (truckPos=({truckTrans.Pos.x:F2}, {truckTrans.Pos.y:F2}, {truckTrans.Pos.z:F2}), destGate='{currentDestinationGateId}')");
                 }
 
                 SendTrailerMovement();
