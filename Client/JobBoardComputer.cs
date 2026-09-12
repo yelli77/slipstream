@@ -46,15 +46,15 @@ namespace StarTruckMP.StarTruckClient
             if (visible)
             {
                 bool cockpitOk = false; // 303 Plan B: eigenes Cockpit-Panel stillgelegt (Spiel schuetzt Monitor-Pipeline); Overlay-Fallback aktiv.
-                // 304: Original-Jobboard des Spiels oeffnen (m_openJobBoardScreenEvent -> GameEvent.Invoke()).
+                // 305: Original-Jobboard des Spiels oeffnen (m_openJobBoardScreenEvent -> GameEvent.Invoke()).
                 if (TryInvokeGameJobBoard(true))
                 {
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Original-Jobboard geoeffnet.");
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Original-Jobboard geoeffnet.");
                 }
                 else
                 {
                     EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f;
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Original-Jobboard nicht erreichbar - Overlay an (Fallback).");
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Original-Jobboard nicht erreichbar - Overlay an (Fallback).");
                 }
             }
             else
@@ -679,22 +679,36 @@ namespace StarTruckMP.StarTruckClient
             {
                 if (_jobBoardHostComp == null)
                 {
-                    var allComps = UnityEngine.Object.FindObjectsOfType<UnityEngine.Component>(true);
-                    foreach (var comp in allComps)
+                    // 305: Scan ueber alle geladenen Assemblies (AppDomain) statt FindObjectsOfType<Component>(true),
+                    // das praktisch keine Komponenten liefert. Kandidaten: Typen mit Feld m_openJobBoardScreenEvent.
+                    // Instanzen dann via Resources.FindObjectsOfTypeAll(Il2CppType.From(t)) holen (DontDestroyOnLoad inklusive).
+                    int scanned = 0, candidates = 0;
+                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                     {
-                        if (comp == null) continue;
-                        Il2CppSystem.Type t = null;
-                        try { t = comp.GetIl2CppType(); } catch { continue; }
-                        if (t == null) continue;
-                        Il2CppSystem.Reflection.FieldInfo f = null;
-                        try { f = t.GetField("m_openJobBoardScreenEvent"); } catch { }
-                        if (f != null)
+                        System.Type[] types = null;
+                        try { types = asm.GetTypes(); } catch { continue; }
+                        if (types == null) continue;
+                        foreach (var t in types)
                         {
+                            scanned++;
+                            if (t == null || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
+                            System.Reflection.FieldInfo f = null;
+                            try { f = t.GetField("m_openJobBoardScreenEvent"); } catch { }
+                            if (f == null) continue;
+                            candidates++;
+                            UnityEngine.Object[] inst = null;
+                            try { inst = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppType.From(t)); } catch { }
+                            if (inst == null || inst.Length == 0) continue;
+                            var comp = inst[0] as UnityEngine.Component;
+                            if (comp == null) continue;
                             _jobBoardHostComp = comp;
-                            StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Host-Komponente gefunden: '" + t.Name + "' auf '" + comp.gameObject.name + "'.");
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Host-Komponente gefunden: '" + t.Name + "' auf '" + comp.gameObject.name + "' (scanned=" + scanned + ", candidates=" + candidates + ").");
                             break;
                         }
+                        if (_jobBoardHostComp != null) break;
                     }
+                    if (_jobBoardHostComp == null)
+                        StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Host-Suche erfolglos (scanned=" + scanned + ", candidates=" + candidates + ").");
                 }
                 if (_jobBoardHostComp == null)
                 {
@@ -703,22 +717,22 @@ namespace StarTruckMP.StarTruckClient
                 }
                 var hostT = _jobBoardHostComp.GetIl2CppType();
                 var evF = hostT.GetField("m_openJobBoardScreenEvent");
-                if (evF == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Feld wieder verschwunden."); return false; }
+                if (evF == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Feld wieder verschwunden."); return false; }
                 var evObj = evF.GetValue(_jobBoardHostComp);
-                if (evObj == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Event-Instanz null."); return false; }
+                if (evObj == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Event-Instanz null."); return false; }
                 var evT = evObj.GetIl2CppType();
                 Il2CppSystem.Reflection.MethodInfo invM = null;
                 foreach (var m in evT.GetMethods())
                 {
                     if (m.Name == "Invoke" && m.GetParameters().Length == 0) { invM = m; break; }
                 }
-                if (invM == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Invoke-Methode nicht gefunden auf '" + evT.Name + "'."); return false; }
+                if (invM == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Invoke-Methode nicht gefunden auf '" + evT.Name + "'."); return false; }
                 invM.Invoke(evObj, null);
                 return true;
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Original-Jobboard-Fehler: " + ex.Message);
+                StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Original-Jobboard-Fehler: " + ex.Message);
                 return false;
             }
         }
