@@ -153,7 +153,15 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (c2 == null) continue;
                     string cn = c2.gameObject.name;
-                    if (cn.StartsWith("Camera_RenderToTexture")) { best = c2; break; }
+                    if (cn.EndsWith("_Left")) { best = c2; break; }
+                }
+                if (best == null)
+                {
+                    foreach (var c2 in cams)
+                    {
+                        if (c2 == null) continue;
+                        if (c2.gameObject.name.StartsWith("Camera_RenderToTexture")) { best = c2; break; }
+                    }
                 }
                 if (best != null)
                 {
@@ -176,6 +184,30 @@ namespace StarTruckMP.StarTruckClient
             cockpitObj.transform.localPosition = new Vector3(0f, 0f, 1.2f);
             cockpitObj.transform.localRotation = Quaternion.identity;
             cockpitObj.transform.localScale = Vector3.one * 0.5f;
+            // 298: Panel auf einen Layer setzen, den die Monitor-Kamera rendert (Culling Mask),
+            // sonst rendert sie es nicht (Diagnose 297b: cam cullingMask=0x1000 vs panelLayer=0).
+            try
+            {
+                var layerCam = anchorT.GetComponent<UnityEngine.Camera>();
+                if (layerCam != null)
+                {
+                    for (int L = 0; L < 32; L++)
+                    {
+                        if ((layerCam.cullingMask & (1 << L)) != 0)
+                        {
+                            cockpitObj.layer = L;
+                            var renders = cockpitObj.GetComponentsInChildren<UnityEngine.Renderer>(true);
+                            foreach (var r in renders) r.gameObject.layer = L;
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel Layer=" + L + " (" + UnityEngine.LayerMask.LayerToName(L) + "), children=" + renders.Length + ".");
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: Layer-Fix fehlgeschlagen: " + ex.Message);
+            }
             // 297a/297b: Textgroesse an die Render-Textur der Monitor-Kamera anpassen + Diagnose
             try
             {
