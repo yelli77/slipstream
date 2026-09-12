@@ -158,9 +158,40 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: TMP-Suche fehlgeschlagen: " + ex.Message); }
 
+            // Fallback 294: rekursiv ganze Szene nach IRGENDEINEM TMP suchen (3D oder UGUI) -
+            // dessen font-Asset laesst sich auch auf ein frisches 3D-TMP uebertragen.
+            TMPro.TextMeshProUGUI uguiFallback = null;
+            if (cloned == null)
+            {
+                try
+                {
+                    var allT = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshPro>(true);
+                    if (allT != null && allT.Length > 0 && allT[0] != null) cloned = allT[0];
+                }
+                catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: 3D-Szenen-Suche fehlgeschlagen: " + ex.Message); }
+                if (cloned == null)
+                {
+                    try
+                    {
+                        var allU = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>(true);
+                        if (allU != null && allU.Length > 0 && allU[0] != null) uguiFallback = allU[0];
+                    }
+                    catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: UGUI-Szenen-Suche fehlgeschlagen: " + ex.Message); }
+                }
+            }
+
             TMPro.TextMeshPro sourceTemplate = null;
             GameObject textGO;
-            if (cloned != null)
+            if (cloned == null && uguiFallback != null)
+            {
+                // Kein klonbares 3D-TMP, aber UGUI-TMP gefunden: frisches 3D-TMP + dessen Font uebernehmen.
+                textGO = new GameObject("Text");
+                textGO.transform.SetParent(cockpitObj.transform, false);
+                cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
+                if (uguiFallback.font != null) cockpitText.font = uguiFallback.font;
+                StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel fontFallback=UGUI-TMP (font=" + (uguiFallback.font != null ? uguiFallback.font.name : "null") + ").");
+            }
+            else if (cloned != null)
             {
                 sourceTemplate = cloned;
                 textGO = UnityEngine.Object.Instantiate(cloned.gameObject, cockpitObj.transform);
@@ -188,9 +219,30 @@ namespace StarTruckMP.StarTruckClient
                 try { if (sourceTemplate.fontSharedMaterial != null) cockpitText.fontSharedMaterial = sourceTemplate.fontSharedMaterial; }
                 catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: fontSharedMaterial-Rebind fehlgeschlagen: " + ex.Message); }
             }
+            // Letzter Fallback 294: irgendein geladenes TMP_FontAsset aus den Resources nehmen.
+            if (cockpitText.font == null)
+            {
+                try
+                {
+                    var fonts = UnityEngine.Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>();
+                    if (fonts != null && fonts.Length > 0 && fonts[0] != null)
+                    {
+                        cockpitText.font = fonts[0];
+                        StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel fontFallback=FontAsset (" + fonts[0].name + ").");
+                    }
+                }
+                catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: FontAsset-Suche fehlgeschlagen: " + ex.Message); }
+            }
+
             // Active/alpha state: Instantiate() preserves whatever the source had.
             textGO.SetActive(true);
-            try { textGO.GetComponent<UnityEngine.CanvasRenderer>().SetAlpha(1f); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: SetAlpha fehlgeschlagen: " + ex.Message); }
+            try
+            {
+                var cr = textGO.GetComponent<UnityEngine.CanvasRenderer>();
+                if (cr != null) cr.SetAlpha(1f);
+                else StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel kein CanvasRenderer am Text (OK fuer 3D-TMP).");
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: SetAlpha fehlgeschlagen: " + ex.Message); }
             var cg = textGO.GetComponent<UnityEngine.CanvasGroup>();
             if (cg != null) cg.alpha = 1f;
             cockpitText.text = "";
