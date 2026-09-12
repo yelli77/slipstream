@@ -1,3 +1,10 @@
+## Neu in custom-build-288: Boardcomputer-Jobboard (J-Toggle)
+
+- FEATURE: J-Toggle zeigt Screen-Space-Overlay mit den verfuegbaren Jobs des AKTUELLEN Sektors - kein Andocken mehr noetig.
+- Anzeige pro Job: Name (QuestInstance.displayName), Credits (JobExtensions.Credits()), Ziel-Bay (JobExtensions.DropOffBay()).
+- Datenquelle: ProceduralJobGenerator.GetAvailableJobs() - dieselben Jobs, die JobBoardSync (287) zwischen allen Spielern synchronisiert.
+- Hintergrund-Panel + TMP-Klon-Text (gleiche Font-Technik wie DockingBayHUD), Refresh 1s, [J] schliesst.
+
 ## Neu in custom-build-287: JobBoardSync Fix — gleiche Auftraege pro Sektor
 
 - BUG: eingehende Job-Syncs wurden beim Empfaenger still verworfen, wenn QuestTracker im Sync-Moment noch nicht ready war (Race nach Sektorwechsel). Jeder Spieler sah sein eigenes, lokal generiertes Board -> Auftraege unterschiedlich zwischen Spielern im gleichen Sektor.
