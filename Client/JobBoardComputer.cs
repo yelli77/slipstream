@@ -176,11 +176,16 @@ namespace StarTruckMP.StarTruckClient
             cockpitObj.transform.localPosition = new Vector3(0f, 0f, 1.2f);
             cockpitObj.transform.localRotation = Quaternion.identity;
             cockpitObj.transform.localScale = Vector3.one * 0.5f;
-            // 297a: Diagnose - rendert die Monitor-Kamera ueberhaupt in eine Textur, und wuerde
-            // sie unseren Layer sehen (Culling Mask)?
+            // 297a/297b: Textgroesse an die Render-Textur der Monitor-Kamera anpassen + Diagnose
             try
             {
                 var anchorCam = anchorT.GetComponent<UnityEngine.Camera>();
+                if (anchorCam != null && anchorCam.targetTexture != null)
+                {
+                    float s = anchorCam.targetTexture.height / 1080f;
+                    cockpitObj.transform.localScale = Vector3.one * s;
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel scale=" + s.ToString("F4") + " (targetTexture " + anchorCam.targetTexture.width + "x" + anchorCam.targetTexture.height + ").");
+                }
                 if (anchorCam != null)
                 {
                     StarTruckMP.Log.LogInfo("JobBoardComputer: MonitorCam targetTexture=" + (anchorCam.targetTexture != null ? anchorCam.targetTexture.width + "x" + anchorCam.targetTexture.height : "null")
