@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-287";
+    public const string customBuildNumber = "custom-build-288";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -67,6 +67,7 @@ public class StarTruckMP : BasePlugin
             StarTruckClient.StarTruckClient.Update();
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.CheckHonk();
+            StarTruckClient.JobBoardComputer.Update();
             StarTruckClient.StarTruckClient.SendMovement();
             StarTruckClient.DockingBayHUD.UpdatePositions();
             StarTruckClient.WarpGateBillboard.UpdatePositions();
