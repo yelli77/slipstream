@@ -39,22 +39,111 @@ namespace StarTruckMP.StarTruckClient
             SetVisible(!visible);
         }
 
-        private static void SetVisible(bool v)
+        // 307: interne Coroutine-Runner-Klasse (nur StartCoroutine durchreichen).
+        // Muss injected werden (Plugin.cs: ClassInjector.RegisterTypeInIl2Cpp<CoroutineRunnerHelper>).
+        public class CoroutineRunnerHelper : MonoBehaviour
+        {
+        }
+
+        private static bool TryOpenGameJobBoard()
+        {
+            // (A) PRIMAERPFAAD: echtes Jobboard via MenuState.LoadAndShow
+            try
+            {
+                var ms = com.monsterandmonster.Menu.MenuState.Get();
+                StarTruckMP.Log.LogInfo("307 MenuState.Get() = " + (ms == null ? "null" : "nicht null"));
+                if (ms != null)
+                {
+                    try
+                    {
+                        var runnerGO = new GameObject("StarTruckMP_CoroutineRunner307");
+                        UnityEngine.Object.DontDestroyOnLoad(runnerGO);
+                        var runner = runnerGO.AddComponent<CoroutineRunnerHelper>();
+                        runner.StartCoroutine(ms.LoadAndShow("JobBoardScreen", null, null));
+                        ScheduleJobBoardVerify();
+                        return true;
+                    }
+                    catch (System.Exception ex2)
+                    {
+                        StarTruckMP.Log.LogWarning("307 LoadAndShow-Start fehlgeschlagen: " + ex2.Message);
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("307 MenuState-Pfad fehlgeschlagen: " + ex.Message);
+            }
+            // (B) FALLBACK: DevPanel_Cheats.ShowJobBoard()
+            try
+            {
+                var devGO = new GameObject("StarTruckMP_DevPanel307");
+                UnityEngine.Object.DontDestroyOnLoad(devGO);
+                var dp = devGO.AddComponent<global::DevPanel_Cheats>();
+                dp.ShowJobBoard();
+                StarTruckMP.Log.LogInfo("307 (b) DevPanel-ShowJobBoard aufgerufen");
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("307 (b) DevPanel-Fallback fehlgeschlagen: " + ex.Message);
+            }
+            return false;
+        }
+
+        private static float jobBoardVerifyAt = -1f;
+
+        private static void ScheduleJobBoardVerify()
+        {
+            jobBoardVerifyAt = UnityEngine.Time.time + 1f;
+        }
+
+        // Wird aus Update() aufgerufen (kein Coroutine-Runner noetig).
+        private static void TickJobBoardVerify()
+        {
+            if (jobBoardVerifyAt < 0f || UnityEngine.Time.time < jobBoardVerifyAt) return;
+            jobBoardVerifyAt = -1f;
+            bool found = false;
+            try
+            {
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    System.Type[] types = null;
+                    try { types = asm.GetTypes(); } catch { continue; }
+                    foreach (var t in types)
+                    {
+                        if (t == null || t.Name != "JobBoardScreen" || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
+                        try
+                        {
+                            var insts = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppInterop.Runtime.Il2CppType.From(t));
+                            if (insts != null && insts.Length > 0) { found = true; break; }
+                        }
+                        catch { }
+                    }
+                    if (found) break;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("307 JobBoardScreen-Suche fehlgeschlagen: " + ex.Message);
+            }
+            StarTruckMP.Log.LogInfo("307 JobBoardScreen-Instanz vorhanden: " + found);
+        }
+
+private static void SetVisible(bool v)
         {
             if (v == visible && !(v && canvasObj == null)) return;
             visible = v;
             if (visible)
             {
-                bool cockpitOk = false; // 303 Plan B: eigenes Cockpit-Panel stillgelegt (Spiel schuetzt Monitor-Pipeline); Overlay-Fallback aktiv.
-                // 305: Original-Jobboard des Spiels oeffnen (m_openJobBoardScreenEvent -> GameEvent.Invoke()).
-                if (TryInvokeGameJobBoard(true))
+                // 307: PRIMAER erst das echte Jobboard via MenuState (A), dann DevPanel-Fallback (B).
+                if (TryOpenGameJobBoard())
                 {
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Original-Jobboard geoeffnet.");
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 307 Original-Jobboard geoeffnet.");
                 }
                 else
                 {
                     EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f;
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Original-Jobboard nicht erreichbar - Overlay an (Fallback).");
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 307 Overlay-Fallback aktiv");
                 }
             }
             else
@@ -68,6 +157,7 @@ namespace StarTruckMP.StarTruckClient
         public static void Update()
         {
             CheckToggle();
+            TickJobBoardVerify();
             if (!visible) return;
             if (canvasObj == null && cockpitObj == null) return;
             if (canvasObj == null && cockpitObj != null && !cockpitObj.activeInHierarchy) return;
