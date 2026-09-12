@@ -26,11 +26,25 @@ namespace StarTruckMP.StarTruckClient
             if (Time.unscaledTime < nextToggleCheck) return;
             nextToggleCheck = Time.unscaledTime + 0.2f;
 
+            // Diagnose (build-289): Ist CheckToggle ueberhaupt im Spiel-Loop? Heartbeat alle ~30s.
+            diagHeartbeat += 0.2f;
+            if (diagHeartbeat >= 30f)
+            {
+                diagHeartbeat = 0f;
+                StarTruckMP.Log.LogInfo($"JobBoardComputer.CheckToggle: alive, connected={StarTruckClient.client != null && StarTruckClient.client.IsConnected}, visible={visible}, canvasObj={(canvasObj == null ? "null" : "ok")}");
+            }
+            // Log JEDES Keydown von J unabhaengig vom Verbindungsstatus.
+            if (Input.GetKeyDown(ToggleKey))
+            {
+                StarTruckMP.Log.LogInfo($"JobBoardComputer: J-Keydown erkannt, connected={StarTruckClient.client != null && StarTruckClient.client.IsConnected}");
+            }
+
             if (StarTruckClient.client == null || !StarTruckClient.client.IsConnected) { SetVisible(false); return; }
             if (!Input.GetKeyDown(ToggleKey)) return;
 
             SetVisible(!visible);
         }
+        private static float diagHeartbeat = 0f;
 
         private static void SetVisible(bool v)
         {

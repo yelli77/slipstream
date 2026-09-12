@@ -1,3 +1,8 @@
+## Neu in custom-build-289: Jobboard-Diagnose (J-Toggle reagierte nicht)
+
+- DIAGNOSE: Log-Heartbeat alle 30s bestaetigt, dass CheckToggle() im Spiel-Loop laeuft; jedes J-Keydown wird geloggt (auch ohne Verbindung).
+- Jobboard-Feature selbst identisch zu 288.
+
 ## Neu in custom-build-288: Boardcomputer-Jobboard (J-Toggle)
 
 - FEATURE: J-Toggle zeigt Screen-Space-Overlay mit den verfuegbaren Jobs des AKTUELLEN Sektors - kein Andocken mehr noetig.
