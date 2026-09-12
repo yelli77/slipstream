@@ -43,9 +43,9 @@ namespace StarTruckMP.StarTruckClient
             visible = v;
             if (visible)
             {
-                bool cockpitOk = EnsureCockpitPanel();
-                if (cockpitOk) { cockpitObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Display an."); }
-                else { EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay an (Fallback)."); }
+                bool cockpitOk = false; // 303 Plan B: eigenes Cockpit-Panel stillgelegt (Spiel schuetzt Monitor-Pipeline); Overlay-Fallback aktiv.
+                if (cockpitOk) { cockpitObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Plan B Cockpit-Display an."); }
+                else { EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Plan B Overlay an (Fallback)."); }
             }
             else
             {
