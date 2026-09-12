@@ -293,10 +293,9 @@ namespace StarTruckMP.StarTruckClient
                 textGO.transform.SetParent(cockpitObj.transform, false);
                 cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
                 if (cloned.font != null) cockpitText.font = cloned.font;
-                // 301: Switcher-Reflection-Dump + Kamera-enabled zeitlich + Panel als Kanal-Kind
+                // 302: channels-Eintraege lesen + Panel exakt wie einen echten Kanaleintrag anlegen
             try
             {
-                // (3) Panel als "Kanal-Kind" unter MonitorChannelSwitcher_Left anlegen
                 Transform swL = null;
                 {
                     var monCams = anchorT != null ? anchorT.parent : null;
@@ -340,10 +339,72 @@ namespace StarTruckMP.StarTruckClient
                 {
                     StarTruckMP.Log.LogWarning("JobBoardComputer: switcher301: MonitorChannelSwitcher_Left nicht gefunden.");
                 }
+                // channels-Feld auslesen (IL2CPP-Reflection) + Panel wie channels[0] konfigurieren
+                if (swL != null)
+                {
+                    UnityEngine.Component swComp = null;
+                    foreach (var _c in swL.GetComponents<UnityEngine.Component>()) { if (_c != null && _c.GetIl2CppType().Name == "MonitorChannelSwitcher") { swComp = _c; break; } }
+                    if (swComp != null)
+                    {
+                        var swType = swComp.GetIl2CppType();
+                        var fChannels = swType.GetField("channels");
+                        if (fChannels != null)
+                        {
+                            var chList = fChannels.GetValue(swComp);
+                            var chEnum = chList as System.Collections.IEnumerable;
+                            int ci2 = 0;
+                            if (chEnum != null)
+                            {
+                                foreach (var ch in chEnum)
+                                {
+                                    var chObj = ch as UnityEngine.Component;
+                                    if (chObj == null) { StarTruckMP.Log.LogInfo("JobBoardComputer: channels302[" + ci2 + "] <null/unmapped>."); ci2++; continue; }
+                                    var chT = chObj.GetIl2CppType();
+                                    string chInfo = "type=" + chT.Name;
+                                    string fieldNames2 = ""; int fn2 = 0; foreach (var _f in chT.GetFields(Il2CppSystem.Reflection.BindingFlags.Public | Il2CppSystem.Reflection.BindingFlags.NonPublic | Il2CppSystem.Reflection.BindingFlags.Instance)) { fieldNames2 += (fn2 > 0 ? "," : "") + _f.Name; if (++fn2 >= 10) { fieldNames2 += ",..."; break; } }
+                                    // haeufige Felder probieren: gameObject/transform/layer
+                                    try {
+                                        var fGO = chT.GetField("gameObject");
+                                        var fTr = chT.GetField("transform");
+                                        UnityEngine.Transform chTr = null;
+                                        if (fTr != null) chTr = fTr.GetValue(chObj) as UnityEngine.Transform;
+                                        if (chTr == null && fGO != null) { var go = fGO.GetValue(chObj) as UnityEngine.GameObject; if (go != null) chTr = go.transform; }
+                                        if (chTr != null)
+                                            chInfo += " name='" + chTr.name + "' layer=" + chTr.gameObject.layer + " active=" + chTr.gameObject.activeSelf + " worldPos=" + chTr.position.ToString("F2") + " localPos=" + chTr.localPosition.ToString("F3") + " rot=" + chTr.eulerAngles.ToString("F1") + " scale=" + chTr.lossyScale.ToString("F3");
+                                        else
+                                            chInfo += " fields=[" + fieldNames2 + "]";
+                                    } catch (System.Exception che) { chInfo += " <read-err:" + che.Message + ">"; }
+                                    StarTruckMP.Log.LogInfo("JobBoardComputer: channels302[" + ci2 + "] " + chInfo + ".");
+                                    ci2++;
+                                    if (ci2 >= 8) break;
+                                }
+                            }
+                        }
+                        else StarTruckMP.Log.LogWarning("JobBoardComputer: channels302: Feld 'channels' nicht gefunden.");
+                    }
+                }
+                // Panel-Transform an channels[0]-Werte anpassen wird erst nach dem Log moeglich sein;
+                // aber mindestens: Layer endgueltig auf den Kamera-Layer (11) erzwingen inkl. aller Kinder.
+                try {
+                    var monCamRef = anchorT != null ? anchorT.GetComponent<UnityEngine.Camera>() : null;
+                    if (monCamRef != null) {
+                        for (int LF = 0; LF < 32; LF++) {
+                            if ((monCamRef.cullingMask & (1 << LF)) != 0) {
+                                cockpitObj.transform.gameObject.layer = LF;
+                                var allR = cockpitObj.transform.GetComponentsInChildren<UnityEngine.Renderer>(true);
+                                foreach (var r in allR) r.gameObject.layer = LF;
+                                var allT = cockpitObj.transform.GetComponentsInChildren<UnityEngine.Transform>(true);
+                                foreach (var t in allT) t.gameObject.layer = LF;
+                                StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel302 Layer-Final=" + LF + " (" + UnityEngine.LayerMask.LayerToName(LF) + "), children=" + allT.Length + ".");
+                                break;
+                            }
+                        }
+                    }
+                } catch (System.Exception lfe) { StarTruckMP.Log.LogWarning("CockpitPanel: 302-Layer-Final fehlgeschlagen: " + lfe.Message); }
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning("CockpitPanel: 301-Diagnose fehlgeschlagen: " + ex.Message);
+                StarTruckMP.Log.LogWarning("CockpitPanel: 302 fehlgeschlagen: " + ex.Message);
             }
             // 300: Kamera-Render-Parameter + MonitorCameras-Kinder-Dump + Panel auf echtes Kanal-Objekt
             try
