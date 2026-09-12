@@ -293,7 +293,59 @@ namespace StarTruckMP.StarTruckClient
                 textGO.transform.SetParent(cockpitObj.transform, false);
                 cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
                 if (cloned.font != null) cockpitText.font = cloned.font;
-                // 300: Kamera-Render-Parameter + MonitorCameras-Kinder-Dump + Panel auf echtes Kanal-Objekt
+                // 301: Switcher-Reflection-Dump + Kamera-enabled zeitlich + Panel als Kanal-Kind
+            try
+            {
+                // (3) Panel als "Kanal-Kind" unter MonitorChannelSwitcher_Left anlegen
+                Transform swL = null;
+                {
+                    var monCams = anchorT != null ? anchorT.parent : null;
+                    if (monCams != null)
+                    {
+                        for (int si = 0; si < monCams.childCount; si++)
+                        {
+                            var sk = monCams.GetChild(si);
+                            if (sk.name == "MonitorChannelSwitcher_Left") { swL = sk; break; }
+                        }
+                    }
+                }
+                if (swL != null)
+                {
+                    cockpitObj.transform.SetParent(swL, false);
+                    // Position wie die der anderen Kinder (alle worldPos ~(46.8,-7.8,305.4), also localPos=0)
+                    cockpitObj.transform.localPosition = Vector3.zero;
+                    cockpitObj.transform.localRotation = Quaternion.identity;
+                    cockpitObj.transform.localScale = Vector3.one;
+                    cockpitObj.layer = swL.gameObject.layer;
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel301 umgehängt unter '" + swL.name + "' (layer=" + swL.gameObject.layer + ", childCount=" + swL.childCount + ").");
+                    // (1) Switcher-Komponenten + private Fields dumpen
+                    var swComps = swL.GetComponents<Component>();
+                    for (int ci = 0; ci < swComps.Length; ci++)
+                    {
+                        var comp = swComps[ci];
+                        if (comp == null) { StarTruckMP.Log.LogInfo("JobBoardComputer: switcher301[" + ci + "] <null>."); continue; }
+                        var ctype = comp.GetIl2CppType();
+                        string fieldNames = "";
+                        try
+                        {
+                            var fields = ctype.GetFields(Il2CppSystem.Reflection.BindingFlags.Public | Il2CppSystem.Reflection.BindingFlags.NonPublic | Il2CppSystem.Reflection.BindingFlags.Instance);
+                            int fn = 0;
+                            foreach (var f in fields) { fieldNames += (fn > 0 ? "," : "") + f.Name; if (++fn >= 12) { fieldNames += ",..."; break; } }
+                        }
+                        catch (System.Exception fe) { fieldNames = "<fields-err:" + fe.Message + ">"; }
+                        StarTruckMP.Log.LogInfo("JobBoardComputer: switcher301[" + ci + "] '" + ctype.Name + "' fields=[" + fieldNames + "].");
+                    }
+                }
+                else
+                {
+                    StarTruckMP.Log.LogWarning("JobBoardComputer: switcher301: MonitorChannelSwitcher_Left nicht gefunden.");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: 301-Diagnose fehlgeschlagen: " + ex.Message);
+            }
+            // 300: Kamera-Render-Parameter + MonitorCameras-Kinder-Dump + Panel auf echtes Kanal-Objekt
             try
             {
                 var diagCam = anchorT != null ? anchorT.GetComponent<UnityEngine.Camera>() : null;
