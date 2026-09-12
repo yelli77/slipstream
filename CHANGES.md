@@ -1,3 +1,8 @@
+## Neu in custom-build-291: Boardcomputer-Politur
+
+- Liste auf 10 Jobs begrenzt + "... und N weitere (am Dock andocken)" - Overlay ragt nicht mehr ueber den Screenrand.
+- Diagnose-Logging (Heartbeat + J-Keydown) aus 289 entfernt.
+
 ## Neu in custom-build-290: Jobboard-J-Toggle Fix
 
 - ROOT CAUSE (Diagnose 289): Input.GetKeyDown ist nur einen Frame true; der 0,2s-Debounce vor dem Check hat die meisten Keydowns verschluckt.

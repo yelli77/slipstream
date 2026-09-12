@@ -27,26 +27,12 @@ namespace StarTruckMP.StarTruckClient
             // VOR dem Check hat ~95% aller Keydowns verschluckt (nur ein Treffer alle 12 Frames).
             // Toggle-Check jetzt JEDE FRAME; der Throttle bleibt nur fuer Heartbeat.
             bool jDown = Input.GetKeyDown(ToggleKey);
-            if (jDown)
-            {
-                bool conn = StarTruckClient.client != null && StarTruckClient.client.IsConnected;
-                StarTruckMP.Log.LogInfo($"JobBoardComputer: J-Keydown erkannt, connected={conn}");
-            }
-
-            diagHeartbeat += Time.unscaledDeltaTime;
-            if (diagHeartbeat >= 30f)
-            {
-                diagHeartbeat = 0f;
-                bool conn = StarTruckClient.client != null && StarTruckClient.client.IsConnected;
-                StarTruckMP.Log.LogInfo($"JobBoardComputer.CheckToggle: alive, connected={conn}, visible={visible}, canvasObj={(canvasObj == null ? "null" : "ok")}");
-            }
 
             if (StarTruckClient.client == null || !StarTruckClient.client.IsConnected) { if (visible) SetVisible(false); return; }
             if (!jDown) return;
 
             SetVisible(!visible);
         }
-        private static float diagHeartbeat = 0f;
 
         private static void SetVisible(bool v)
         {
@@ -174,9 +160,16 @@ namespace StarTruckMP.StarTruckClient
             sb.AppendLine("Sektor: " + sector + " - " + count + " Auftraege");
             sb.AppendLine();
 
+            int shown = 0;
             for (int i = 0; i < count; i++)
             {
+                if (shown >= 10)
+                {
+                    sb.AppendLine("... und " + (count - shown) + " weitere (am Dock andocken)");
+                    break;
+                }
                 var job = jobs[i];
+                shown++;
                 if (job == null) continue;
                 try
                 {
