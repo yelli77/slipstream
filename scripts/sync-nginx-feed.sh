@@ -4,23 +4,12 @@
 set -u
 CONTAINER="${NGINX_CONTAINER:-starttruckmp-starttruckmp-1}"
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-FEED_URL="https://raw.githubusercontent.com/yelli77/slipstream/main/builds/StarTruckMP-custom-build-306.dll.gz"
 
-# version.json in src erzeugen (falls nicht aktuell) — Build-Nummer aus neuestem builds/*.dll.gz
-LATEST_GZ="$(ls -1 "$SRC_DIR"/builds/StarTruckMP-custom-build-*.dll.gz 2>/dev/null | sed "s/.*custom-build-//;s/\\.dll\\.gz//" | sort -n | tail -1)"
-if [ -n "${LATEST_GZ}" ]; then
-  BUILD="custom-build-${LATEST_GZ}"
-  URL="https://raw.githubusercontent.com/yelli77/slipstream/main/builds/StarTruckMP-${BUILD}.dll.gz"
-  python3 -c "
-import json, sys
-with open(\"$SRC_DIR/version.json\", \"w\") as f:
-    json.dump({\"build\": \"$BUILD\", \"url\": \"$URL\"}, f)
-print(f\"[sync-nginx-feed] version.json geschrieben: {\"$BUILD\"}\")
-"
-else
-  echo "[sync-nginx-feed] WARN: keine builds/*.dll.gz gefunden, version.json unveraendert" >&2
-fi
-
+# version.json in src wird NICHT mehr automatisch ueberschrieben —
+# sie ist die authoritative Quelle (architect-gesteuert). Nur Kopieren nach nginx.
+python3 -c "import json; json.load(open(\"$SRC_DIR/version.json\"))" || { echo "[sync-nginx-feed] ERROR: version.json fehlt/invalid - abort" >&2; exit 1; }
+BUILD="$(python3 -c "import json; print(json.load(open(\"$SRC_DIR/version.json\"))[\"build\"])")"
+echo "[sync-nginx-feed] Feed-Stand laut version.json: $BUILD"
 # Ziel-Pfad ermitteln: Mount auf /usr/share/nginx/html suchen
 HTML_PATH="$(docker inspect "$CONTAINER" --format "{{range .Mounts}}{{if eq .Destination \"/usr/share/nginx/html\"}}{{.Source}}{{end}}{{end}}" 2>/dev/null)"
 
