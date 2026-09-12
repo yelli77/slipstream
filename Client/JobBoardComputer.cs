@@ -23,24 +23,26 @@ namespace StarTruckMP.StarTruckClient
 
         public static void CheckToggle()
         {
-            if (Time.unscaledTime < nextToggleCheck) return;
-            nextToggleCheck = Time.unscaledTime + 0.2f;
+            // FIX (build-290): GetKeyDown ist nur EINEN Frame true. Der fruehere 0,2s-Debounce
+            // VOR dem Check hat ~95% aller Keydowns verschluckt (nur ein Treffer alle 12 Frames).
+            // Toggle-Check jetzt JEDE FRAME; der Throttle bleibt nur fuer Heartbeat.
+            bool jDown = Input.GetKeyDown(ToggleKey);
+            if (jDown)
+            {
+                bool conn = StarTruckClient.client != null && StarTruckClient.client.IsConnected;
+                StarTruckMP.Log.LogInfo($"JobBoardComputer: J-Keydown erkannt, connected={conn}");
+            }
 
-            // Diagnose (build-289): Ist CheckToggle ueberhaupt im Spiel-Loop? Heartbeat alle ~30s.
-            diagHeartbeat += 0.2f;
+            diagHeartbeat += Time.unscaledDeltaTime;
             if (diagHeartbeat >= 30f)
             {
                 diagHeartbeat = 0f;
-                StarTruckMP.Log.LogInfo($"JobBoardComputer.CheckToggle: alive, connected={StarTruckClient.client != null && StarTruckClient.client.IsConnected}, visible={visible}, canvasObj={(canvasObj == null ? "null" : "ok")}");
-            }
-            // Log JEDES Keydown von J unabhaengig vom Verbindungsstatus.
-            if (Input.GetKeyDown(ToggleKey))
-            {
-                StarTruckMP.Log.LogInfo($"JobBoardComputer: J-Keydown erkannt, connected={StarTruckClient.client != null && StarTruckClient.client.IsConnected}");
+                bool conn = StarTruckClient.client != null && StarTruckClient.client.IsConnected;
+                StarTruckMP.Log.LogInfo($"JobBoardComputer.CheckToggle: alive, connected={conn}, visible={visible}, canvasObj={(canvasObj == null ? "null" : "ok")}");
             }
 
-            if (StarTruckClient.client == null || !StarTruckClient.client.IsConnected) { SetVisible(false); return; }
-            if (!Input.GetKeyDown(ToggleKey)) return;
+            if (StarTruckClient.client == null || !StarTruckClient.client.IsConnected) { if (visible) SetVisible(false); return; }
+            if (!jDown) return;
 
             SetVisible(!visible);
         }

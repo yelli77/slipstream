@@ -1,3 +1,9 @@
+## Neu in custom-build-290: Jobboard-J-Toggle Fix
+
+- ROOT CAUSE (Diagnose 289): Input.GetKeyDown ist nur einen Frame true; der 0,2s-Debounce vor dem Check hat die meisten Keydowns verschluckt.
+- FIX: Toggle-Check laeuft jetzt jeden Frame; Throttle nur noch fuer den 30s-Heartbeat.
+- Text-Refresh 1s unveraendert.
+
 ## Neu in custom-build-289: Jobboard-Diagnose (J-Toggle reagierte nicht)
 
 - DIAGNOSE: Log-Heartbeat alle 30s bestaetigt, dass CheckToggle() im Spiel-Loop laeuft; jedes J-Keydown wird geloggt (auch ohne Verbindung).
