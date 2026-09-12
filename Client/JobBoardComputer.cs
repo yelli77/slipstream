@@ -176,6 +176,27 @@ namespace StarTruckMP.StarTruckClient
             cockpitObj.transform.localPosition = new Vector3(0f, 0f, 1.2f);
             cockpitObj.transform.localRotation = Quaternion.identity;
             cockpitObj.transform.localScale = Vector3.one * 0.5f;
+            // 297a: Diagnose - rendert die Monitor-Kamera ueberhaupt in eine Textur, und wuerde
+            // sie unseren Layer sehen (Culling Mask)?
+            try
+            {
+                var anchorCam = anchorT.GetComponent<UnityEngine.Camera>();
+                if (anchorCam != null)
+                {
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: MonitorCam targetTexture=" + (anchorCam.targetTexture != null ? anchorCam.targetTexture.width + "x" + anchorCam.targetTexture.height : "null")
+                        + " cullingMask=0x" + anchorCam.cullingMask.ToString("X8")
+                        + " camLayer=" + anchorCam.gameObject.layer
+                        + " panelLayer=" + cockpitObj.layer);
+                }
+                else
+                {
+                    StarTruckMP.Log.LogWarning("JobBoardComputer: Anchor ist keine Kamera (297a-Diagnose unmoeglich).");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: 297a-Diagnose fehlgeschlagen: " + ex.Message);
+            }
 
             // Font sourcing: clone an existing TextMeshPro under popupsRoot (game font asset),
             // otherwise fresh AddComponent<TextMeshPro> renders NOTHING (no font in IL2CPP).
