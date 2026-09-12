@@ -1,3 +1,7 @@
+## Neu in custom-build-307: Jobboard-Pfad
+
+- Original-Jobboard via MenuState.LoadAndShow (Primaerpfad), DevPanel-Fallback, Overlay letzte Notloesung.
+
 ## Neu in custom-build-293: Cockpit-Fix
 
 - Cockpit-Panel klont jetzt ein Spiel-TMP (Font/Material) statt frisches TMP ohne Font (-rendered nothing-).
