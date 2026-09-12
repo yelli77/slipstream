@@ -13,6 +13,12 @@ if [[ ! -f "$PLUGIN" || ! -f "$VERSION" ]]; then
   exit 0
 fi
 
+# JSON-Validitaet: version.json muss parsebares JSON sein (Updater crasht sonst).
+if ! python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$VERSION" 2>/dev/null; then
+  echo "[check-build-number] FEHLER: version.json ist kein gueltiges JSON (fehlende Anfuehrungszeichen?)." >&2
+  exit 1
+fi
+
 # Build-Nummer aus Plugin.cs: customBuildNumber = "custom-build-XXX"
 PLUGIN_BUILD="$(grep -oE 'customBuildNumber[[:space:]]*=[[:space:]]*"[^"]+"' "$PLUGIN" | grep -oE 'custom-build-[0-9]+')"
 # Build-Nummer aus version.json: "build": "custom-build-XXX"
