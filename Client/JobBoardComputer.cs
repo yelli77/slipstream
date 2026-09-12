@@ -1,3 +1,5 @@
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes;
 using System;
 using System.Text;
 using UnityEngine;
@@ -44,12 +46,20 @@ namespace StarTruckMP.StarTruckClient
             if (visible)
             {
                 bool cockpitOk = false; // 303 Plan B: eigenes Cockpit-Panel stillgelegt (Spiel schuetzt Monitor-Pipeline); Overlay-Fallback aktiv.
-                if (cockpitOk) { cockpitObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Plan B Cockpit-Display an."); }
-                else { EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Plan B Overlay an (Fallback)."); }
+                // 304: Original-Jobboard des Spiels oeffnen (m_openJobBoardScreenEvent -> GameEvent.Invoke()).
+                if (TryInvokeGameJobBoard(true))
+                {
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Original-Jobboard geoeffnet.");
+                }
+                else
+                {
+                    EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f;
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Original-Jobboard nicht erreichbar - Overlay an (Fallback).");
+                }
             }
             else
             {
-                if (cockpitObj != null) { cockpitObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Display aus."); }
+                TryInvokeGameJobBoard(false);
                 if (canvasObj != null) { canvasObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay aus."); }
             }
         }
@@ -661,5 +671,57 @@ namespace StarTruckMP.StarTruckClient
             }
             visible = false;
         }
+        // 304: Original-Jobboard: Komponente mit Feld m_openJobBoardScreenEvent suchen und deren GameEvent invoke'n.
+        private static UnityEngine.Component _jobBoardHostComp;
+        private static bool TryInvokeGameJobBoard(bool opening)
+        {
+            try
+            {
+                if (_jobBoardHostComp == null)
+                {
+                    var allComps = UnityEngine.Object.FindObjectsOfType<UnityEngine.Component>(true);
+                    foreach (var comp in allComps)
+                    {
+                        if (comp == null) continue;
+                        Il2CppSystem.Type t = null;
+                        try { t = comp.GetIl2CppType(); } catch { continue; }
+                        if (t == null) continue;
+                        Il2CppSystem.Reflection.FieldInfo f = null;
+                        try { f = t.GetField("m_openJobBoardScreenEvent"); } catch { }
+                        if (f != null)
+                        {
+                            _jobBoardHostComp = comp;
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: 304 Host-Komponente gefunden: '" + t.Name + "' auf '" + comp.gameObject.name + "'.");
+                            break;
+                        }
+                    }
+                }
+                if (_jobBoardHostComp == null)
+                {
+                    StarTruckMP.Log.LogWarning("JobBoardComputer: 304 keine Komponente mit m_openJobBoardScreenEvent gefunden.");
+                    return false;
+                }
+                var hostT = _jobBoardHostComp.GetIl2CppType();
+                var evF = hostT.GetField("m_openJobBoardScreenEvent");
+                if (evF == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Feld wieder verschwunden."); return false; }
+                var evObj = evF.GetValue(_jobBoardHostComp);
+                if (evObj == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Event-Instanz null."); return false; }
+                var evT = evObj.GetIl2CppType();
+                Il2CppSystem.Reflection.MethodInfo invM = null;
+                foreach (var m in evT.GetMethods())
+                {
+                    if (m.Name == "Invoke" && m.GetParameters().Length == 0) { invM = m; break; }
+                }
+                if (invM == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Invoke-Methode nicht gefunden auf '" + evT.Name + "'."); return false; }
+                invM.Invoke(evObj, null);
+                return true;
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("JobBoardComputer: 304 Original-Jobboard-Fehler: " + ex.Message);
+                return false;
+            }
+        }
+
     }
 }
