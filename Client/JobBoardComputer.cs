@@ -671,18 +671,67 @@ namespace StarTruckMP.StarTruckClient
             }
             visible = false;
         }
-        // 304: Original-Jobboard: Komponente mit Feld m_openJobBoardScreenEvent suchen und deren GameEvent invoke'n.
-        private static UnityEngine.Component _jobBoardHostComp;
+        // 306: Original-Jobboard. (a) DevPanel_Cheats-Instanz suchen (statisch verifizierter Host von m_openJobBoardScreenEvent)
+        // und dessen GameEvent invoken. (b) Fallback: existierende JobBoardScreen-Instanz im UI suchen und deren GameObject aktivieren.
+        // Ein GameEvent wird NICHT selbst instanziiert (onTriggered-Listener-Struktur unbekannt - Crash-Risiko).
+        private static UnityEngine.Component _devPanelComp;
+        private static UnityEngine.Object _jobBoardScreenObj;
         private static bool TryInvokeGameJobBoard(bool opening)
         {
             try
             {
-                if (_jobBoardHostComp == null)
+                if (opening)
                 {
-                    // 305: Scan ueber alle geladenen Assemblies (AppDomain) statt FindObjectsOfType<Component>(true),
-                    // das praktisch keine Komponenten liefert. Kandidaten: Typen mit Feld m_openJobBoardScreenEvent.
-                    // Instanzen dann via Resources.FindObjectsOfTypeAll(Il2CppType.From(t)) holen (DontDestroyOnLoad inklusive).
-                    int scanned = 0, candidates = 0;
+                    // (a) DevPanel_Cheats ueber IL2CPP-Typnamen suchen (auch inactive, FindObjectsOfTypeAll)
+                    if (_devPanelComp == null)
+                    {
+                        UnityEngine.Object[] insts = null;
+                        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                        {
+                            System.Type[] types = null;
+                            try { types = asm.GetTypes(); } catch { continue; }
+                            if (types == null) continue;
+                            foreach (var t in types)
+                            {
+                                if (t == null || t.Name != "DevPanel_Cheats" || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
+                                try { insts = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppType.From(t)); } catch { }
+                                if (insts != null && insts.Length > 0)
+                                {
+                                    _devPanelComp = insts[0] as UnityEngine.Component;
+                                    StarTruckMP.Log.LogInfo("JobBoardComputer: 306 (a) DevPanel_Cheats gefunden auf '" + (_devPanelComp != null ? _devPanelComp.gameObject.name : "?") + "' (insts=" + insts.Length + ").");
+                                    break;
+                                }
+                            }
+                            if (_devPanelComp != null) break;
+                        }
+                        if (_devPanelComp == null)
+                            StarTruckMP.Log.LogWarning("JobBoardComputer: 306 (a) DevPanel_Cheats-Instanz nicht gefunden.");
+                    }
+                    if (_devPanelComp != null)
+                    {
+                        var hostT = _devPanelComp.GetIl2CppType();
+                        var evF = hostT.GetField("m_openJobBoardScreenEvent");
+                        if (evF != null)
+                        {
+                            var evObj = evF.GetValue(_devPanelComp);
+                            if (evObj != null)
+                            {
+                                var evT = evObj.GetIl2CppType();
+                                Il2CppSystem.Reflection.MethodInfo invM = null;
+                                foreach (var m in evT.GetMethods())
+                                    if (m.Name == "Invoke" && m.GetParameters().Length == 0) { invM = m; break; }
+                                if (invM != null)
+                                {
+                                    invM.Invoke(evObj, null);
+                                    StarTruckMP.Log.LogInfo("JobBoardComputer: 306 (a) DevPanel gefunden/invoked.");
+                                    return true;
+                                }
+                            }
+                        }
+                        StarTruckMP.Log.LogWarning("JobBoardComputer: 306 (a) Event/Invoke nicht erreichbar am DevPanel.");
+                    }
+                    // (b) JobBoardScreen-Instanz direkt suchen (auch inactive) und GameObject aktivieren
+                    UnityEngine.Object[] jbs = null;
                     foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                     {
                         System.Type[] types = null;
@@ -690,49 +739,35 @@ namespace StarTruckMP.StarTruckClient
                         if (types == null) continue;
                         foreach (var t in types)
                         {
-                            scanned++;
-                            if (t == null || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
-                            System.Reflection.FieldInfo f = null;
-                            try { f = t.GetField("m_openJobBoardScreenEvent"); } catch { }
-                            if (f == null) continue;
-                            candidates++;
-                            UnityEngine.Object[] inst = null;
-                            try { inst = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppType.From(t)); } catch { }
-                            if (inst == null || inst.Length == 0) continue;
-                            var comp = inst[0] as UnityEngine.Component;
-                            if (comp == null) continue;
-                            _jobBoardHostComp = comp;
-                            StarTruckMP.Log.LogInfo("JobBoardComputer: 305 Host-Komponente gefunden: '" + t.Name + "' auf '" + comp.gameObject.name + "' (scanned=" + scanned + ", candidates=" + candidates + ").");
-                            break;
+                            if (t == null || t.Name != "JobBoardScreen" || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
+                            try { jbs = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppType.From(t)); } catch { }
+                            if (jbs != null && jbs.Length > 0)
+                            {
+                                _jobBoardScreenObj = jbs[0];
+                                break;
+                            }
                         }
-                        if (_jobBoardHostComp != null) break;
+                        if (_jobBoardScreenObj != null) break;
                     }
-                    if (_jobBoardHostComp == null)
-                        StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Host-Suche erfolglos (scanned=" + scanned + ", candidates=" + candidates + ").");
-                }
-                if (_jobBoardHostComp == null)
-                {
-                    StarTruckMP.Log.LogWarning("JobBoardComputer: 304 keine Komponente mit m_openJobBoardScreenEvent gefunden.");
+                    if (_jobBoardScreenObj != null)
+                    {
+                        var comp = _jobBoardScreenObj as UnityEngine.Component;
+                        if (comp != null)
+                        {
+                            var go = comp.gameObject;
+                            if (!go.activeSelf) go.SetActive(true);
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: 306 (b) JobBoardScreen-GO aktiviert: '" + go.name + "'.");
+                            return true;
+                        }
+                    }
+                    StarTruckMP.Log.LogWarning("JobBoardComputer: 306 (b) JobBoardScreen-Instanz nicht gefunden.");
                     return false;
                 }
-                var hostT = _jobBoardHostComp.GetIl2CppType();
-                var evF = hostT.GetField("m_openJobBoardScreenEvent");
-                if (evF == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Feld wieder verschwunden."); return false; }
-                var evObj = evF.GetValue(_jobBoardHostComp);
-                if (evObj == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Event-Instanz null."); return false; }
-                var evT = evObj.GetIl2CppType();
-                Il2CppSystem.Reflection.MethodInfo invM = null;
-                foreach (var m in evT.GetMethods())
-                {
-                    if (m.Name == "Invoke" && m.GetParameters().Length == 0) { invM = m; break; }
-                }
-                if (invM == null) { StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Invoke-Methode nicht gefunden auf '" + evT.Name + "'."); return false; }
-                invM.Invoke(evObj, null);
-                return true;
+                return false;
             }
             catch (System.Exception ex)
             {
-                StarTruckMP.Log.LogWarning("JobBoardComputer: 305 Original-Jobboard-Fehler: " + ex.Message);
+                StarTruckMP.Log.LogWarning("JobBoardComputer: 306 Original-Jobboard-Fehler: " + ex.Message);
                 return false;
             }
         }
