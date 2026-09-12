@@ -519,7 +519,31 @@ namespace StarTruckMP.StarTruckClient
                     playerInfo currentPlayer;
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
 
-                    if (foundPlayer)
+                    // ON-THE-FLY REGISTRATION: movementUpdates from players we never
+                    // registered (clientJoin/playerConnected lost or raced) were silently
+                    // dropped, so the truck never spawned and the departure board stayed
+                    // empty. Register here from the message itself — id + destinationGateId
+                    // are known, the name is a placeholder and our own currentSector is the
+                    // best available guess. A later updateSector can still correct the sector.
+                    if (!foundPlayer)
+                    {
+                        currentPlayer = new playerInfo();
+                        currentPlayer.Trailers = new Dictionary<long, GameObject>();
+                        currentPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
+                        currentPlayer.sector = currentSector;
+                        currentPlayer.Name = $"Player_{playerId}";
+                        currentPlayer.destinationGateId = remoteDestGate;
+                        currentPlayer.truckTrans.Pos = playerPos;
+                        currentPlayer.truckTrans.Rot = playerRot;
+                        currentPlayer.playerTrans.Pos = playerPos;
+                        currentPlayer.playerTrans.Rot = playerRot;
+                        playerList.Add(playerId, currentPlayer);
+                        JumpgateOption1.ForceRefresh();
+                        StarTruckMP.Log.LogInfo($"movementUpdate: registered unknown player {playerId} on the fly (sector={currentSector}, destGate='{remoteDestGate}')");
+                    }
+
+                    // Proceed — currentPlayer was just ensured above (existing entry or
+                    // freshly registered), so handle this movementUpdate unconditionally.
                     {
                         if (isTruck)
                         {
@@ -1208,7 +1232,17 @@ namespace StarTruckMP.StarTruckClient
         {
             if (client.IsConnected)
             {
-                currentSector = GameObject.Find("[Sector]").scene.name;
+                var sectorScene = GameObject.Find("[Sector]");
+                currentSector = (sectorScene != null) ? sectorScene.scene.name : "none";
+                // If the sector scene isn't resolvable yet (early connect), don't send a
+                // bogus 'none' — schedule a retry so other clients don't permanently
+                // see us in sector 'none' and RemoveFromSector despawns us on arrival.
+                if (currentSector == "none")
+                {
+                    StarTruckMP.Log.LogWarning("OnArrivedAtSector: [Sector] not found yet - retrying initial updateSector send");
+                    RetrySendSectorAfterConnect();
+                    return;
+                }
                 currentDestinationGateId = "";  // reset on sector change
                 JumpgateOption1.ForceRefresh();
                 client.Send(Messages.updateSector(client.Id, currentSector));
