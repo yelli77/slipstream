@@ -138,8 +138,49 @@ namespace StarTruckMP.StarTruckClient
             var root = switcher.popupsRootTransform;
             cockpitObj = new GameObject("StarTruckMP_JobCockpitPanel");
             cockpitObj.transform.SetParent(root, false);
-            cockpitObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
             cockpitObj.transform.localRotation = Quaternion.identity;
+            cockpitObj.transform.localScale = Vector3.one;
+
+            // 296: Anchoring - das Display-Mesh (Monitor) im Cockpit suchen und das Panel auf
+            // dessen localPosition within popupsRoot platzieren. popupsRoot selbst kann weit weg
+            // liegen (Floating Origin): localPosition relativ zum Mesh ist der sichere Weg.
+            UnityEngine.Transform anchorT = root;
+            try
+            {
+                var cams = UnityEngine.Object.FindObjectsOfType<UnityEngine.Camera>();
+                UnityEngine.Camera best = null;
+                foreach (var c2 in cams) { if (c2 != null && c2.isActiveAndEnabled && (best == null || (c2.depth > best.depth))) best = c2; }
+                if (best != null)
+                {
+                    // search SIBLINGS of popupsRoot for a Display screen (MeshRenderer near camera)
+                    var popRootParent = root.parent;
+                    if (popRootParent != null)
+                    {
+                        int mn = popRootParent.childCount;
+                        UnityEngine.Transform bestT = null; float bestD = float.MaxValue;
+                        for (int i = 0; i < mn; i++)
+                        {
+                            var sib = popRootParent.GetChild(i);
+                            if (sib == null || sib == root) continue;
+                            var mrs = sib.GetComponentsInChildren<UnityEngine.MeshRenderer>(true);
+                            foreach (var mr in mrs)
+                            {
+                                if (mr == null || mr.gameObject.name.ToLower().Contains("darkbg")) continue;
+                                float d = UnityEngine.Vector3.Distance(mr.transform.position, best.transform.position);
+                                if (d < bestD) { bestD = d; bestT = mr.transform; }
+                            }
+                        }
+                        if (bestT != null)
+                        {
+                            anchorT = bestT;
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel anchored to '" + bestT.name + "' (dist to cam=" + bestD.ToString("F2") + ").");
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Anchor-Suche fehlgeschlagen: " + ex.Message); }
+            cockpitObj.transform.SetParent(anchorT, false);
+            cockpitObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
             cockpitObj.transform.localScale = Vector3.one;
 
             // Font sourcing: clone an existing TextMeshPro under popupsRoot (game font asset),
@@ -288,6 +329,34 @@ namespace StarTruckMP.StarTruckClient
                 }
             }
             catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Root-Dump fehlgeschlagen: " + ex.Message); }
+            // 296-Diagnose: Cockpit-Subtree dumpen - von der aktivsten Kamera aufwaerts die
+            // Parent-Kette durchgehen und je Node name+TMP-Info loggen. Ziel: Wo leben die
+            // LLAMA-Kanalseiten wirklich (welche Komponenten rendert das Spiel)?
+            try
+            {
+                var cams2 = UnityEngine.Object.FindObjectsOfType<UnityEngine.Camera>();
+                UnityEngine.Camera cam2 = null;
+                foreach (var c3 in cams2) { if (c3 != null && c3.isActiveAndEnabled && (cam2 == null || c3.depth > cam2.depth)) cam2 = c3; }
+                if (cam2 != null)
+                {
+                    var t = cam2.transform;
+                    int lvl = 0;
+                    while (t != null && lvl < 8)
+                    {
+                        var comps2 = t.GetComponents<UnityEngine.Component>();
+                        var cn = new System.Collections.Generic.List<string>();
+                        foreach (var cp in comps2) { if (cp != null) cn.Add(cp.GetType().Name); }
+                        var mr2 = t.GetComponent<UnityEngine.MeshRenderer>();
+                        StarTruckMP.Log.LogInfo("JobBoardComputer: cockpitSub[" + lvl + "] '" + t.name + "'"
+                            + " mr=" + (mr2 != null ? "yes" : "no")
+                            + " worldPos=" + t.position.ToString("F1")
+                            + " comps=[" + string.Join(",", cn) + "]");
+                        t = t.parent;
+                        lvl++;
+                    }
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Subtree-Dump fehlgeschlagen: " + ex.Message); }
             StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (fontClone=" + (cloned != null) + ", " + diag + ").");
             return true;
         }
