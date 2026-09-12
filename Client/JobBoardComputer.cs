@@ -141,47 +141,41 @@ namespace StarTruckMP.StarTruckClient
             cockpitObj.transform.localRotation = Quaternion.identity;
             cockpitObj.transform.localScale = Vector3.one;
 
-            // 296: Anchoring - das Display-Mesh (Monitor) im Cockpit suchen und das Panel auf
-            // dessen localPosition within popupsRoot platzieren. popupsRoot selbst kann weit weg
-            // liegen (Floating Origin): localPosition relativ zum Mesh ist der sichere Weg.
-            UnityEngine.Transform anchorT = root;
+            // 297: Anchoring - die Monitor-RenderTexture-Kamera (Camera_RenderToTexture_*)
+            // suchen; das Panel wird deren CHILD, sodass die Monitor-Kamera es mit rendert
+            // (Render-Textur-Pipeline des LLAMA-Displays). Floating Origin egal.
+            UnityEngine.Transform anchorT = null;
             try
             {
                 var cams = UnityEngine.Object.FindObjectsOfType<UnityEngine.Camera>();
                 UnityEngine.Camera best = null;
-                foreach (var c2 in cams) { if (c2 != null && c2.isActiveAndEnabled && (best == null || (c2.depth > best.depth))) best = c2; }
+                foreach (var c2 in cams)
+                {
+                    if (c2 == null) continue;
+                    string cn = c2.gameObject.name;
+                    if (cn.StartsWith("Camera_RenderToTexture")) { best = c2; break; }
+                }
                 if (best != null)
                 {
-                    // search SIBLINGS of popupsRoot for a Display screen (MeshRenderer near camera)
-                    var popRootParent = root.parent;
-                    if (popRootParent != null)
-                    {
-                        int mn = popRootParent.childCount;
-                        UnityEngine.Transform bestT = null; float bestD = float.MaxValue;
-                        for (int i = 0; i < mn; i++)
-                        {
-                            var sib = popRootParent.GetChild(i);
-                            if (sib == null || sib == root) continue;
-                            var mrs = sib.GetComponentsInChildren<UnityEngine.MeshRenderer>(true);
-                            foreach (var mr in mrs)
-                            {
-                                if (mr == null || mr.gameObject.name.ToLower().Contains("darkbg")) continue;
-                                float d = UnityEngine.Vector3.Distance(mr.transform.position, best.transform.position);
-                                if (d < bestD) { bestD = d; bestT = mr.transform; }
-                            }
-                        }
-                        if (bestT != null)
-                        {
-                            anchorT = bestT;
-                            StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel anchored to '" + bestT.name + "' (dist to cam=" + bestD.ToString("F2") + ").");
-                        }
-                    }
+                    anchorT = best.transform;
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel anchored to monitor cam '" + best.gameObject.name + "'.");
+                }
+                else
+                {
+                    StarTruckMP.Log.LogWarning("JobBoardComputer: CockpitPanel keine Camera_RenderToTexture* gefunden - Fallback popupsRoot.");
+                    anchorT = root;
                 }
             }
-            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Anchor-Suche fehlgeschlagen: " + ex.Message); }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: Anchor-Suche fehlgeschlagen: " + ex.Message);
+                anchorT = root;
+            }
             cockpitObj.transform.SetParent(anchorT, false);
-            cockpitObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
-            cockpitObj.transform.localScale = Vector3.one;
+            // Panel ein Stueck VOR der Monitor-Kamera platzieren (in deren Sichtfeld, rendern von deren Perspektive)
+            cockpitObj.transform.localPosition = new Vector3(0f, 0f, 1.2f);
+            cockpitObj.transform.localRotation = Quaternion.identity;
+            cockpitObj.transform.localScale = Vector3.one * 0.5f;
 
             // Font sourcing: clone an existing TextMeshPro under popupsRoot (game font asset),
             // otherwise fresh AddComponent<TextMeshPro> renders NOTHING (no font in IL2CPP).
