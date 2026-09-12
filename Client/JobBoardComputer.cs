@@ -417,72 +417,7 @@ private static void SetVisible(bool v)
                     cockpitObj.transform.localScale = Vector3.one;
                     cockpitObj.layer = swL.gameObject.layer;
                     StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel301 umgehängt unter '" + swL.name + "' (layer=" + swL.gameObject.layer + ", childCount=" + swL.childCount + ").");
-                    // (1) Switcher-Komponenten + private Fields dumpen
-                    var swComps = swL.GetComponents<Component>();
-                    for (int ci = 0; ci < swComps.Length; ci++)
-                    {
-                        var comp = swComps[ci];
-                        if (comp == null) { StarTruckMP.Log.LogInfo("JobBoardComputer: switcher301[" + ci + "] <null>."); continue; }
-                        var ctype = comp.GetIl2CppType();
-                        string fieldNames = "";
-                        try
-                        {
-                            var fields = ctype.GetFields(Il2CppSystem.Reflection.BindingFlags.Public | Il2CppSystem.Reflection.BindingFlags.NonPublic | Il2CppSystem.Reflection.BindingFlags.Instance);
-                            int fn = 0;
-                            foreach (var f in fields) { fieldNames += (fn > 0 ? "," : "") + f.Name; if (++fn >= 12) { fieldNames += ",..."; break; } }
-                        }
-                        catch (System.Exception fe) { fieldNames = "<fields-err:" + fe.Message + ">"; }
-                        StarTruckMP.Log.LogInfo("JobBoardComputer: switcher301[" + ci + "] '" + ctype.Name + "' fields=[" + fieldNames + "].");
                     }
-                }
-                else
-                {
-                    StarTruckMP.Log.LogWarning("JobBoardComputer: switcher301: MonitorChannelSwitcher_Left nicht gefunden.");
-                }
-                // channels-Feld auslesen (IL2CPP-Reflection) + Panel wie channels[0] konfigurieren
-                if (swL != null)
-                {
-                    UnityEngine.Component swComp = null;
-                    foreach (var _c in swL.GetComponents<UnityEngine.Component>()) { if (_c != null && _c.GetIl2CppType().Name == "MonitorChannelSwitcher") { swComp = _c; break; } }
-                    if (swComp != null)
-                    {
-                        var swType = swComp.GetIl2CppType();
-                        var fChannels = swType.GetField("channels");
-                        if (fChannels != null)
-                        {
-                            var chList = fChannels.GetValue(swComp);
-                            var chEnum = chList as System.Collections.IEnumerable;
-                            int ci2 = 0;
-                            if (chEnum != null)
-                            {
-                                foreach (var ch in chEnum)
-                                {
-                                    var chObj = ch as UnityEngine.Component;
-                                    if (chObj == null) { StarTruckMP.Log.LogInfo("JobBoardComputer: channels302[" + ci2 + "] <null/unmapped>."); ci2++; continue; }
-                                    var chT = chObj.GetIl2CppType();
-                                    string chInfo = "type=" + chT.Name;
-                                    string fieldNames2 = ""; int fn2 = 0; foreach (var _f in chT.GetFields(Il2CppSystem.Reflection.BindingFlags.Public | Il2CppSystem.Reflection.BindingFlags.NonPublic | Il2CppSystem.Reflection.BindingFlags.Instance)) { fieldNames2 += (fn2 > 0 ? "," : "") + _f.Name; if (++fn2 >= 10) { fieldNames2 += ",..."; break; } }
-                                    // haeufige Felder probieren: gameObject/transform/layer
-                                    try {
-                                        var fGO = chT.GetField("gameObject");
-                                        var fTr = chT.GetField("transform");
-                                        UnityEngine.Transform chTr = null;
-                                        if (fTr != null) chTr = fTr.GetValue(chObj) as UnityEngine.Transform;
-                                        if (chTr == null && fGO != null) { var go = fGO.GetValue(chObj) as UnityEngine.GameObject; if (go != null) chTr = go.transform; }
-                                        if (chTr != null)
-                                            chInfo += " name='" + chTr.name + "' layer=" + chTr.gameObject.layer + " active=" + chTr.gameObject.activeSelf + " worldPos=" + chTr.position.ToString("F2") + " localPos=" + chTr.localPosition.ToString("F3") + " rot=" + chTr.eulerAngles.ToString("F1") + " scale=" + chTr.lossyScale.ToString("F3");
-                                        else
-                                            chInfo += " fields=[" + fieldNames2 + "]";
-                                    } catch (System.Exception che) { chInfo += " <read-err:" + che.Message + ">"; }
-                                    StarTruckMP.Log.LogInfo("JobBoardComputer: channels302[" + ci2 + "] " + chInfo + ".");
-                                    ci2++;
-                                    if (ci2 >= 8) break;
-                                }
-                            }
-                        }
-                        else StarTruckMP.Log.LogWarning("JobBoardComputer: channels302: Feld 'channels' nicht gefunden.");
-                    }
-                }
                 // Panel-Transform an channels[0]-Werte anpassen wird erst nach dem Log moeglich sein;
                 // aber mindestens: Layer endgueltig auf den Kamera-Layer (11) erzwingen inkl. aller Kinder.
                 try {
@@ -505,41 +440,6 @@ private static void SetVisible(bool v)
             catch (System.Exception ex)
             {
                 StarTruckMP.Log.LogWarning("CockpitPanel: 302 fehlgeschlagen: " + ex.Message);
-            }
-            // 300: Kamera-Render-Parameter + MonitorCameras-Kinder-Dump + Panel auf echtes Kanal-Objekt
-            try
-            {
-                var diagCam = anchorT != null ? anchorT.GetComponent<UnityEngine.Camera>() : null;
-                if (diagCam != null)
-                {
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: MonitorCam300 nearClip=" + diagCam.nearClipPlane.ToString("F4")
-                        + " farClip=" + diagCam.farClipPlane.ToString("F2")
-                        + " aspect=" + diagCam.aspect.ToString("F3")
-                        + " enabled=" + diagCam.enabled
-                        + " clearFlags=" + diagCam.clearFlags
-                        + " orthographic=" + diagCam.orthographic + ".");
-                }
-                // Kinder-Subtree von MonitorCameras dumpen (echte Kanalseiten-Objekte finden)
-                Transform monRoot = anchorT != null ? anchorT.parent : null; // MonitorCameras
-                if (monRoot != null)
-                {
-                    int dumpN = monRoot.childCount;
-                    for (int di = 0; di < dumpN && di < 12; di++)
-                    {
-                        var dk = monRoot.GetChild(di);
-                        StarTruckMP.Log.LogInfo("JobBoardComputer: monCam300[" + di + "] '" + dk.name + "' layer=" + dk.gameObject.layer + " active=" + dk.gameObject.activeSelf + " worldPos=" + dk.position.ToString("F2") + " localPos=" + dk.localPosition.ToString("F3") + " scale=" + dk.lossyScale.ToString("F4") + ".");
-                        // Enkel (Kanal-Texte) mit dumpen
-                        for (int dj = 0; dj < dk.childCount && dj < 8; dj++)
-                        {
-                            var dk2 = dk.GetChild(dj);
-                            StarTruckMP.Log.LogInfo("JobBoardComputer: monCam300[" + di + "." + dj + "] '" + dk2.name + "' layer=" + dk2.gameObject.layer + " active=" + dk2.gameObject.activeSelf + " worldPos=" + dk2.position.ToString("F2") + " localPos=" + dk2.localPosition.ToString("F3") + ".");
-                        }
-                    }
-                }
-            }
-            catch (System.Exception ex)
-            {
-                StarTruckMP.Log.LogWarning("CockpitPanel: 300-Diagnose fehlgeschlagen: " + ex.Message);
             }
             // 299: Layer-Set NACH Text-Erstellung wiederholen (Text-GO + Renderer), da der
             // Layer-Fix oben vor dem Text-AddComponent lief (children=0, Text blieb Layer 0).
@@ -620,68 +520,7 @@ private static void SetVisible(bool v)
             if (rt != null) { rt.sizeDelta = new Vector2(1.6f, 1.2f); rt.anchoredPosition = new Vector2(-0.8f, 0.6f); }
             cockpitObj.SetActive(false);
             try { UnityEngine.Canvas.ForceUpdateCanvases(); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: ForceUpdateCanvases fehlgeschlagen: " + ex.Message); }
-            string diag;
-            try
-            {
-                var rt2 = textGO.GetComponent<UnityEngine.RectTransform>();
-                var mr = textGO.GetComponent<UnityEngine.MeshRenderer>();
-                diag = "tplName=" + (sourceTemplate != null ? sourceTemplate.gameObject.name : "null")
-                     + " font=" + (cockpitText.font != null ? cockpitText.font.name : "null")
-                     + " mat=" + (cockpitText.fontSharedMaterial != null ? cockpitText.fontSharedMaterial.name : "null")
-                     + " pos=" + (rt2 != null ? rt2.position.ToString("F2") : "?")
-                     + " lossyScale=" + cockpitText.transform.lossyScale.ToString("F3")
-                     + " rendererVisible=" + (mr != null ? mr.isVisible.ToString() : "noMR");
-            }
-            catch (System.Exception ex) { diag = "diagErr=" + ex.Message; }
-            // 295-Diagnose: Wie rendert das Spiel selbst die Seiten? Struktur unter popupsRoot dumpen.
-            try
-            {
-                int n2 = root.childCount;
-                for (int i = 0; i < n2 && i < 12; i++)
-                {
-                    Transform ch = root.GetChild(i);
-                    if (ch == null) continue;
-                    var comps = ch.GetComponentsInChildren<UnityEngine.Component>(true);
-                    var names = new System.Collections.Generic.List<string>();
-                    foreach (var cp in comps) { if (cp != null) names.Add(cp.GetType().Name); }
-                    var tmpt = ch.GetComponentInChildren<TMPro.TextMeshPro>(true);
-                    var tmput = ch.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
-                    StarTruckMP.Log.LogInfo("JobBoardComputer: popupsRoot[" + i + "] '" + ch.name + "' active=" + ch.gameObject.activeSelf
-                        + " tmp3D=" + (tmpt != null ? tmpt.name + "(" + (tmpt.font != null ? tmpt.font.name : "noFont") + ")" : "none")
-                        + " tmpUGUI=" + (tmput != null ? tmput.name : "none")
-                        + " comps=[" + string.Join(",", names) + "]");
-                }
-            }
-            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Root-Dump fehlgeschlagen: " + ex.Message); }
-            // 296-Diagnose: Cockpit-Subtree dumpen - von der aktivsten Kamera aufwaerts die
-            // Parent-Kette durchgehen und je Node name+TMP-Info loggen. Ziel: Wo leben die
-            // LLAMA-Kanalseiten wirklich (welche Komponenten rendert das Spiel)?
-            try
-            {
-                var cams2 = UnityEngine.Object.FindObjectsOfType<UnityEngine.Camera>();
-                UnityEngine.Camera cam2 = null;
-                foreach (var c3 in cams2) { if (c3 != null && c3.isActiveAndEnabled && (cam2 == null || c3.depth > cam2.depth)) cam2 = c3; }
-                if (cam2 != null)
-                {
-                    var t = cam2.transform;
-                    int lvl = 0;
-                    while (t != null && lvl < 8)
-                    {
-                        var comps2 = t.GetComponents<UnityEngine.Component>();
-                        var cn = new System.Collections.Generic.List<string>();
-                        foreach (var cp in comps2) { if (cp != null) cn.Add(cp.GetType().Name); }
-                        var mr2 = t.GetComponent<UnityEngine.MeshRenderer>();
-                        StarTruckMP.Log.LogInfo("JobBoardComputer: cockpitSub[" + lvl + "] '" + t.name + "'"
-                            + " mr=" + (mr2 != null ? "yes" : "no")
-                            + " worldPos=" + t.position.ToString("F1")
-                            + " comps=[" + string.Join(",", cn) + "]");
-                        t = t.parent;
-                        lvl++;
-                    }
-                }
-            }
-            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Subtree-Dump fehlgeschlagen: " + ex.Message); }
-            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (fontClone=" + (cloned != null) + ", " + diag + ").");
+            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (fontClone=" + (cloned != null) + ").");
             return true;
         }
 
