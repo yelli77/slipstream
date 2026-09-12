@@ -41,3 +41,6 @@ fi
 
 echo "[check-build-number] OK: '$PLUGIN_BUILD' stimmt in Plugin.cs und version.json ueberein."
 exit 0
+
+# Nginx-Feed (version.json + .dll.gz in Container) synchronisieren
+"$(dirname "$0")/sync-nginx-feed.sh"
