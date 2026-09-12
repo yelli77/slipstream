@@ -93,9 +93,31 @@ namespace StarTruckMPUpdater
                 Log($"Konnte alte StarTruckMP.cfg nicht entfernen: {ex.Message}");
             }
 
-            // 3. Read locally installed build number
-            string localBuild = File.Exists(localVersionPath) ? File.ReadAllText(localVersionPath).Trim() : "(unbekannt)";
-            Log($"Aktuell installiert: {localBuild}");
+            // 3. Read locally installed build number. Fail-open: wenn die Datei fehlt oder
+            // leer ist, wird IMMER neu heruntergeladen (kein "Bereits aktuell").
+            string localBuild = "";
+            if (File.Exists(localVersionPath))
+            {
+                try
+                {
+                    // Trim + BOM-Strip + Normalisierung, damit U+FEFF am Dateianfang
+                    // den Versionsvergleich nicht unsinnig faelscht.
+                    localBuild = File.ReadAllText(localVersionPath).Trim().TrimStart('\uFEFF').Trim();
+                }
+                catch (Exception ex)
+                {
+                    Log($"Konnte {localVersionPath} nicht lesen: {ex.Message}");
+                    localBuild = "";
+                }
+            }
+            if (localBuild.Length == 0)
+            {
+                Log("installed-build.txt fehlt oder ist leer - UPDATE wird erzwungen.");
+            }
+            else
+            {
+                Log($"Aktuell installiert: {localBuild}");
+            }
 
             // 4. Fetch remote version info
             VersionInfo? remote;
@@ -119,7 +141,9 @@ namespace StarTruckMPUpdater
 
             Log($"Neueste Version: {remote.build}");
 
-            if (remote.build == localBuild && File.Exists(dllPath) && !freshBepInExInstall)
+            bool buildMatch = localBuild.Length > 0 &&
+                string.Equals(remote.build.Trim(), localBuild, StringComparison.OrdinalIgnoreCase);
+            if (buildMatch && File.Exists(dllPath) && !freshBepInExInstall)
             {
                 Log("Bereits aktuell.");
                 LaunchGame(gamePath);
