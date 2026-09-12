@@ -293,7 +293,31 @@ namespace StarTruckMP.StarTruckClient
                 textGO.transform.SetParent(cockpitObj.transform, false);
                 cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
                 if (cloned.font != null) cockpitText.font = cloned.font;
-                StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel fontClone=False, fontFromTemplate=" + (cloned.font != null ? cloned.font.name : "null") + " (Template='" + cloned.gameObject.name + "').");
+                // 299: Layer-Set NACH Text-Erstellung wiederholen (Text-GO + Renderer), da der
+            // Layer-Fix oben vor dem Text-AddComponent lief (children=0, Text blieb Layer 0).
+            try
+            {
+                var layerCam2 = anchorT != null ? anchorT.GetComponent<UnityEngine.Camera>() : null;
+                if (layerCam2 != null)
+                {
+                    for (int L2 = 0; L2 < 32; L2++)
+                    {
+                        if ((layerCam2.cullingMask & (1 << L2)) != 0)
+                        {
+                            cockpitObj.layer = L2;
+                            var renders2 = cockpitObj.GetComponentsInChildren<UnityEngine.Renderer>(true);
+                            foreach (var r in renders2) r.gameObject.layer = L2;
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel Layer-Reapply=" + L2 + " (" + UnityEngine.LayerMask.LayerToName(L2) + "), children=" + renders2.Length + ".");
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: Layer-Reapply fehlgeschlagen: " + ex.Message);
+            }
+            StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel fontClone=False, fontFromTemplate=" + (cloned.font != null ? cloned.font.name : "null") + " (Template='" + cloned.gameObject.name + "').");
             }
             else
             {
