@@ -193,10 +193,14 @@ namespace StarTruckMP.StarTruckClient
             }
             else if (cloned != null)
             {
+                // 295: NICHT mehr das ganze GameObject klonen (Klon blieb unsichtbar - Ursache unbekannt),
+                // sondern frisches 3D-TMP + font/fontSharedMaterial der Vorlage uebernehmen.
                 sourceTemplate = cloned;
-                textGO = UnityEngine.Object.Instantiate(cloned.gameObject, cockpitObj.transform);
-                textGO.name = "Text";
-                cockpitText = textGO.GetComponent<TMPro.TextMeshPro>();
+                textGO = new GameObject("Text");
+                textGO.transform.SetParent(cockpitObj.transform, false);
+                cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
+                if (cloned.font != null) cockpitText.font = cloned.font;
+                StarTruckMP.Log.LogInfo("JobBoardComputer: CockpitPanel fontClone=False, fontFromTemplate=" + (cloned.font != null ? cloned.font.name : "null") + " (Template='" + cloned.gameObject.name + "').");
             }
             else
             {
@@ -251,7 +255,40 @@ namespace StarTruckMP.StarTruckClient
             if (rt != null) { rt.sizeDelta = new Vector2(1.6f, 1.2f); rt.anchoredPosition = new Vector2(-0.8f, 0.6f); }
             cockpitObj.SetActive(false);
             try { UnityEngine.Canvas.ForceUpdateCanvases(); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: ForceUpdateCanvases fehlgeschlagen: " + ex.Message); }
-            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (popupsRoot gefunden, fontClone=" + (cloned != null) + ").");
+            string diag;
+            try
+            {
+                var rt2 = textGO.GetComponent<UnityEngine.RectTransform>();
+                var mr = textGO.GetComponent<UnityEngine.MeshRenderer>();
+                diag = "tplName=" + (sourceTemplate != null ? sourceTemplate.gameObject.name : "null")
+                     + " font=" + (cockpitText.font != null ? cockpitText.font.name : "null")
+                     + " mat=" + (cockpitText.fontSharedMaterial != null ? cockpitText.fontSharedMaterial.name : "null")
+                     + " pos=" + (rt2 != null ? rt2.position.ToString("F2") : "?")
+                     + " lossyScale=" + cockpitText.transform.lossyScale.ToString("F3")
+                     + " rendererVisible=" + (mr != null ? mr.isVisible.ToString() : "noMR");
+            }
+            catch (System.Exception ex) { diag = "diagErr=" + ex.Message; }
+            // 295-Diagnose: Wie rendert das Spiel selbst die Seiten? Struktur unter popupsRoot dumpen.
+            try
+            {
+                int n2 = root.childCount;
+                for (int i = 0; i < n2 && i < 12; i++)
+                {
+                    Transform ch = root.GetChild(i);
+                    if (ch == null) continue;
+                    var comps = ch.GetComponentsInChildren<UnityEngine.Component>(true);
+                    var names = new System.Collections.Generic.List<string>();
+                    foreach (var cp in comps) { if (cp != null) names.Add(cp.GetType().Name); }
+                    var tmpt = ch.GetComponentInChildren<TMPro.TextMeshPro>(true);
+                    var tmput = ch.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: popupsRoot[" + i + "] '" + ch.name + "' active=" + ch.gameObject.activeSelf
+                        + " tmp3D=" + (tmpt != null ? tmpt.name + "(" + (tmpt.font != null ? tmpt.font.name : "noFont") + ")" : "none")
+                        + " tmpUGUI=" + (tmput != null ? tmput.name : "none")
+                        + " comps=[" + string.Join(",", names) + "]");
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: Root-Dump fehlgeschlagen: " + ex.Message); }
+            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (fontClone=" + (cloned != null) + ", " + diag + ").");
             return true;
         }
 
