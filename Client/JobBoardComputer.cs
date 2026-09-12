@@ -141,18 +141,65 @@ namespace StarTruckMP.StarTruckClient
             cockpitObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
             cockpitObj.transform.localRotation = Quaternion.identity;
             cockpitObj.transform.localScale = Vector3.one;
-            var go = new GameObject("Text");
-            go.transform.SetParent(cockpitObj.transform, false);
-            cockpitText = go.AddComponent<TMPro.TextMeshPro>();
+
+            // Font sourcing: clone an existing TextMeshPro under popupsRoot (game font asset),
+            // otherwise fresh AddComponent<TextMeshPro> renders NOTHING (no font in IL2CPP).
+            TMPro.TextMeshPro cloned = null;
+            try
+            {
+                int n = root.childCount;
+                for (int i = 0; i < n && cloned == null; i++)
+                {
+                    Transform child = root.GetChild(i);
+                    if (child == null) continue;
+                    var tmps = child.GetComponentsInChildren<TMPro.TextMeshPro>(true);
+                    if (tmps != null && tmps.Length > 0) cloned = tmps[0];
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: TMP-Suche fehlgeschlagen: " + ex.Message); }
+
+            TMPro.TextMeshPro sourceTemplate = null;
+            GameObject textGO;
+            if (cloned != null)
+            {
+                sourceTemplate = cloned;
+                textGO = UnityEngine.Object.Instantiate(cloned.gameObject, cockpitObj.transform);
+                textGO.name = "Text";
+                cockpitText = textGO.GetComponent<TMPro.TextMeshPro>();
+            }
+            else
+            {
+                textGO = new GameObject("Text");
+                textGO.transform.SetParent(cockpitObj.transform, false);
+                cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
+            }
+            if (cockpitText == null) { UnityEngine.Object.Destroy(cockpitObj); cockpitObj = null; return false; }
+            // NOTES_WORLDSPACE_UI: clone silently carries over state - re-assert everything explicitly.
+            cockpitText.enableAutoSizing = false;   // must be BEFORE fontSize, else fontSize is silently overridden
             cockpitText.fontSize = 0.02f;
             cockpitText.color = new Color(0.45f, 1f, 0.55f);
             cockpitText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+            cockpitText.enableWordWrapping = false;
+            cockpitText.overflowMode = TMPro.TextOverflowModes.Overflow;
+            if (sourceTemplate != null)
+            {
+                if (cockpitText.font == null && sourceTemplate.font != null)
+                    cockpitText.font = sourceTemplate.font;
+                try { if (sourceTemplate.fontSharedMaterial != null) cockpitText.fontSharedMaterial = sourceTemplate.fontSharedMaterial; }
+                catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: fontSharedMaterial-Rebind fehlgeschlagen: " + ex.Message); }
+            }
+            // Active/alpha state: Instantiate() preserves whatever the source had.
+            textGO.SetActive(true);
+            try { textGO.GetComponent<UnityEngine.CanvasRenderer>().SetAlpha(1f); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: SetAlpha fehlgeschlagen: " + ex.Message); }
+            var cg = textGO.GetComponent<UnityEngine.CanvasGroup>();
+            if (cg != null) cg.alpha = 1f;
             cockpitText.text = "";
             cockpitText.ForceMeshUpdate();
-            var rt = go.GetComponent<RectTransform>();
+            var rt = textGO.GetComponent<RectTransform>();
             if (rt != null) { rt.sizeDelta = new Vector2(1.6f, 1.2f); rt.anchoredPosition = new Vector2(-0.8f, 0.6f); }
             cockpitObj.SetActive(false);
-            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (popupsRoot gefunden).");
+            try { UnityEngine.Canvas.ForceUpdateCanvases(); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("CockpitPanel: ForceUpdateCanvases fehlgeschlagen: " + ex.Message); }
+            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (popupsRoot gefunden, fontClone=" + (cloned != null) + ").");
             return true;
         }
 

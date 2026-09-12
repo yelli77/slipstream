@@ -1,3 +1,8 @@
+## Neu in custom-build-293: Cockpit-Fix
+
+- Cockpit-Panel klont jetzt ein Spiel-TMP (Font/Material) statt frisches TMP ohne Font (-rendered nothing-).
+- Log zeigt fontClone=true/false fuer Diagnose.
+
 ## Neu in custom-build-292: Cockpit-Display-Integration
 
 - J-Toggle zeigt das Jobboard jetzt bevorzugt auf dem echten LLAMA-Cockpit-Display (World-Space-TMP unter MonitorOverlaySwitcher.popupsRootTransform, von der Monitor-Kamera gerendert).
