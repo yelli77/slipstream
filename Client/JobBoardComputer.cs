@@ -293,7 +293,42 @@ namespace StarTruckMP.StarTruckClient
                 textGO.transform.SetParent(cockpitObj.transform, false);
                 cockpitText = textGO.AddComponent<TMPro.TextMeshPro>();
                 if (cloned.font != null) cockpitText.font = cloned.font;
-                // 299: Layer-Set NACH Text-Erstellung wiederholen (Text-GO + Renderer), da der
+                // 300: Kamera-Render-Parameter + MonitorCameras-Kinder-Dump + Panel auf echtes Kanal-Objekt
+            try
+            {
+                var diagCam = anchorT != null ? anchorT.GetComponent<UnityEngine.Camera>() : null;
+                if (diagCam != null)
+                {
+                    StarTruckMP.Log.LogInfo("JobBoardComputer: MonitorCam300 nearClip=" + diagCam.nearClipPlane.ToString("F4")
+                        + " farClip=" + diagCam.farClipPlane.ToString("F2")
+                        + " aspect=" + diagCam.aspect.ToString("F3")
+                        + " enabled=" + diagCam.enabled
+                        + " clearFlags=" + diagCam.clearFlags
+                        + " orthographic=" + diagCam.orthographic + ".");
+                }
+                // Kinder-Subtree von MonitorCameras dumpen (echte Kanalseiten-Objekte finden)
+                Transform monRoot = anchorT != null ? anchorT.parent : null; // MonitorCameras
+                if (monRoot != null)
+                {
+                    int dumpN = monRoot.childCount;
+                    for (int di = 0; di < dumpN && di < 12; di++)
+                    {
+                        var dk = monRoot.GetChild(di);
+                        StarTruckMP.Log.LogInfo("JobBoardComputer: monCam300[" + di + "] '" + dk.name + "' layer=" + dk.gameObject.layer + " active=" + dk.gameObject.activeSelf + " worldPos=" + dk.position.ToString("F2") + " localPos=" + dk.localPosition.ToString("F3") + " scale=" + dk.lossyScale.ToString("F4") + ".");
+                        // Enkel (Kanal-Texte) mit dumpen
+                        for (int dj = 0; dj < dk.childCount && dj < 8; dj++)
+                        {
+                            var dk2 = dk.GetChild(dj);
+                            StarTruckMP.Log.LogInfo("JobBoardComputer: monCam300[" + di + "." + dj + "] '" + dk2.name + "' layer=" + dk2.gameObject.layer + " active=" + dk2.gameObject.activeSelf + " worldPos=" + dk2.position.ToString("F2") + " localPos=" + dk2.localPosition.ToString("F3") + ".");
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("CockpitPanel: 300-Diagnose fehlgeschlagen: " + ex.Message);
+            }
+            // 299: Layer-Set NACH Text-Erstellung wiederholen (Text-GO + Renderer), da der
             // Layer-Fix oben vor dem Text-AddComponent lief (children=0, Text blieb Layer 0).
             try
             {
