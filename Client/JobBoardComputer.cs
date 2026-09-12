@@ -20,6 +20,9 @@ namespace StarTruckMP.StarTruckClient
         private static bool visible = false;
         private static float nextToggleCheck = 0f;
         private static float nextTextRefresh = 0f;
+        // Cockpit-Panel (build-292): World-Space-TMP als Kind unter MonitorOverlaySwitcher.popupsRootTransform
+                private static GameObject cockpitObj;
+                private static TMPro.TextMeshPro cockpitText;
 
         public static void CheckToggle()
         {
@@ -40,15 +43,14 @@ namespace StarTruckMP.StarTruckClient
             visible = v;
             if (visible)
             {
-                EnsureUI();
-                if (canvasObj != null) canvasObj.SetActive(true);
-                nextTextRefresh = 0f;
-                StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay an.");
+                bool cockpitOk = EnsureCockpitPanel();
+                if (cockpitOk) { cockpitObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Display an."); }
+                else { EnsureUI(); if (canvasObj != null) canvasObj.SetActive(true); nextTextRefresh = 0f; StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay an (Fallback)."); }
             }
-            else if (canvasObj != null)
+            else
             {
-                canvasObj.SetActive(false);
-                StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay aus.");
+                if (cockpitObj != null) { cockpitObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Display aus."); }
+                if (canvasObj != null) { canvasObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay aus."); }
             }
         }
 
@@ -56,10 +58,16 @@ namespace StarTruckMP.StarTruckClient
         public static void Update()
         {
             CheckToggle();
-            if (!visible || canvasObj == null || !canvasObj.activeInHierarchy) return;
+            if (!visible) return;
+            if (canvasObj == null && cockpitObj == null) return;
+            if (canvasObj == null && cockpitObj != null && !cockpitObj.activeInHierarchy) return;
             if (Time.unscaledTime < nextTextRefresh) return;
             nextTextRefresh = Time.unscaledTime + 1.0f;
-            RefreshText();
+            var jobs = ProceduralJobGenerator.GetAvailableJobs();
+            string sector = StarTruckClient.currentSector;
+            string body = BuildBody(sector, jobs);
+            if (text != null) { text.text = body; text.ForceMeshUpdate(); }
+            if (cockpitText != null && cockpitObj != null && cockpitObj.activeInHierarchy) { cockpitText.text = body; cockpitText.ForceMeshUpdate(); }
         }
 
         private static void EnsureUI()
@@ -122,6 +130,32 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo("JobBoardComputer: UI erstellt.");
         }
 
+        private static bool EnsureCockpitPanel()
+        {
+            if (cockpitObj != null) return cockpitText != null;
+            var switcher = UnityEngine.Object.FindObjectOfType<MonitorOverlaySwitcher>();
+            if (switcher == null || switcher.popupsRootTransform == null) return false;
+            var root = switcher.popupsRootTransform;
+            cockpitObj = new GameObject("StarTruckMP_JobCockpitPanel");
+            cockpitObj.transform.SetParent(root, false);
+            cockpitObj.transform.localPosition = new Vector3(0f, 0f, -0.05f);
+            cockpitObj.transform.localRotation = Quaternion.identity;
+            cockpitObj.transform.localScale = Vector3.one;
+            var go = new GameObject("Text");
+            go.transform.SetParent(cockpitObj.transform, false);
+            cockpitText = go.AddComponent<TMPro.TextMeshPro>();
+            cockpitText.fontSize = 0.02f;
+            cockpitText.color = new Color(0.45f, 1f, 0.55f);
+            cockpitText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+            cockpitText.text = "";
+            cockpitText.ForceMeshUpdate();
+            var rt = go.GetComponent<RectTransform>();
+            if (rt != null) { rt.sizeDelta = new Vector2(1.6f, 1.2f); rt.anchoredPosition = new Vector2(-0.8f, 0.6f); }
+            cockpitObj.SetActive(false);
+            StarTruckMP.Log.LogInfo("JobBoardComputer: Cockpit-Panel erstellt (popupsRoot gefunden).");
+            return true;
+        }
+
         private static TMPro.TextMeshProUGUI FindSourceTMP()
         {
             var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
@@ -132,28 +166,14 @@ namespace StarTruckMP.StarTruckClient
             return null;
         }
 
-        private static void RefreshText()
+        private static string BuildBody(string sector, Il2CppSystem.Collections.Generic.List<global::QuestInstance> jobs)
         {
-            if (text == null) return;
-
-            string sector = StarTruckClient.currentSector;
-
             if (string.IsNullOrEmpty(sector) || sector == "none")
-            {
-                text.text = "BOARD-COMPUTER\n\nKein Sektor.";
-                text.ForceMeshUpdate();
-                return;
-            }
+                return "BOARD-COMPUTER\n\nKein Sektor.";
 
-            var jobs = ProceduralJobGenerator.GetAvailableJobs();
             int count = (jobs != null) ? jobs.Count : 0;
-
             if (count == 0)
-            {
-                text.text = "BOARD-COMPUTER\nSektor: " + sector + "\n\nKeine Auftraege verfuegbar.\n\n[J] Schliessen";
-                text.ForceMeshUpdate();
-                return;
-            }
+                return "BOARD-COMPUTER\nSektor: " + sector + "\n\nKeine Auftraege verfuegbar.\n\n[J] Schliessen";
 
             var sb = new StringBuilder();
             sb.AppendLine("== BOARD-COMPUTER ==");
@@ -193,8 +213,7 @@ namespace StarTruckMP.StarTruckClient
 
             sb.AppendLine();
             sb.AppendLine("[J] Schliessen");
-            text.text = sb.ToString();
-            text.ForceMeshUpdate();
+            return sb.ToString();
         }
 
         public static void Cleanup()
@@ -204,6 +223,12 @@ namespace StarTruckMP.StarTruckClient
                 UnityEngine.Object.Destroy(canvasObj);
                 canvasObj = null;
                 text = null;
+            }
+            if (cockpitObj != null)
+            {
+                UnityEngine.Object.Destroy(cockpitObj);
+                cockpitObj = null;
+                cockpitText = null;
             }
             visible = false;
         }

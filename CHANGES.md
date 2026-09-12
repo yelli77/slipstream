@@ -1,3 +1,9 @@
+## Neu in custom-build-292: Cockpit-Display-Integration
+
+- J-Toggle zeigt das Jobboard jetzt bevorzugt auf dem echten LLAMA-Cockpit-Display (World-Space-TMP unter MonitorOverlaySwitcher.popupsRootTransform, von der Monitor-Kamera gerendert).
+- Fallback: wenn Cockpit-Panel nicht gefunden wird, bleibt das Screen-Overlay aktiv.
+- Test-Log: Cockpit-Display an/aus vs Overlay an (Fallback).
+
 ## Neu in custom-build-291: Boardcomputer-Politur
 
 - Liste auf 10 Jobs begrenzt + "... und N weitere (am Dock andocken)" - Overlay ragt nicht mehr ueber den Screenrand.
