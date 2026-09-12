@@ -1,3 +1,7 @@
+## Neu in custom-build-308: Cleanup
+
+- Diagnose-Dumps entfernt (Cockpit-Experimente 300-303), Jobboard-Funktion unveraendert.
+
 ## Neu in custom-build-307: Jobboard-Pfad
 
 - Original-Jobboard via MenuState.LoadAndShow (Primaerpfad), DevPanel-Fallback, Overlay letzte Notloesung.
