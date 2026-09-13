@@ -5,6 +5,7 @@ using Riptide;
 using StarTruckMP.Utilities;
 using HarmonyLib;
 using StarTruckSaveData;
+using UnityEngine;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -123,9 +124,16 @@ namespace StarTruckMP.StarTruckClient
                 // Build-321: NullReferenceException-Quelle eingegrenzt - im Sektorwechsel-
                 // Fenster koennen DeserializeJobs oder der questSave-Cast NREs werfen
                 // (IL2CPP-Objekte, deren Managed-Wrapper waehrend des Sektor-Teardown
-                // bereits invalidiert sind). Jeder dieser Schritte ist einzeln guarded:
-                // ein defekter Blob wird VERWORFEN (kein Crash, keine Halbwelt-State),
-                // der naechste Sync-Broadcast vom Autoritaets-Client ersetzt ihn.
+                // bereits invalidiert sind).
+                // Build-323: Ein defekter Blob ist NICHT mehr endgueltig verworfen.
+                // Hintergrund (Testbefehl 322): ApplyRestore kann in Spiel-Code NREn
+                // (QuestTaskParameter.GenerateSector), wenn ein Sektor-Parameter auf einen
+                // Sektor verweist, den der EMPFAENGER-Client noch nicht geladen/registriert
+                // hat. Solche Races loesen sich binnen Sekunden (Sektor-Load, QuestTracker-
+                // Sektor-Ready). Deshalb: DeserializeJobs/Cast-Fehler -> Blob verwerfen
+                // (unlesbar, kein Retry sinnvoll); ApplyRestore-Fehler -> PUFFERN und
+                // mit Retry-Queue (max. 10 Versuche, alle 2s) nachziehen. Siehe
+                // EnqueueRetry/ProcessRetryQueue.
                 Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData> jobs = null;
                 try
                 {
@@ -169,9 +177,12 @@ namespace StarTruckMP.StarTruckClient
                 catch (Exception applyEx)
                 {
                     // ApplyRestore toucht QuestTracker (Il2Cpp) - im Sektorwechsel-Fenster
-                    // kann das NREn. Verwerfen statt Crash; OnLocalJobsGenerated des
-                    // Autoritaets-Clients broadcastet erneut.
-                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: ApplyRestore fehlgeschlagen (Sektor '{sector}') - verworfen: {applyEx.Message}");
+                    // kann das NREn. Build-323: NICHT mehr endgueltig verwerfen, sondern
+                    // in die Retry-Queue (Sektor-Load-Races loesen sich binnen Sekunden).
+                    // Nur wenn ALLE Versuche scheitern, wird der Blob endgueltig verworfen
+                    // (dann Log mit Diagnose: job-Ids + betroffene Parameter-Namen).
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: ApplyRestore fehlgeschlagen (Sektor '{sector}') - Retry-Queue: {applyEx.Message}");
+                    EnqueueRetry(sector, questSave, applyEx.Message);
                 }
             }
             catch (Exception ex)
@@ -192,10 +203,51 @@ namespace StarTruckMP.StarTruckClient
             return lowest == myId;
         }
 
-        // Gepufferter Sync, falls QuestTracker beim Empfang noch nicht ready war.
-        // Wird ueber Client.FixedUpdate() -> TryApplyPending() nachgeholt.
-        private static string pendingRestoreSector = null;
-        private static QuestSaveData pendingRestoreJobs = null;
+        // Build-323: Retry-Queue fuer ApplyRestore-Fehler (QuestTaskParameter.GenerateSector
+        // NREt, wenn ein Sektor-Parameter auf einen (noch) nicht geladenen Sektor verweist).
+        // - Generisch fuer ALLE Sektoren (keine Whitelist/Blacklist): Es wird nur geprueft,
+        //   ob die Sektor-Metadaten des aktuellen Sektors abrufbar sind; ein noch nicht
+        //   geladener Sektor loest sich auf, sobald das Spiel ihn laedt.
+        // - Max. MAX_RETRY_ATTEMPTS Versuche im Abstand RETRY_INTERVAL Sekunden; danach wird
+        //   der Blob endgueltig verworfen (Diagnose-Log mit Job-Ids).
+        // - Ein neuer Sync-Broadcast fuer denselben Sektor ersetzt den gepufferten (immer
+        //   der aktuellste Stand gewinnt).
+        // Wird ueber Client.FixedUpdate() -> TryApplyPending() nachgezogen.
+        private const int MAX_RETRY_ATTEMPTS = 10;
+        private const float RETRY_INTERVAL = 2f;
+
+        private class PendingRestore
+        {
+            public string sector;
+            public QuestSaveData jobs;
+            public int attempts;
+            public float nextTryTime;
+            public string lastError;
+        }
+
+        private static PendingRestore pendingRestore = null;
+
+        private static void EnqueueRetry(string sector, QuestSaveData questSave, string error)
+        {
+            // Neuer Broadcast fuer denselben Sektor ersetzt den alten gepufferten Stand.
+            if (pendingRestore != null && pendingRestore.sector == sector)
+            {
+                pendingRestore.jobs = questSave;
+                pendingRestore.attempts = 0;
+                pendingRestore.lastError = error;
+                pendingRestore.nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL;
+                return;
+            }
+            pendingRestore = new PendingRestore
+            {
+                sector = sector,
+                jobs = questSave,
+                attempts = 0,
+                nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL,
+                lastError = error,
+            };
+            StarTruckMP.Log.LogInfo($"JobBoardSync: Retry-Queue fuer Sektor '{sector}' eingerichtet (max {MAX_RETRY_ATTEMPTS} Versuche alle {RETRY_INTERVAL:0}s).");
+        }
 
         private static void ApplyRestore(string sector, QuestSaveData questSave)
         {
@@ -207,13 +259,85 @@ namespace StarTruckMP.StarTruckClient
 
         public static void TryApplyPending()
         {
-            if (pendingRestoreJobs == null) return;
+            var pending = pendingRestore;
+            if (pending == null) return;
+
+            // Sektor verlassen? Retry ist dann sinnlos (ApplyRestore wuerde eh abbrechen).
+            if (pending.sector != StarTruckClient.currentSector)
+            {
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Retry fuer Sektor '{pending.sector}' verworfen (wir sind jetzt in '{StarTruckClient.currentSector}').");
+                pendingRestore = null;
+                return;
+            }
             if (!QuestTracker.ready) return;
-            var sector = pendingRestoreSector;
-            var jobs = pendingRestoreJobs;
-            pendingRestoreSector = null;
-            pendingRestoreJobs = null;
-            ApplyRestore(sector, jobs);
+            if (IsAuthorityForCurrentSector())
+            {
+                // Autoritaet wechselt zu uns: unser eigener Stand ist Quelle der Wahrheit,
+                // der gepufferte Remote-Stand ist ueberfluessig.
+                pendingRestore = null;
+                return;
+            }
+            if (Time.realtimeSinceStartup < pending.nextTryTime) return;
+
+            pending.attempts++;
+            try
+            {
+                ApplyRestore(pending.sector, pending.jobs);
+                pendingRestore = null;
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Retry erfolgreich (Sektor '{pending.sector}', Versuch {pending.attempts}).");
+                return;
+            }
+            catch (Exception retryEx)
+            {
+                pending.lastError = retryEx.Message;
+                if (pending.attempts >= MAX_RETRY_ATTEMPTS)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardSync: Retry ENDGUELTIG fehlgeschlagen (Sektor '{pending.sector}' nach {pending.attempts} Versuchen) - Blob verworfen. Letzter Fehler: {retryEx.Message}. Diagnose: {DescribeJobs(pending.jobs)}");
+                    pendingRestore = null;
+                    return;
+                }
+                pending.nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL;
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Retry {pending.attempts}/{MAX_RETRY_ATTEMPTS} fuer Sektor '{pending.sector}' fehlgeschlagen ({retryEx.Message}) - naechster Versuch in {RETRY_INTERVAL:0}s.");
+            }
+        }
+
+        // Diagnose: Job-Ids + Parameter-Namen des gepufferten Standes loggen, damit der
+        // problematische Job/Parameter (QuestTaskParameter.GenerateSector) identifiziert
+        // werden kann, auch wenn das Spiel nur All-or-Nothing-Restore anbietet.
+        private static string DescribeJobs(QuestSaveData questSave)
+        {
+            try
+            {
+                var jobs = questSave?.availableJobs;
+                if (jobs == null) return "availableJobs=null";
+                var ids = new List<string>();
+                int count = Il2CppCount(jobs);
+                for (int i = 0; i < count && i < 20; i++)
+                {
+                    var job = jobs[i];
+                    var paramNames = new List<string>();
+                    var pars = job.generatedParameters;
+                    if (pars != null)
+                    {
+                        int pc = Il2CppCount(pars);
+                        for (int p = 0; p < pc && p < 10; p++)
+                        {
+                            var par = pars[p];
+                            // Nur Sektor-/Route-Parameter nennen - das sind die Kandidaten
+                            // fuer GenerateSector-NREs (Sektoren, die der Empfaenger noch
+                            // nie geladen hat).
+                            if (par.Kind == QuestTaskParameterSaveData.ItemKind.sectorId && par.sectorId != null)
+                                paramNames.Add($"sectorId:{par.sectorId.name}={par.sectorId.value}");
+                        }
+                    }
+                    ids.Add($"{job.id}[{string.Join(",", paramNames)}]");
+                }
+                return $"jobs={count}: {string.Join("; ", ids)}";
+            }
+            catch (Exception ex)
+            {
+                return $"(DescribeJobs fehlgeschlagen: {ex.Message})";
+            }
         }
 
         // ---- Serialisierung (eigenes Blob-Format, unabhaengig von Riptide-Feld-API) ----
