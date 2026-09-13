@@ -183,17 +183,17 @@ namespace StarTruckMP.StarTruckClient
             int curBytes = 0;
             for (int i = 0; i < idents.Count; i++)
             {
-                var entry = Encoding.UTF8.GetBytes((idents[i] ?? "") + "\n");
+                var entry = System.Text.Encoding.UTF8.GetBytes((idents[i] ?? "") + "\n");
                 if (curBytes + entry.Length > MAX_CHUNK_BYTES && cur.Count > 0)
                 {
-                    chunkPayloads.Add(Encoding.UTF8.GetBytes(string.Join("", cur)));
+                    chunkPayloads.Add(System.Text.Encoding.UTF8.GetBytes(string.Join("", cur)));
                     cur = new List<byte[]>();
                     curBytes = 0;
                 }
                 cur.Add(entry);
                 curBytes += entry.Length;
             }
-            if (cur.Count > 0) chunkPayloads.Add(Encoding.UTF8.GetBytes(string.Join("", cur)));
+            if (cur.Count > 0) chunkPayloads.Add(System.Text.Encoding.UTF8.GetBytes(string.Join("", cur)));
 
             if (chunkPayloads.Count > MAX_CHUNKS)
             {
@@ -253,7 +253,7 @@ namespace StarTruckMP.StarTruckClient
                     chunkNextIndex = 0;
                 }
 
-                var text = Encoding.UTF8.GetString(payload);
+                var text = System.Text.Encoding.UTF8.GetString(payload);
                 var parts = text.Split('\n');
                 foreach (var p in parts)
                 {
