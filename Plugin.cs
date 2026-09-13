@@ -6,6 +6,7 @@ using UnityEngine;
 using HarmonyLib;
 using System.Reflection;
 using System;
+using System.IO;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP.UnityEngine;
 using StarTruckMP.MainMenu;
@@ -21,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-329";
+    public const string customBuildNumber = "custom-build-330";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -52,10 +53,17 @@ public class StarTruckMP : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.StarTruckClient.JobBoardComputer.CoroutineRunnerHelper>();
         
-        // Build-329: Diagnose-Env-Empfang beim Plugin-Init loggen - zeigt sofort, ob die
+        // Build-330: Diagnose-Env-Empfang beim Plugin-Init loggen - zeigt sofort, ob die
         // Variable den Prozess (Slipstream-Launcher/Updater-Kette) erreicht hat oder nicht.
+        // Zusaetzlich: Datei-Trigger-Check (Build-330, startart-unabhaengig).
         string roundtripEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
-        StarTruckMP.Log.LogInfo($"STRUCKMP_ROUNDTRIP={roundtripEnv ?? "<null>"}");
+        bool roundtripFile;
+        try
+        {
+            roundtripFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_ROUNDTRIP.txt"));
+        }
+        catch { roundtripFile = false; }
+        StarTruckMP.Log.LogInfo($"roundtrip trigger: env={roundtripEnv ?? "<null>"} file={roundtripFile}");
 
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));

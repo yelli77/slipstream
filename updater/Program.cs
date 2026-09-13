@@ -288,6 +288,12 @@ namespace StarTruckMPUpdater
                     FileName = $"steam://run/{SteamAppId}",
                     UseShellExecute = true
                 });
+                // Build-330: Env-Passthrough-Diagnose. Der steam://-Start macht Steam selbst
+                // zum Elternprozess des Spiels - Environment-Variablen des Launchers kommen
+                // dort nicht zuverlaessig an (deshalb nutzt der Mod jetzt einen Datei-Trigger,
+                // siehe Client/Client.cs Build-330). Wir loggen nur noch, was wir sehen.
+                string rtVal = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
+                Log($"env passthrough: STRUCKMP_ROUNDTRIP={(rtVal ?? "missing")}");
                 return;
             }
             catch (Exception ex)

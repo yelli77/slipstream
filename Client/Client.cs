@@ -7,6 +7,8 @@ using StarTruckMP.Encoding;
 using StarTruckMP.MainMenu;
 using System.Collections.Generic;
 using System.Linq;
+using System.IO;
+using BepInEx;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -104,13 +106,20 @@ namespace StarTruckMP.StarTruckClient
             UpdateMapIndicators();
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
-            // Build-329: Roundtrip-Trigger robust. Diagnose-Zeile einmalig, damit wir im
-            // User-Log sehen, WELCHE Bedingung blockiert (env / QuestTracker.ready / Generator).
-            // Trigger-Pfade: (1) FixedUpdate-Hook, (2) Sektor-Eintritt + 5s Delay als Sicherheitsnetz.
+            // Build-330: Roundtrip-Trigger = Env-Var ODER Config-Datei. Die Env-Var erreicht den
+            // Spiel-Prozess nicht zuverlaessig (Start via steam:// - Steam ist der Elternprozess,
+            // unsere Variablen kommen dort nicht an). Die Datei <BepInEx>/config/
+            // STRUCKMP_ROUNDTRIP.txt funktioniert startart-unabhaengig (nur Existenz zaehlt).
             string rtEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
+            bool rtFile;
+            try
+            {
+                rtFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_ROUNDTRIP.txt"));
+            }
+            catch { rtFile = false; }
             if (!roundtripDone)
             {
-                if (rtEnv == "1")
+                if (rtEnv == "1" || rtFile)
                 {
                     if (roundtripDiagLogged < 2)
                     {
@@ -125,9 +134,9 @@ namespace StarTruckMP.StarTruckClient
                 }
                 else if (!roundtripDisabledLogged)
                 {
-                    // einmalig loggen - beweist, dass die Env-Var den Spiel-Prozess nicht erreichte
+                    // einmalig loggen - beweist, dass weder Env-Var noch Datei vorhanden sind
                     roundtripDisabledLogged = true;
-                    StarTruckMP.Log.LogInfo($"roundtrip disabled (env not set, STRUCKMP_ROUNDTRIP={rtEnv ?? "<null>"})");
+                    StarTruckMP.Log.LogInfo($"roundtrip disabled (env={rtEnv ?? "<null>"} file={rtFile})");
                 }
             }
             // Build-329: Fallback-Trigger - 5s nach Sektor-Eintritt nochmal probieren,
@@ -136,8 +145,14 @@ namespace StarTruckMP.StarTruckClient
             {
                 roundtripFallbackAt = -1f; // nur ein Fallback-Versuch
                 string fbEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
-                StarTruckMP.Log.LogInfo($"Roundtrip-Fallback (5s nach Sektor): env={fbEnv ?? "<null>"} ready={QuestTracker.ready} generator={ProceduralJobGenerator.Get() != null}");
-                if (fbEnv == "1" && QuestTracker.ready && ProceduralJobGenerator.Get() != null)
+                bool fbFile;
+                try
+                {
+                    fbFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_ROUNDTRIP.txt"));
+                }
+                catch { fbFile = false; }
+                StarTruckMP.Log.LogInfo($"Roundtrip-Fallback (5s nach Sektor): env={fbEnv ?? "<null>"} file={fbFile} ready={QuestTracker.ready} generator={ProceduralJobGenerator.Get() != null}");
+                if ((fbEnv == "1" || fbFile) && QuestTracker.ready && ProceduralJobGenerator.Get() != null)
                 {
                     roundtripDone = true;
                     JobBoardSync.RunRoundtripVerification();
