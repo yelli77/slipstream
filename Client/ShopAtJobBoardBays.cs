@@ -8,7 +8,7 @@ using UnityEngine;
 namespace StarTruckMP.StarTruckClient
 {
     /// <summary>
-    /// 311: Shop an JobsBoard-Docking-Bays.
+    /// 311c (Dock-Rewrite): Shop an JobsBoard-Docking-Bays.
     ///
     /// Hintergrund: Das Jobboard ist seit custom-build-288/307 jederzeit per J-Taste
     /// verfuegbar (Client/JobBoardComputer.cs) - die JobsBoard-Docking-Bays am Station-
@@ -21,31 +21,51 @@ namespace StarTruckMP.StarTruckClient
     ///   BodyShop=5, UpgradeShop=6, ItemDelivery=7, FuelPump=8, ParkingBay=9
     ///   (ilspycmd -t StationAmenity /bepinex/interop/Assembly-CSharp.dll).
     ///
-    /// Patchpunkt ist der hochmoegliche Einstieg in den Amenity-Ablauf nach dem Docking:
-    ///   TruckAmenityTerminal.OnAmenityEnter(sender, eventArgs)
-    ///   -> setzt _currentAmenity/_currentShop aus dem AmenityEventArgs und ist DIE
-    ///      Zentrale, an der entschieden wird, welcher Amenity-Screen spaeter oeffnet
-    ///      (ShowAmenityScreen -> _currentAmenitySetup.openAmenityScreenEvent).
+    /// 311c: ECHTER Dock-Pfad (verifiziert via ilspycmd-Dekompilierung): Die native
+    /// DockingCoroutine (DockingBay.&lt;DockingCoroutine&gt;d__82, liest m_amenityType
+    /// der Bay) ruft nach dem Dock-Cinematic
+    ///   DockingBaySharedAssets.EnterAmenity(StationAmenity amenityType,
+    ///   string nameStringId, ShopDescription shopDesc, ItemDeliveryDescription
+    ///   deliveryDesc, bool showScreenImmediately)
+    /// auf; diese Methode baut das AmenityEventArgs und feuert m_enterAmenityEvent.
+    /// Der vorherige Prefix auf TruckAmenityTerminal.OnAmenityEnter feuerte beim Dock
+    /// NICHT (das ist der AmenityTriggerZone-Pfad im Stationsinneren) und wurde entfernt.
+    /// Der neue Prefix schreibt amenityType (ref) JobsBoard -> Shop um und injiziert
+    /// per ref die shopDescription der ParentStation (Shop-DockingBayGroup), BEVOR der
+    /// native Handler die EventArgs baut. Bay-Aufloesung: __instance (ScriptableObject)
+    /// -> DockingBay mit m_sharedAssets == __instance -> ParentStation.
     ///
-    /// Strategie: Wenn das Event einen JobsBoard-Amenity traegt (Dock an einer
-    /// JobsBoard-Bay) UND der MP-Client verbunden ist, werden die Event-Args vor dem
-    /// nativen Handler auf Shop umgeschrieben (amenity=Shop, shopDescription=<Station-
-    /// Shop-Gruppe>). Der native Pfad (Docking-Cinematic -> DockedScreen/AmenitySetup-
-    /// Kette mit ShopDescription) laeuft danach 1:1 wie an echten Shop-Bays - kein
-    /// UI-Klon, keine Coroutines.
+    /// 311b (POI-Marker): Die POI-Marker der JobsBoard-Bays zeigten weiterhin
+    /// 'Auftragsborse' (Klemmbrett-Icon). Statisch verifizierte natives Design:
+    ///   - DockingBay.ConfigurePOI(bool) liest m_setPOISettingFromAmenity und ruft
+    ///     dann m_sharedAssets.GetPOISettings(m_amenityType) und haengt das Ergebnis
+    ///     an m_dockingBayPOI.settings (der PointsOfInterest-Manager rendert daraus
+    ///     Icon + Label). CallerCount von ConfigurePOI ist 2.
+    ///   - RegisterPointOfInterest.SetSettings(PointOfInterestSettings) ist public
+    ///     und aktualisiert die zugehoerigen Marker (der POI-Manager liest pro Frame
+    ///     entry.settings).
+    ///   - Der angezeigte Label-Text kommt aus RegisterPointOfInterest.displayNameId
+    ///     (String-ID); die POI-Settings liefern nur Icon/Prefab/Farben.
+    /// Native Pfade, die wir nutzen (KEIN eigenes Overlay):
+    ///   1. PointOfInterestSettings austauschen: DockingBay.m_sharedAssets
+    ///      .m_poiSettingsJobsBoard = m_poiSettingsShop (fuer zukuenftige
+    ///      ConfigurePOI-Aufrufe), plus bay.ConfigurePOI(bay.gameObject.activeSelf)
+    ///      als Re-Apply-Versuch.
+    ///   2. RegisterPointOfInterest.SetSettings(shopSettings) direkt an der live
+    ///      registrierten POI-Instanz (Wirksamkeit unabhaengig vom CallerCount-Design
+    ///      von ConfigurePOI).
+    ///   3. displayNameId auf shopDescription.shopDisplayName setzen, damit das
+    ///      Label den Shop-Namen zeigt (nicht die String-ID 'Auftragsboerse').
+    /// Fallback/diag: Wenn m_dockingBayPOI oder Shop-Settings null sind, Log-Warnung
+    /// (Praefix 311b) und Bay-Anzeige unveraendert.
     ///
-    /// Fallback: Hat die Station KEINE Shop-Gruppe (keine DockingBayGroup mit
-    /// amenityType==Shop bzw. keine shopDescription), bleibt das Bay-Verhalten
-    /// unveraendert (Jobboard via Dock) - nur eine Log-Warnung, kein Crash.
+    /// DockingBayHUD-Konsistenz: DockingBayHUD.IsJobsBoard fragt
+    /// ShouldRewriteForAmenityDisplay() ab und behandelt die Bays als Shop-Bays,
+    /// damit kein 'Modified - Job Board (Jobs)'-HUD-Marker mehr erzeugt wird.
     /// Singleplayer ohne MP-Client: Patches greifen gar nicht (Gate auf IsConnected).
     /// </summary>
     public static class ShopAtJobBoardBays
     {
-        private const int AmenityJobsBoard = 1; // StationAmenity.JobsBoard (verifiziert)
-        private const int AmenityShop = 2;      // StationAmenity.Shop (verifiziert)
-
-        private static bool searched = false;
-        private static MethodInfo mi_OnAmenityEnter = null;
         private static bool harmonyApplied = false;
 
         /// <summary>
@@ -68,59 +88,24 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// Liest die amenityType-Property eines Il2Cpp-Objekts (DockingBay oder
-        /// Station.DockingBayGroup) als int. Basiert auf dem DockingBayHUD-Muster
-        /// (direkte Property, Fallback Field).
+        /// 311b: Oeffentliches Gate fuer die Anzeige-Umschreibung (POI/HUD).
+        /// Derselbe Gate wie ShouldRewrite() - verbundener MP-Client.
         /// </summary>
-        private static int ReadAmenityType(Il2CppObjectBase obj)
+        public static bool ShouldRewriteForAmenityDisplay()
         {
-            if (obj == null) return -1;
-            try
-            {
-                var prop = obj.GetType().GetProperty("amenityType", BindingFlags.Public | BindingFlags.Instance);
-                if (prop != null)
-                {
-                    var val = prop.GetValue(obj);
-                    if (val != null) return Convert.ToInt32(val);
-                }
-                var prop2 = obj.GetType().GetProperty("AmenityType", BindingFlags.Public | BindingFlags.Instance);
-                if (prop2 != null)
-                {
-                    var val2 = prop2.GetValue(obj);
-                    if (val2 != null) return Convert.ToInt32(val2);
-                }
-                var field = obj.GetType().GetField("m_amenityType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null)
-                {
-                    var val3 = field.GetValue(obj);
-                    if (val3 != null) return Convert.ToInt32(val3);
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.ReadAmenityType fehlgeschlagen: {ex.Message}");
-            }
-            return -1;
+            return ShouldRewrite();
         }
 
         /// <summary>
-        /// Sucht die shopDescription der ersten DockingBayGroup der Station, deren
-        /// amenityType == Shop ist (Station.DockingBayGroups). Das ist derselbe Kontext,
-        /// den echte Shop-Bays ueber DockingBay.ShopDescription bekommen - Lager/Preise
-        /// entsprechen damit dem Stationsshop.
+        /// Liest die shopDescription der ersten DockingBayGroup der Station, deren
+        /// amenityType == Shop ist (Station.DockingBayGroups).
         /// </summary>
-        private static Il2CppObjectBase FindStationShopDescription(Il2CppObjectBase stationObj)
+        private static ShopDescription FindStationShopDescription(Station stationObj)
         {
             if (stationObj == null) return null;
             try
             {
-                var groupsProp = stationObj.GetType().GetProperty("DockingBayGroups", BindingFlags.Public | BindingFlags.Instance);
-                if (groupsProp == null)
-                {
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: Station.DockingBayGroups nicht gefunden.");
-                    return null;
-                }
-                var groups = groupsProp.GetValue(stationObj) as System.Collections.IEnumerable;
+                var groups = stationObj.DockingBayGroups;
                 if (groups == null)
                 {
                     StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: Station.DockingBayGroups ist null/leer.");
@@ -128,12 +113,9 @@ namespace StarTruckMP.StarTruckClient
                 }
                 foreach (var g in groups)
                 {
-                    var gObj = g as Il2CppObjectBase;
-                    if (gObj == null) continue;
-                    int amenity = ReadAmenityType(gObj);
-                    if (amenity != AmenityShop) continue;
-                    var sdProp = gObj.GetType().GetProperty("shopDescription", BindingFlags.Public | BindingFlags.Instance);
-                    var sd = sdProp?.GetValue(gObj) as Il2CppObjectBase;
+                    if (g == null) continue;
+                    if (g.amenityType != StationAmenity.Shop) continue;
+                    var sd = g.shopDescription;
                     if (sd != null) return sd;
                     // Gruppe vorhanden, aber Description null -> continue (nicht abbrechen)
                 }
@@ -146,49 +128,16 @@ namespace StarTruckMP.StarTruckClient
             return null;
         }
 
-        /// <summary>
-        /// Finds the Station object for a DockingBay (bay.ParentStation). Uses the
-        /// DockingBayHUD FindMember pattern because the declaring type of the
-        /// ParentStation property can differ from the runtime proxy type.
-        /// </summary>
-        private static Il2CppObjectBase FindStationOfBay(Il2CppObjectBase bayObj)
+        public static void Apply()
         {
-            if (bayObj == null) return null;
-            try
-            {
-                foreach (var name in new[] { "ParentStation", "parentStation", "m_parentStation" })
-                {
-                    var prop = bayObj.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (prop != null && prop.CanRead)
-                    {
-                        var v = prop.GetValue(bayObj) as Il2CppObjectBase;
-                        if (v != null) return v;
-                    }
-                    var f = bayObj.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (f != null)
-                    {
-                        var v2 = f.GetValue(bayObj) as Il2CppObjectBase;
-                        if (v2 != null) return v2;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.FindStationOfBay fehlgeschlagen: {ex.Message}");
-            }
-            return null;
-        }
+            if (harmonyApplied) return;
+            harmonyApplied = true;
+            var harmony = new Harmony("StarTruckMP.ShopAtJobBoardBays");
 
-        // ── Harmony patch registration (called from Plugin.Load) ──
-
-        /// <summary>
-        /// Resolve TruckAmenityTerminal.OnAmenityEnter via assembly scan: the type lives
-        /// in the game's Assembly-CSharp (global namespace), not this assembly, so a
-        /// plain AccessTools.Method("TruckAmenityTerminal:...") string lookup is
-        /// unreliable. The loop over AppDomain assemblies is the working path.
-        /// </summary>
-        private static MethodInfo TryResolveOnAmenityEnter()
-        {
+            // 311c: ECHTER Dock-Pfad (verifiziert): DockingCoroutine ->
+            // DockingBaySharedAssets.EnterAmenity(...) -> AmenityEventArgs/m_enterAmenityEvent.
+            MethodInfo mi = null;
+            string targetDesc = null;
             try
             {
                 foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
@@ -197,154 +146,279 @@ namespace StarTruckMP.StarTruckClient
                     try { types = asm.GetTypes(); } catch { continue; }
                     foreach (var t in types)
                     {
-                        if (t == null || t.Name != "TruckAmenityTerminal") continue;
-                        var mi = AccessTools.Method(t, "OnAmenityEnter");
-                        if (mi != null) return mi;
+                        if (t == null || t.Name != "DockingBaySharedAssets") continue;
+                        foreach (var m in t.GetMethods())
+                        {
+                            if (m.Name != "EnterAmenity") continue;
+                            var ps = m.GetParameters();
+                            if (ps.Length == 5 && ps[0].ParameterType.Name == "StationAmenity"
+                                && ps[1].ParameterType == typeof(string)
+                                && ps[2].ParameterType.Name == "ShopDescription"
+                                && ps[3].ParameterType.Name == "ItemDeliveryDescription")
+                            {
+                                mi = m;
+                                targetDesc = $"{t.Name}.{m.Name}(StationAmenity, string, ShopDescription, ItemDeliveryDescription, bool)";
+                                break;
+                            }
+                        }
+                        if (mi != null) break;
                     }
+                    if (mi != null) break;
                 }
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.TryResolveOnAmenityEnter: nicht auflösbar: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.Apply: Ziel-Suche fehlgeschlagen: {ex.Message}");
             }
-            return null;
-        }
 
-        public static void Apply()
-        {
-            if (harmonyApplied) return;
-            harmonyApplied = true;
-            var harmony = new Harmony("StarTruckMP.ShopAtJobBoardBays");
-
-            // highest possible level: the entry into the amenity flow after docking.
-            mi_OnAmenityEnter = TryResolveOnAmenityEnter();
-
-            if (mi_OnAmenityEnter == null)
+            if (mi == null)
             {
-                StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays.Apply: Patchziel nicht gefunden - Feature inaktiv.");
+                StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays.Apply: Patchziel DockingBaySharedAssets.EnterAmenity nicht gefunden - Feature inaktiv.");
                 return;
             }
 
-            var prefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(RewriteAmenityPrefix));
-            harmony.Patch(mi_OnAmenityEnter, prefix: prefix);
-            StarTruckMP.Log.LogInfo("311 ShopAtJobBoardBays.Apply: Harmony-Patch auf TruckAmenityTerminal.OnAmenityEnter registriert.");
+            var prefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPrefix));
+            harmony.Patch(mi, prefix: prefix);
+            StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c).");
         }
 
-        // ── Prefix: rewrite JobsBoard amenity events into Shop events ──
+        // ── Prefix: rewrite the JobsBoard dock amenity into a Shop amenity ──
 
-        private static readonly Dictionary<int, int> rewriteCounters = new Dictionary<int, int>();
+        private static int rewriteCount = 0;
 
         /// <summary>
-        /// Prefix vor TruckAmenityTerminal.OnAmenityEnter(sender, eventArgs).
-        /// Wenn das Event einen JobsBoard-Amenity traegt und wir als MP-Client verbunden
-        /// sind: amenity -> Shop umschreiben und die shopDescription der Station injizieren.
-        /// Wenn die Station keinen Shop hat: keine Aenderung (Bay verhaelt sich wie bisher).
+        /// Prefix vor DockingBaySharedAssets.EnterAmenity - DER Punkt, den die native
+        /// DockingCoroutine nach dem Dock-Cinematic aufruft. amenityType und shopDesc
+        /// werden per ref umgeschrieben, BEVOR der native Handler das AmenityEventArgs
+        /// baut und m_enterAmenityEvent feuert.
         /// </summary>
         // ReSharper disable once RedundantAssignment
-        public static void RewriteAmenityPrefix(object __0, object __1)
+        public static void EnterAmenityPrefix(
+            DockingBaySharedAssets __instance,
+            ref StationAmenity amenityType,
+            ref ShopDescription shopDesc)
         {
             try
             {
                 if (!ShouldRewrite()) return;
+                if (amenityType != StationAmenity.JobsBoard) return; // echte Bays unveraendert
 
-                var argsObj = __1 as Il2CppObjectBase;
-                if (argsObj == null) return;
-
-                // amenity aus den Args lesen (Feld, nicht Property - AmenityEventArgs.expose)
-                int amenity = ReadAmenityType(argsObj);
-                if (amenity != AmenityJobsBoard)
+                var bay = FindBayForSharedAssets(__instance);
+                if (bay == null)
                 {
-                    return; // echter Shop/Repairs/etc. oder unlesbar -> unveraendert durchlassen
-                }
-
-                // shopDescription der Station beschaffen:
-                // AmenityEventArgs.shopDescription kommt aus der Bay; aber die JobsBoard-
-                // Bay selbst hat keine ShopDescription. Wir brauchen also die Station.
-                // sender (=__0) ist der Trigger/Bay-Context - wir suchen die Station direkt
-                // ueber die Szene: Alle DockingBays, JobsBoard-amenityType, deren ParentStation.
-                Il2CppObjectBase shopDesc = null;
-                try
-                {
-                    // 1. Aus den Event-Args selbst (falls das Spiel sie setzt)
-                    var sdProp = argsObj.GetType().GetProperty("shopDescription", BindingFlags.Public | BindingFlags.Instance);
-                    var sdFromArgs = sdProp?.GetValue(argsObj) as Il2CppObjectBase;
-                    // 2. Falls vorhanden: sender-Kette (sender ist bei Dock-Events ein DockingBay
-                    //    bzw. DockingBaySharedAssets) fuer die ParentStation nutzen
-                    if (sdFromArgs == null && __0 is Il2CppObjectBase senderObj)
-                    {
-                        var stationObj = FindStationOfBay(senderObj);
-                        if (stationObj != null)
-                            shopDesc = FindStationShopDescription(stationObj);
-                        if (shopDesc == null)
-                            StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: Station/Shop-Gruppe nicht ermittelbar (sender=" + senderObj.GetType().Name + ").");
-                    }
-                    else if (sdFromArgs != null)
-                    {
-                        shopDesc = sdFromArgs;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays: ShopDescription-Suche fehlgeschlagen: {ex.Message}");
-                }
-
-                if (shopDesc == null)
-                {
-                    // Sauberer Fallback: Bay verhaelt sich wie bisher (= Jobboard via Dock).
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: keine ShopDescription verfuegbar - Bay bleibt Jobboard (Fallback).");
+                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: DockingBay fuer SharedAssets nicht gefunden - Bay bleibt Jobboard (Fallback).");
                     return;
                 }
 
-                // amenity -> Shop umschreiben (Feldzugriff, IL2CPP-Enum ist int-backing)
-                try
+                var station = bay.ParentStation;
+                if (station == null)
                 {
-                    var amenityField = argsObj.GetType().GetField("m_amenity",
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                        ?? argsObj.GetType().GetField("amenity",
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (amenityField == null)
-                    {
-                        StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: AmenityEventArgs.amenity-Feld nicht gefunden.");
-                        return;
-                    }
-                    amenityField.SetValue(argsObj, Enum.ToObject(amenityField.FieldType, AmenityShop));
-
-                    // shopDescription injizieren
-                    var sdProp2 = argsObj.GetType().GetProperty("shopDescription", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (sdProp2 != null && sdProp2.CanWrite)
-                    {
-                        sdProp2.SetValue(argsObj, shopDesc);
-                    }
-                    else
-                    {
-                        var sdField = argsObj.GetType().GetField("m_shopDescription",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (sdField != null)
-                        {
-                            sdField.SetValue(argsObj, shopDesc);
-                        }
-                        else
-                        {
-                            StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: shopDescription nicht schreibbar.");
-                            return;
-                        }
-                    }
-
-                    int cnt;
-                    rewriteCounters.TryGetValue(AmenityShop, out cnt);
-                    rewriteCounters[AmenityShop] = cnt + 1;
-                    StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock-Ereignis zu Shop umgeschrieben (#{cnt + 1}).");
+                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: DockingBay.ParentStation null - Bay bleibt Jobboard (Fallback).");
+                    return;
                 }
-                catch (Exception ex)
+
+                var stationShop = FindStationShopDescription(station);
+                if (stationShop == null)
                 {
-                    StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays: Umschreiben fehlgeschlagen: {ex.Message}");
+                    // Sauberer Fallback: Bay verhaelt sich wie bisher (= Jobboard via Dock).
+                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: keine ShopDescription an der Station verfuegbar - Bay bleibt Jobboard (Fallback).");
+                    return;
                 }
+
+                amenityType = StationAmenity.Shop;
+                shopDesc = stationShop;
+
+                rewriteCount++;
+                StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
             }
             catch (Exception ex)
             {
                 // Niemals crashen - im Zweifel laeuft der native Ablauf unveraendert.
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.RewriteAmenityPrefix Fehler: {ex}");
+                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.EnterAmenityPrefix Fehler: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Findet die DockingBay, deren m_sharedAssets == sharedAssets ist (311c).
+        /// DockingBay.m_sharedAssets ist eine public Property auf dem interop Proxy.
+        /// Wrapper-Identitaet kann pro Zugriff wechseln -> Pointer-Vergleich als
+        /// verlaesslicheres Kriterium zusaetzlich zu ReferenceEquals.
+        /// </summary>
+        private static DockingBay FindBayForSharedAssets(DockingBaySharedAssets shared)
+        {
+            if (shared == null) return null;
+            try
+            {
+                var bays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
+                foreach (var bay in bays)
+                {
+                    if (bay == null) continue;
+                    try
+                    {
+                        var sa = bay.m_sharedAssets;
+                        if (sa == null) continue;
+                        if (ReferenceEquals(sa, shared) || sa.Pointer == shared.Pointer) return bay;
+                    }
+                    catch { continue; }
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.FindBayForSharedAssets fehlgeschlagen: {ex.Message}");
+            }
+            return null;
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        // 311b: POI-Marker der JobsBoard-Bays auf Shop-Anzeige umschreiben
+        // (Einkaufskorb-Icon + Shopname) via native POI-Settings, kein Overlay.
+        // ════════════════════════════════════════════════════════════════════
+
+        private static bool poiApplied = false;
+
+        /// <summary>
+        /// Re writes the POI settings of all JobsBoard bays in the scene so the native
+        /// POI marker renderer shows the Shop icon + shop display name instead of the
+        /// job board clipboard + "Auftragsbörse".
+        ///
+        /// Called periodically from Plugin.Update (throttled by DockingBayHUD's refresh
+        /// cycle) and re-applies when a new sector loads.
+        /// </summary>
+        public static void ApplyShopPoiToJobsBoardBays()
+        {
+            if (!ShouldRewriteForAmenityDisplay()) return;
+            try
+            {
+                var allBays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
+                if (allBays == null || allBays.Length == 0) return;
+
+                int rewritten = 0, noPoi = 0, noShared = 0, noShopSettings = 0;
+                foreach (var bay in allBays)
+                {
+                    if (bay == null || bay.gameObject == null) continue;
+                    try
+                    {
+                        // JobsBoard-Bay-Klassifikation (shared with DockingBayHUD).
+                        if (!DockingBayAmenityUtil.IsJobsBoardBay(bay)) continue;
+
+                        // m_sharedAssets (DockingBaySharedAssets ScriptableObject) with
+                        // per-amenity POI settings (m_poiSettingsShop etc.).
+                        var shared = ReadSharedAssets(bay);
+                        if (shared == null)
+                        {
+                            noShared++;
+                            continue;
+                        }
+
+                        // 1) Native path: redirect the JobsBoard POI setting of this
+                        //    bay's shared assets to the Shop POI setting (basket icon),
+                        //    so any ConfigurePOI(…) call picks up Shop automatically.
+                        var shopSettings = shared.m_poiSettingsShop;
+                        if (shopSettings == null)
+                        {
+                            noShopSettings++;
+                            continue;
+                        }
+                        if (shared.m_poiSettingsJobsBoard != shopSettings)
+                        {
+                            shared.m_poiSettingsJobsBoard = shopSettings;
+                        }
+
+                        // 2) Live POI instance: m_dockingBayPOI (RegisterPointOfInterest)
+                        //    gets SetSettings(shopSettings) so the already-registered
+                        //    marker switches immediately (PointsOfInterest manager reads
+                        //    entry.settings each frame).
+                        var poi = bay.m_dockingBayPOI;
+                        if (poi != null)
+                        {
+                            poi.SetSettings(shopSettings);
+                            // Label: shop display name (native points-of-interest system
+                            // resolves this for display). shopDisplayName is the plain
+                            // display string of the station's shop.
+                            var shopDesc = bay.ShopDescription ?? FindShopDescriptionViaGroup(bay);
+                            if (shopDesc != null)
+                            {
+                                var dispName = shopDesc.shopDisplayName;
+                                if (!string.IsNullOrEmpty(dispName))
+                                {
+                                    poi.displayNameId = dispName;
+                                }
+                            }
+                            rewritten++;
+                        }
+                        else
+                        {
+                            noPoi++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        StarTruckMP.Log.LogWarning($"311b POI-Rewrite an '{bay.gameObject.name}' fehlgeschlagen: {ex.Message}");
+                    }
+                }
+
+                if (rewritten > 0 || noShared > 0 || noPoi > 0 || noShopSettings > 0)
+                {
+                    StarTruckMP.Log.LogInfo(
+                        $"311b POI-Rewrite: {rewritten} JobsBoard-Bays auf Shop-POI umgeschrieben " +
+                        $"(kein POI: {noPoi}, keine SharedAssets: {noShared}, keine Shop-Settings: {noShopSettings}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"311b ApplyShopPoiToJobsBoardBays Fehler: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Reads DockingBay.m_sharedAssets via the shared reflection helper
+        /// (native-first read). Returns null when unavailable.
+        /// </summary>
+        private static DockingBaySharedAssets ReadSharedAssets(DockingBay bay)
+        {
+            try
+            {
+                var m = DockingBayAmenityUtil.FindMember(bay.GetType(), "m_sharedAssets");
+                if (m == null) return null;
+                return DockingBayAmenityUtil.ReadIl2CppField(m, bay) as DockingBaySharedAssets;
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"311b ReadSharedAssets fehlgeschlagen: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Fallback ShopDescription lookup via the Station's Shop DockingBayGroup
+        /// when bay.ShopDescription is null (JobsBoard bays normally have none).
+        /// </summary>
+        private static ShopDescription FindShopDescriptionViaGroup(DockingBay bay)
+        {
+            try
+            {
+                var stationObj = bay.ParentStation;
+                if (stationObj == null) return null;
+                var m = DockingBayAmenityUtil.FindMember(stationObj.GetType(), "DockingBayGroups")
+                      ?? DockingBayAmenityUtil.FindMember(stationObj.GetType(), "m_dockingBayGroups");
+                if (m == null) return null;
+                var groups = DockingBayAmenityUtil.ReadIl2CppField(m, stationObj) as System.Collections.IEnumerable;
+                if (groups == null) return null;
+                foreach (var g in groups)
+                {
+                    var gObj = g as Il2CppObjectBase;
+                    if (gObj == null) continue;
+                    if (DockingBayAmenityUtil.ReadAmenityType(gObj) != AmenityTypes.Shop) continue;
+                    var gm = DockingBayAmenityUtil.FindMember(gObj.GetType(), "shopDescription");
+                    if (gm == null) continue;
+                    return DockingBayAmenityUtil.ReadIl2CppField(gm, gObj) as Il2CppObjectBase as ShopDescription;
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"311b FindShopDescriptionViaGroup fehlgeschlagen: {ex.Message}");
+            }
+            return null;
         }
     }
 }

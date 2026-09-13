@@ -53,7 +53,8 @@ namespace StarTruckMP.StarTruckClient
         private static bool groupReflectionSearched = false;
 
         // StationAmenity.JobsBoard == 1 (None=0). Only this bay type is the Auftragsboerse.
-        private static readonly int AmenityJobsBoard = 1;
+        // 311b: constant moved to shared AmenityTypes.cs (used by ShopAtJobBoardBays too).
+        private static readonly int AmenityJobsBoard = AmenityTypes.JobsBoard;
 
         /// <summary>
         /// Returns true if the DockingBay belongs to at least one DockingBayGroup whose
@@ -192,7 +193,17 @@ namespace StarTruckMP.StarTruckClient
 
         private static bool IsJobsBoard(DockingBay bay)
         {
+            // 311b: ShopAtJobBoardBays rewrites JobsBoard bays into Shops when the
+            // MP client is connected — the HUD must treat these bays as Shop bays
+            // then (no "Modified - Job Board (Jobs)" marker). Shared classification.
             if (bay == null) return false;
+            if (ShopAtJobBoardBays.ShouldRewriteForAmenityDisplay())
+            {
+                // Bays whose amenityType is JobsBoard are now shown as Shops:
+                // exclude them from the JobsBoard marker set.
+                if (DockingBayAmenityUtil.IsJobsBoardBay(bay)) return false;
+                return false; // rewritten bays are no longer JobsBoard for HUD purposes
+            }
             try
             {
                 // Direct property access on DockingBay — no nested reflection needed.
@@ -206,7 +217,7 @@ namespace StarTruckMP.StarTruckClient
                     if (val != null)
                     {
                         int amenityInt = System.Convert.ToInt32(val);
-                        return amenityInt == 1; // StationAmenity.JobsBoard
+                        return amenityInt == AmenityTypes.JobsBoard; // StationAmenity.JobsBoard
                     }
                 }
 
@@ -219,7 +230,7 @@ namespace StarTruckMP.StarTruckClient
                     if (val2 != null)
                     {
                         int amenityInt2 = System.Convert.ToInt32(val2);
-                        return amenityInt2 == 1;
+                        return amenityInt2 == AmenityTypes.JobsBoard;
                     }
                 }
 

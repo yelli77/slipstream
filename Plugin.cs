@@ -62,10 +62,20 @@ public class StarTruckMP : BasePlugin
     [HarmonyPatch]
     public class TruckClient
     {
+        private static float poiUpdateTimer = 0f;
+
         [HarmonyPatch(typeof(PauseController), nameof(Update), new Type[] { })]
         [HarmonyPostfix]
         public static void Update()
         {
+            // 311b: throttle POI rewrite — run at most every 5 s and only when
+            // connected; FindObjectsOfType<DockingBay>() is not free.
+            poiUpdateTimer -= Time.unscaledDeltaTime;
+            if (poiUpdateTimer <= 0f)
+            {
+                poiUpdateTimer = 5f;
+                StarTruckClient.ShopAtJobBoardBays.ApplyShopPoiToJobsBoardBays();
+            }
             StarTruckClient.StarTruckClient.Update();
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.CheckHonk();
