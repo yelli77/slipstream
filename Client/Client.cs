@@ -100,6 +100,8 @@ namespace StarTruckMP.StarTruckClient
             UpdateMapIndicators();
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
+            ChunkedBlobTransfer.Update();
+            ChunkedBlobTransfer.ReceiveMaintenance();
 
             if (pendingSectorRetry && client.IsConnected && Time.realtimeSinceStartup >= nextSectorRetryTime)
             {

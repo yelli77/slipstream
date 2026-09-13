@@ -100,6 +100,13 @@ public class MessageHandler
         msg.AddUShort(chunkIndex);
         msg.AddUShort(totalChunks);
         msg.AddBytes(chunkBytes);
+        // Diagnose (custom-build-324): 1x pro Transfer loggen, nicht pro Chunk - sonst
+        // spammen 106 Zeilen ins Server-Log und man sieht trotzdem nicht, wo ein Transfer
+        // haengt. chunkIndex==0 == erster Chunk dieses Transfers.
+        if (chunkIndex == 0)
+        {
+            Console.WriteLine($"[INFO] HandleJobBoardSync: relaying job blob from client {e.FromConnection.Id}: {totalChunks} chunks (transferId={transferId}, sector '{sector}')");
+        }
         server.SendToAll(msg, e.FromConnection.Id);
     }
 
