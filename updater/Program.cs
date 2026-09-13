@@ -11,7 +11,8 @@ namespace StarTruckMPUpdater
 {
     class Program
     {
-        const string VersionJsonUrl = "https://api.github.com/repos/yelli77/slipstream/contents/version.json";
+        const string VersionJsonUrl = "https://raw.githubusercontent.com/yelli77/slipstream/main/version.json";
+        const string VersionJsonApiFallback = "https://api.github.com/repos/yelli77/slipstream/contents/version.json";
         const string BootstrapZipUrl = "https://raw.githubusercontent.com/yelli77/slipstream/main/bootstrap/bepinex-bootstrap.zip";
         const string ConfigFileName = "updater-config.txt";
         const string LocalVersionFileName = "installed-build.txt";
@@ -544,13 +545,46 @@ namespace StarTruckMPUpdater
 
         static VersionInfo? FetchVersionInfo()
         {
-            using var http = new HttpClient();
-            http.DefaultRequestHeaders.Add("User-Agent", "StarTruckMPUpdater");
-            var apiJson = http.GetStringAsync(VersionJsonUrl).GetAwaiter().GetResult();
-            using var doc = System.Text.Json.JsonDocument.Parse(apiJson);
-            var content = doc.RootElement.GetProperty("content").GetString();
-            var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(content ?? ""));
-            return JsonSerializer.Deserialize<VersionInfo>(decoded, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // 1. Try raw (nur 5-Min CDN-Cache, kein API-Cache)
+            try
+            {
+                using var http = new HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "StarTruckMPUpdater");
+                var raw = http.GetStringAsync(VersionJsonUrl).GetAwaiter().GetResult();
+                var info = JsonSerializer.Deserialize<VersionInfo>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (info != null && !string.IsNullOrEmpty(info.build))
+                {
+                    Log($"VersionInfo von raw: {info.build}");
+                    return info;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"raw-version.json fehlgeschlagen: {ex.Message}");
+            }
+
+            // 2. Fallback: GitHub API (base64-kodiert)
+            try
+            {
+                using var http = new HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "StarTruckMPUpdater");
+                var apiJson = http.GetStringAsync(VersionJsonApiFallback).GetAwaiter().GetResult();
+                using var doc = System.Text.Json.JsonDocument.Parse(apiJson);
+                var content = doc.RootElement.GetProperty("content").GetString();
+                var decoded = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(content ?? ""));
+                var info = JsonSerializer.Deserialize<VersionInfo>(decoded, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (info != null && !string.IsNullOrEmpty(info.build))
+                {
+                    Log($"VersionInfo von API-Fallback: {info.build}");
+                    return info;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"api-version.json fehlgeschlagen: {ex.Message}");
+            }
+
+            return null;
         }
 
         static byte[] DownloadBytes(string url)

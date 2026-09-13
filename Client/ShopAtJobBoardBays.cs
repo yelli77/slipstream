@@ -171,13 +171,15 @@ namespace StarTruckMP.StarTruckClient
                             var ps = m.GetParameters();
                             var sig = string.Join(", ", Array.ConvertAll(ps, p => p.ParameterType.FullName));
                             StarTruckMP.Log.LogInfo($"313 EnterAmenity-Kandidat: {t.FullName}.{m.Name}({sig})");
-                            if (ps.Length != 5) continue;
+                            if (ps.Length < 5) continue;
+                            // 314: Accept 5+ params. Runtime has 6 (QuestInstance appended).
                             var isPrimary = ps[0].ParameterType.Name == "StationAmenity"
                                          && ps[2].ParameterType.Name == "ShopDescription";
                             if (isPrimary)
                             {
                                 mi = m;
-                                targetDesc = $"{t.Name}.{m.Name}(StationAmenity, {ps[1].ParameterType}, ShopDescription, {ps[3].ParameterType}, bool)";
+                                targetDesc = $"{t.Name}.{m.Name}(StationAmenity, {ps[1].ParameterType}, ShopDescription, {ps[3].ParameterType}, bool, ...)";
+                                StarTruckMP.Log.LogInfo($"314 Patch-Ziel gewaehlt: {t.FullName}.{m.Name} ({ps.Length} Parameter)");
                                 break;
                             }
                             fallbackCandidate ??= m;
@@ -219,15 +221,30 @@ namespace StarTruckMP.StarTruckClient
         /// baut und m_enterAmenityEvent feuert.
         /// </summary>
         // ReSharper disable once RedundantAssignment
+        // 314: __args approach to handle the runtime 6-param signature
+        // (EnterAmenity(StationAmenity, String, ShopDescription, ItemDeliveryDescription,
+        //  Boolean, QuestInstance)) without needing QuestInstance type at compile time.
         public static void EnterAmenityPrefix(
             DockingBaySharedAssets __instance,
-            ref StationAmenity amenityType,
-            ref ShopDescription shopDesc)
+            object[] __args)
         {
             try
             {
                 if (!ShouldRewrite()) return;
-                if (amenityType != StationAmenity.JobsBoard) return; // echte Bays unveraendert
+                if (__args == null || __args.Length < 5) return;
+
+                // __args[0]: StationAmenity amenityType (ref)
+                // __args[1]: string nameStringId
+                // __args[2]: ShopDescription shopDesc (ref)
+                // __args[3]: ItemDeliveryDescription deliveryDesc
+                // __args[4]: bool showScreenImmediately
+                // __args[5]: QuestInstance (runtime-only, may be absent)
+
+                // Check JobsBoard via Convert.ToInt32 (works with Il2Cpp enums in __args)
+                int amenityInt;
+                try { amenityInt = Convert.ToInt32(__args[0]); }
+                catch { return; }
+                if (amenityInt != (int)AmenityTypes.JobsBoard) return;
 
                 var bay = FindBayForSharedAssets(__instance);
                 if (bay == null)
@@ -251,8 +268,9 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
 
-                amenityType = StationAmenity.Shop;
-                shopDesc = stationShop;
+                // Write back ref parameters through __args
+                __args[0] = (StationAmenity)AmenityTypes.Shop;
+                __args[2] = stationShop;
 
                 rewriteCount++;
                 StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
@@ -406,13 +424,13 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// 313 POI-Text Plan-B: setzt den sichtbaren Label-Text des Live-Markers
-        /// direkt auf den Shop-Namen. Statisch verifizierte Struktur (ilspycmd):
-        ///   PointsOfInterest (MonoBehaviour, Feld 'entries' = List&lt;PointOfInterestEntry&gt;)
-        ///     -> PointOfInterestEntry.marker : PointOfInterestMarker
-        ///        -> PointOfInterestMarker._name/_label : TMPro.TextMeshProUGUI
-        ///        -> PointOfInterestMarker.set_displayName (public setter, Token 100665771).
-        /// Diag-Log '313b text:' zeigt Marker + Text vorher/nachher (BepInEx-Log).
+        /// 314: Setzt den sichtbaren Label-Text des Live-Markers direkt auf den
+        /// Shop-Namen. Sucht PointOfInterestMarker und TextMeshProUGUI ueber das
+        /// poi.gameObject ('Docking_BayPOI').
+        /// Statisch verifizierte Struktur (ilspycmd):
+        ///   PointOfInterestMarker._name/_label : TMPro.TextMeshProUGUI
+        ///   PointOfInterestMarker.set_displayName (public setter, Token 100665771).
+        /// Diag-Log '314b text:' zeigt Marker + TMP + Text vorher/nachher.
         /// </summary>
         private static bool SetLiveMarkerText(RegisterPointOfInterest poi, DockingBay bay, string newText)
         {
@@ -421,90 +439,42 @@ namespace StarTruckMP.StarTruckClient
                 if (poi == null || poi.gameObject == null) return false;
                 if (string.IsNullOrEmpty(newText)) newText = "Shop";
 
-                PointOfInterestMarker marker = null;
-                // Einstiegspunkt 1: PointsOfInterest.entries -> Entry per POI-Id matchen
-                // -> entry.marker (Pointer-Vergleich, Wrapper-Identitaet ist instabil).
-                var manager = UnityEngine.Object.FindObjectOfType<PointsOfInterest>();
-                if (manager != null)
+                // 314: Direct search over poi.gameObject hierarchy, skip
+                // PointsOfInterest.entries-Pointer-Match (scheitert bei vielen
+                // interlaced entries).
+                var markers = poi.gameObject.GetComponentsInChildren<PointOfInterestMarker>(true);
+                var marker = markers != null && markers.Length > 0 ? markers[0] : null;
+                var tmps = poi.gameObject.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
+                var label = tmps != null && tmps.Length > 0 ? tmps[0] : null;
+
+                if (marker == null && label == null)
                 {
-                    try
-                    {
-                        var entries = manager.entries;
-                        if (entries != null)
-                        {
-                            foreach (var e in entries)
-                            {
-                                if (e == null || e.marker == null) continue;
-                                try
-                                {
-                                    if (e.id != null && poi.id != null
-                                        && e.id.Pointer == poi.id.Pointer)
-                                    {
-                                        marker = e.marker;
-                                        break;
-                                    }
-                                }
-                                catch { continue; }
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        StarTruckMP.Log.LogWarning($"313b SetLiveMarkerText: entries-Scan fehlgeschlagen: {ex.Message}");
-                    }
-                }
-                if (marker == null)
-                {
-                    // Fallback: Marker als Component am/kinder des POI-GameObjects.
-                    try
-                    {
-                        var ms = poi.GetComponentsInChildren<PointOfInterestMarker>(true);
-                        if (ms != null && ms.Length > 0) marker = ms[0];
-                    }
-                    catch { }
-                }
-                if (marker == null)
-                {
-                    StarTruckMP.Log.LogWarning($"313b text: kein Live-Marker gefunden (poi={poi.gameObject?.name}) - Label bleibt 'Auftragsboerse'.");
+                    StarTruckMP.Log.LogWarning($"314b text: kein TMP/Marker an poi.GameObject ({poi.gameObject.name}) gefunden.");
                     return false;
                 }
 
-                string before = null;
-                TMPro.TextMeshProUGUI label = null;
-                try
-                {
-                    label = marker._name;
-                    if (label == null) label = marker._label;
-                    if (label != null) before = label.text;
-                }
-                catch { }
-                if (label == null)
-                {
-                    // Fallback: erster TMP am Marker-GameObject.
-                    try
-                    {
-                        var tmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-                        if (tmps != null && tmps.Length > 0) label = tmps[0];
-                        if (label != null) before = label.text;
-                    }
-                    catch { }
-                }
-                if (label == null)
-                {
-                    StarTruckMP.Log.LogWarning($"313b text: Marker '{marker.gameObject?.name}' gefunden, aber kein TMP-Label - Label bleibt unveraendert.");
-                    return false;
-                }
+                string before = label != null ? label.text : null;
 
-                label.text = newText;
+                if (label != null)
+                {
+                    label.text = newText;
+                }
                 // displayName-Setter ebenfalls rufen (native Text-Aktualisierung,
                 // Token 100665771) - falls Init den Text spaeter neu aufbaut.
-                try { marker.displayName = newText; } catch { }
-                StarTruckMP.Log.LogInfo($"313b text: Marker '{marker.gameObject?.name}' '{before}' -> '{newText}' (bay={bay.gameObject?.name}).");
+                if (marker != null)
+                {
+                    try { marker.displayName = newText; } catch { }
+                }
+
+                StarTruckMP.Log.LogInfo(
+                    $"314b text: marker={marker?.gameObject?.name ?? "null"}, " +
+                    $"tmp={label?.gameObject?.name ?? "null"}, " +
+                    $"text='{before}'->'{newText}'");
                 return true;
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"313b SetLiveMarkerText fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"314b SetLiveMarkerText fehlgeschlagen: {ex.Message}");
                 return false;
             }
         }
