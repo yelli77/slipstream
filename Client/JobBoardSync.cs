@@ -495,7 +495,7 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo($"JobBoardSync: native SystemSaveData-Felder aufgeloest (discField={_nativeDiscriminatorField}, valueField={_nativeValueField}, discOffset={IL2CPP.il2cpp_field_get_offset(_nativeDiscriminatorField)})");
         }
 
-        private static SystemSaveData CreateQuestSaveDataUnion(QuestSaveData questSave)
+        private unsafe static SystemSaveData CreateQuestSaveDataUnion(QuestSaveData questSave)
         {
             ResolveNativeSystemSaveDataFields();
 
