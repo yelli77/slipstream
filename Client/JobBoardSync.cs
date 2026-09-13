@@ -120,10 +120,34 @@ namespace StarTruckMP.StarTruckClient
                 // Syncs - unser eigener Stand ist die Quelle der Wahrheit.
                 if (IsAuthorityForCurrentSector()) return;
 
-                var jobs = DeserializeJobs(blob);
+                // Build-321: NullReferenceException-Quelle eingegrenzt - im Sektorwechsel-
+                // Fenster koennen DeserializeJobs oder der questSave-Cast NREs werfen
+                // (IL2CPP-Objekte, deren Managed-Wrapper waehrend des Sektor-Teardown
+                // bereits invalidiert sind). Jeder dieser Schritte ist einzeln guarded:
+                // ein defekter Blob wird VERWORFEN (kein Crash, keine Halbwelt-State),
+                // der naechste Sync-Broadcast vom Autoritaets-Client ersetzt ihn.
+                Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData> jobs = null;
+                try
+                {
+                    jobs = DeserializeJobs(blob);
+                }
+                catch (Exception desEx)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: DeserializeJobs fehlgeschlagen (Sektor '{sector}', {blob?.Length ?? 0} bytes) - Blob verworfen, warte auf naechsten Sync: {desEx.Message}");
+                    return;
+                }
 
-                var questSave = new QuestSaveData();
-                questSave.availableJobs = jobs.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+                QuestSaveData questSave;
+                try
+                {
+                    questSave = new QuestSaveData();
+                    questSave.availableJobs = jobs.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+                }
+                catch (Exception castEx)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: QuestSaveData-Cast fehlgeschlagen (Sektor '{sector}') - Sync verworfen: {castEx.Message}");
+                    return;
+                }
 
                 // QuestTracker kann beim Empfaenger im Sync-Moment noch nicht ready sein
                 // (Ready-Flag hinkt der lokalen Generierung hinterher). Frueher wurde der
@@ -138,7 +162,17 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
 
-                ApplyRestore(sector, questSave);
+                try
+                {
+                    ApplyRestore(sector, questSave);
+                }
+                catch (Exception applyEx)
+                {
+                    // ApplyRestore toucht QuestTracker (Il2Cpp) - im Sektorwechsel-Fenster
+                    // kann das NREn. Verwerfen statt Crash; OnLocalJobsGenerated des
+                    // Autoritaets-Clients broadcastet erneut.
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: ApplyRestore fehlgeschlagen (Sektor '{sector}') - verworfen: {applyEx.Message}");
+                }
             }
             catch (Exception ex)
             {

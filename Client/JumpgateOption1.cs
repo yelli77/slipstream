@@ -57,9 +57,13 @@ namespace StarTruckMP.StarTruckClient
 
         /// <summary>
         /// Find a suitable source TextMeshProUGUI to clone from the scene.
+        /// Fail-safe against the black-box bug (build-321): a TMP clone whose
+        /// template had no usable font asset/material renders as a black box.
+        /// Prefer templates that carry a live font; log what we picked.
         /// </summary>
         private static TMPro.TextMeshProUGUI FindSourceTMP()
         {
+            TMPro.TextMeshProUGUI fallback = null;
             try
             {
                 var allTMP = UnityEngine.Object.FindObjectsOfType<TMPro.TextMeshProUGUI>();
@@ -67,11 +71,18 @@ namespace StarTruckMP.StarTruckClient
                 foreach (var tmp in allTMP)
                 {
                     if (tmp != null && !string.IsNullOrEmpty(tmp.text) && tmp.gameObject.scene.IsValid())
-                        return tmp;
+                    {
+                        bool hasFont = false;
+                        try { hasFont = tmp.font != null; } catch { }
+                        if (hasFont) return tmp;           // best candidate: text + live font
+                        fallback ??= tmp;                   // keep as last resort
+                    }
                 }
             }
             catch { }
-            return null;
+            if (fallback != null)
+                StarTruckMP.Log.LogWarning("JumpgateOption1: only a font-less TMP template available — board rendering may be unreliable (no font/material).");
+            return fallback;
         }
 
         /// <summary>
@@ -526,6 +537,26 @@ namespace StarTruckMP.StarTruckClient
 
             // ── IL2CPP clone gotchas: fix them in the right order ──
 
+            // 0. Fail-safe (build-321): a clone without ANY usable font asset/material
+            //    renders as a black box in Purity (post-sector-change, URP). Rather than
+            //    shipping a visibly broken board, bail out cleanly — no board at all.
+            //    UpdatePositions will retry on the next tick with a fresh template.
+            try
+            {
+                if (tmp.font == null || sourceTMP.font == null)
+                {
+                    StarTruckMP.Log.LogWarning($"JumpgateOption1: clone for gate '{entryGateId}' has no usable font (clone.font={(tmp.font != null ? tmp.font.name : "null")}, template.font={(sourceTMP.font != null ? sourceTMP.font.name : "null")}) — refusing to create a black-box board.");
+                    UnityEngine.Object.Destroy(canvasObj);
+                    return null;
+                }
+            }
+            catch (Exception fsEx)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateOption1: font fail-safe check failed for gate '{entryGateId}': {fsEx.Message}");
+                UnityEngine.Object.Destroy(canvasObj);
+                return null;
+            }
+
             // 1. Disable auto-sizing BEFORE setting fontSize (IL2CPP quirk)
             try { tmp.enableAutoSizing = false; } catch { }
 
@@ -540,7 +571,29 @@ namespace StarTruckMP.StarTruckClient
                 if (sourceTMP.fontMaterial != null)
                     tmp.fontMaterial = sourceTMP.fontMaterial;
             }
-            catch { }
+            catch (Exception rebindEx)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateOption1: font/material re-bind failed for gate '{entryGateId}': {rebindEx.Message}");
+            }
+
+            // 2b. Last-resort fallback: if the template carried no font, grab any loaded
+            //     TMP_FontAsset from memory so we never end up with a missing-font clone.
+            try
+            {
+                if (tmp.font == null)
+                {
+                    var fonts = UnityEngine.Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>();
+                    if (fonts != null && fonts.Length > 0 && fonts[0] != null)
+                    {
+                        tmp.font = fonts[0];
+                        StarTruckMP.Log.LogWarning($"JumpgateOption1: font fallback used for gate '{entryGateId}' (FontAsset '{fonts[0].name}').");
+                    }
+                }
+            }
+            catch (Exception ffEx)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateOption1: font-asset fallback failed for gate '{entryGateId}': {ffEx.Message}");
+            }
 
             // 3. Set fontSize (must be AFTER disabling auto-sizing)
             tmp.fontSize = FontSizeValue;
@@ -566,6 +619,17 @@ namespace StarTruckMP.StarTruckClient
             //    on the near-black background panel.
             tmp.color = new UnityEngine.Color(1f, 1f, 1f, 0.8f);
 
+            // 5b. Alpha re-assert (NOTES_WORLDSPACE_UI): Instantiate() preserves whatever
+            //     alpha state the source happened to have — a 0-alpha clone is invisible.
+            try
+            {
+                var cr = tmpObj.GetComponent<CanvasRenderer>();
+                if (cr != null) cr.SetAlpha(1f);
+                var cg = tmpObj.GetComponent<UnityEngine.CanvasGroup>();
+                if (cg != null) { cg.alpha = 1f; cg.blocksRaycasts = false; }
+            }
+            catch { }
+
             // 6. Re-assert active state
             tmpObj.SetActive(true);
 
@@ -580,6 +644,25 @@ namespace StarTruckMP.StarTruckClient
 
             // 10. Force canvas update
             try { Canvas.ForceUpdateCanvases(); } catch { }
+
+            // 11. Diagnostic logging (build-321): make the next test unambiguous — log
+            //     font/material/autosizing/alpha state at creation so a black box can be
+            //     traced to its exact cause from the client log alone.
+            try
+            {
+                string fontName = tmp.font != null ? tmp.font.name : "NULL";
+                string matName = "NULL";
+                try { matName = tmp.fontSharedMaterial != null ? tmp.fontSharedMaterial.name : "NULL"; } catch { }
+                string crAlpha = "n/a";
+                try { crAlpha = tmpObj.GetComponent<CanvasRenderer>() != null ? tmpObj.GetComponent<CanvasRenderer>().GetAlpha().ToString("F2") : "no-CR"; } catch { }
+                bool canvasEnabled = canvas != null && canvas.enabled;
+                bool tmpEnabled = tmp.enabled;
+                StarTruckMP.Log.LogInfo($"JumpgateOption1: board render-state for gate '{entryGateId}': font='{fontName}', material='{matName}', autoSizing={tmp.enableAutoSizing}, fontSize={tmp.fontSize}, canvas.enabled={canvasEnabled}, tmp.enabled={tmpEnabled}, go.active={tmpObj.activeSelf}, canvasRenderer.alpha={crAlpha}");
+            }
+            catch (Exception diagEx)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateOption1: render-state diagnostics failed for gate '{entryGateId}': {diagEx.Message}");
+            }
 
             StarTruckMP.Log.LogInfo($"JumpgateOption1: board created for gate '{entryGateId}' at ({signPos.x:F0},{signPos.y:F0},{signPos.z:F0}) with {entries.Count} player(s).");
 
