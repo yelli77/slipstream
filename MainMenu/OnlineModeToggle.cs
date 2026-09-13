@@ -368,6 +368,11 @@ namespace StarTruckMP.MainMenu
                 StarTruckMP.Log.LogInfo("OnlineModeToggle: Klick ignoriert (Version vom Server abgelehnt, Slipstream muss aktualisiert werden).");
                 return;
             }
+            if (SC.serverFullRejected)
+            {
+                StarTruckMP.Log.LogInfo($"OnlineModeToggle: Klick ignoriert ({SC.serverFullMessage}).");
+                return;
+            }
 
             float now = Time.realtimeSinceStartup;
             if (now - lastToggleTime < ToggleCooldownSeconds)

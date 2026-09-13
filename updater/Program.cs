@@ -171,6 +171,13 @@ namespace StarTruckMPUpdater
             try
             {
                 Log($"Lade {remote.build} herunter...");
+                if (string.IsNullOrWhiteSpace(remote.url))
+                {
+                    Log("Fehler: url-Feld in version.json ist leer.");
+                    ShowError("Update fehlgeschlagen: Die Download-URL in version.json ist leer.
+Bitte Slipstream manuell neu installieren.");
+                    return 1;
+                }
                 byte[] gz = DownloadBytes(remote.url);
 
                 Log("Entpacke...");
@@ -587,8 +594,20 @@ namespace StarTruckMPUpdater
             return null;
         }
 
+        const string GitHubRawBase = "https://raw.githubusercontent.com/yelli77/slipstream/main/";
+
         static byte[] DownloadBytes(string url)
         {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new InvalidOperationException("Download-URL ist leer. Bitte Slipstream-Update erneut ausloesen.");
+
+            // Relative URL aus version.json robust aufloesen
+            if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+            {
+                url = GitHubRawBase + url.TrimStart('/');
+                Log($"Relative URL aufgelost zu: {url}");
+            }
+
             using var http = new HttpClient();
             http.Timeout = TimeSpan.FromMinutes(5);
             http.DefaultRequestHeaders.Add("User-Agent", "StarTruckMPUpdater");
