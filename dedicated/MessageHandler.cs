@@ -46,6 +46,7 @@ public class MessageHandler
             case MessageType.ClientVersion: HandleClientVersion(e, server); break;
             case MessageType.JobBoardSync: HandleJobBoardSync(e, server); break;
             case MessageType.CargoSync: HandleCargoSync(e, server); break;
+            case MessageType.JobBoardIdents: HandleJobBoardIdents(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -133,6 +134,21 @@ public class MessageHandler
         msg.AddUShort(totalChunks);
         msg.AddBytes(chunkBytes);
         server.SendToAll(msg, e.FromConnection.Id);
+    }
+
+    // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast - nur Strings (questId|displayName),
+    // kein Blob/Chunking. Reiner Relay wie HandleJobBoardSync.
+    private void HandleJobBoardIdents(MessageReceivedEventArgs e, Riptide.Server server)
+    {
+        string sector = e.Message.GetString();
+        ushort count = e.Message.GetUShort();
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardIdents);
+        msg.AddString(sector);
+        msg.AddUShort(e.FromConnection.Id);
+        msg.AddUShort(count);
+        for (ushort i = 0; i < count; i++) msg.AddString(e.Message.GetString());
+        server.SendToAll(msg, e.FromConnection.Id);
+        Console.WriteLine($"[INFO] HandleJobBoardIdents: relaying {count} job idents from client {e.FromConnection.Id} (sector '{sector}')");
     }
 
     private void HandleMovement(MessageReceivedEventArgs e, Riptide.Server server)

@@ -17,5 +17,10 @@ public enum MessageType : ushort
     LinkStatus = 12,
     ClientVersion = 13,
     JobBoardSync = 14,
-    CargoSync = 15
+    CargoSync = 15,
+    // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast (questId|displayName Strings).
+    // ACHTUNG: Client-seitig (Encoding/Utilities.cs messageType) liegen setDestinationGate=16
+    // und multiTrailerMovementUpdate=17 dazwischen (Legacy-Eintraege, Server-ohne-Handler) -
+    // jobBoardIdents ist dort 18. Server-ID MUSS 18 sein, nicht 16!
+    JobBoardIdents = 18
 }

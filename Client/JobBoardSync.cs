@@ -638,6 +638,9 @@ namespace StarTruckMP.StarTruckClient
         {
             try { JobBoardSync.OnLocalJobsGenerated(); }
             catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix Fehler: {ex.Message}"); }
+            // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast - unabhaengig vom Blob-Sync.
+            try { JobBoardIdSync.OnLocalJobsGenerated(); }
+            catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix (IdSync) Fehler: {ex.Message}"); }
         }
     }
 }
