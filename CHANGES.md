@@ -1,3 +1,18 @@
+## Neu in custom-build-331: SystemSaveData-Union manuell aufbauen (Discriminator-Fix)
+
+- Root Cause: Der managed Union-CTor `new SystemSaveData(questSave)` ruft zwar den nativen
+  Union-CTor via runtime_invoke, das Spiel-side Union-Objekt behielt aber Discriminator=0
+  (NONE). Der native FlatSharp-Pfad crashte dann in `GetMaxSizeOf(SystemSaveData)` mit
+  `Exception determining type of union. Discriminator = 0`.
+- Dekompiliert: SystemSaveData-Union besteht aus genau zwei Feldern: `<Discriminator>k__BackingField`
+  (byte) und `value` (Il2CppSystem.Object). Die Interop-Wrapper `_Discriminator_k__BackingField`
+  und `value` schreiben beide direkt per Feld-Offset (byte) bzw. `il2cpp_gc_wbarrier_set_field`
+  (Referenz) — ohne runtime_invoke, also ohne den CTor-Pfad, der Discriminator nicht setzte.
+- FIX: `CreateQuestSaveDataUnion()` — `new SystemSaveData()` (Default-CTor), dann
+  `_Discriminator_k__BackingField = 12` (ItemKind.QuestSaveData) und `value = questSave`;
+  Readback-Log + Guard-Throw, falls der Discriminator-Write nicht haengt.
+- Diagnose-Zeile im Log: `JobBoardSync: SystemSaveData-Union manuell: disc=12 (erwartet 12), value=gesetzt`.
+
 ## Neu in custom-build-330: Datei-basierter Roundtrip-Trigger (Env-Var kam nicht durch)
 
 - Root Cause: Der Slipstream-Updater startet das Spiel primaer via `steam://run/2380050`
