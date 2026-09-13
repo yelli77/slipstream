@@ -625,6 +625,18 @@ namespace StarTruckMP.StarTruckClient
                             // the correct position from the first movementUpdate.
                             if (currentPlayer.Truck == null)
                             {
+                                // Build 319 (Michael): Kein Spawn aus einer Zero/NaN-Position
+                                // (Join-Race: playerConnected/clientJoin ohne echte Position).
+                                // Warten auf die erste echte movementUpdate-Position — die
+                                // spawnt den Neuling dann exakt an seiner Netzwerk-Position.
+                                if (playerPos.sqrMagnitude < 1f ||
+                                    float.IsNaN(playerPos.x) || float.IsNaN(playerPos.y) || float.IsNaN(playerPos.z))
+                                {
+                                    StarTruckMP.Log.LogWarning($"movementUpdate: REFUSED deferred spawn for player {playerId} — zero/NaN position");
+                                    playerList[playerId] = currentPlayer;
+                                }
+                                else
+                                {
                                 // Throttle retries during sector transitions: createPlayer may
                                 // return a fallback (Truck=null) when [Sector]/myTruck are null.
                                 float lastTry;
@@ -688,6 +700,7 @@ namespace StarTruckMP.StarTruckClient
                                 }
                                 SnapRemotePlayerToLocal(playerId, currentPlayer);
                                 } // end else (Truck != null)
+                                } // end zero/NaN position guard
                                 } // end else (cooldown)
                             }
                             // Store target for smooth truck interpolation (no hard snap)
@@ -1361,7 +1374,11 @@ namespace StarTruckMP.StarTruckClient
                 // DEFER: playerConnected sends no position data, so truckTrans.Pos
                 // defaults to zero. Don't spawn at origin - the first movementUpdate
                 // will create the truck at the correct position instead.
-                if (clientInfo.truckTrans.Pos.sqrMagnitude < 1f)
+                // Build 319 (Michael): Guard verschaerft — auch NaN abfangen. Kein Spawn
+                // mit unvollstaendigen Join-Daten; die erste echte movementUpdate-Position
+                // spawnt den Neuling exakt.
+                if (clientInfo.truckTrans.Pos.sqrMagnitude < 1f ||
+                    float.IsNaN(clientInfo.truckTrans.Pos.x) || float.IsNaN(clientInfo.truckTrans.Pos.y) || float.IsNaN(clientInfo.truckTrans.Pos.z))
                 {
                     StarTruckMP.Log.LogInfo($"RemoveFromSector: deferring spawn for player {clientId} - position not yet received (pos={clientInfo.truckTrans.Pos})");
                     return;
@@ -1405,6 +1422,17 @@ namespace StarTruckMP.StarTruckClient
         private static void SnapRemotePlayerToLocal(ushort id, playerInfo p)
         {
             if (floatingOrigin == null) return;
+            // Build 319 (Michael: Join-Exaktheit): KEIN Snap mit (0,0,0) oder NaN —
+            // der 318er-Test zeigte 'SnapRemotePlayerToLocal[2]: abs=(0,0,0)' (Join-Race:
+            // playerConnected traegt keine Position). Ohne echte Position ist Snappen
+            // falsch; der Spawn/Snap passiert stattdessen mit der ersten echten
+            // movementUpdate-Position.
+            if (p.truckTrans.Pos == Vector3.zero ||
+                float.IsNaN(p.truckTrans.Pos.x) || float.IsNaN(p.truckTrans.Pos.y) || float.IsNaN(p.truckTrans.Pos.z))
+            {
+                StarTruckMP.Log.LogWarning($"SnapRemotePlayerToLocal[{id}]: REFUSED — position is zero/NaN (no real movementUpdate received yet)");
+                return;
+            }
             if (p.Truck != null)
             {
                 Vector3 localPos = p.truckTrans.Pos - floatingOrigin.m_currentOrigin;
@@ -1476,6 +1504,19 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[{kv.Key}]: hard snap, errorDist={trailerErrDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetLocal}");
                     continue;
                 }
+                // Build 320: Sustained drift (analog SmoothTruckMovement) — kein bleibender Offset.
+                rp.driftTimer += Time.deltaTime;
+                if (rp.driftTimer > SustainedDriftTime)
+                {
+                    rp.Trailer.transform.position = targetLocal;
+                    rp.Trailer.transform.rotation = Quaternion.Euler(rp.trailerTargetRot);
+                    rp.trailerSmoothVel = Vector3.zero;
+                    playerList[kv.Key] = rp;
+                    StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[{kv.Key}]: sustained-drift snap, errorDist={trailerErrDist:F1}m persistiert > {SustainedDriftTime}s, targetLocal={targetLocal}");
+                    continue;
+                }
+                // Timer nur zurücksetzen, wenn der Fehler klein ist; sonst weiterticken.
+                if (trailerErrDist < SustainedDriftError) rp.driftTimer = 0f;
                 rp.Trailer.transform.position = Vector3.SmoothDamp(
                     rp.Trailer.transform.position,
                     targetLocal,
@@ -1505,6 +1546,11 @@ namespace StarTruckMP.StarTruckClient
         // Der velocity-cap (TruckMaxCorrection) liess den Truck minutenlang crawlen —
         // ab diesem Fehler-Abstand hart snappen statt smooth korrigieren.
         private static readonly float TruckSnapThreshold = 250f;     // meters; above = hard snap
+        // Build 320: Steady-State-Exaktheit. Fehler > 50m, der > 1.5s persistiert, ist kein
+        // Netzwerk-Jitter mehr (der loest sich in ~0.1-0.2s auf) — dann snappen wir hart, damit
+        // keine bleibende Offset-Abweichung entstehen kann.
+        private static readonly float SustainedDriftError = 50f;     // meters
+        private static readonly float SustainedDriftTime = 1.5f;     // seconds
         private static readonly float MaxVelocity = 40f;              // hard clamp: max linear velocity (m/s)
         private static readonly float MaxAngularVelocity = 10f;       // hard clamp: max angular velocity (rad/s)
         private static readonly float ReadyCorrectionK = 2.5f;        // moderate K after grace period (before first contact)
@@ -1535,6 +1581,32 @@ namespace StarTruckMP.StarTruckClient
                     rb.angularVelocity = rp.truckTrans.AngVel;
                     playerList[kv.Key] = rp;
                     StarTruckMP.Log.LogInfo($"SmoothTruckMovement[{kv.Key}]: hard snap, errorDist={errorDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetPos}");
+                    rp.driftTimer = 0f;
+                    continue;
+                }
+
+                // Build 320 (Michael: "das muss immer exakt richtig sein die position"):
+                // Der velocity-add-Pfad garantiert keine Konvergenz — der Truck kann dauerhaft
+                // mit Restfehler daneben hängen (siehe 318er-Log: kleine bis wachsende Offsets).
+                // Guard: bleibt der Fehler > SustainedDriftError über SustainedDriftTime, liegt
+                // kein transienter Netzwerk-Jitter vor → Snap setzt die Position exakt auf
+                // abs - origin. Nach dem Snap ist der Fehler definitionsgemäß 0 und wird im
+                // nächsten Frame direkt wieder mit der frischen Netzwerk-Position neu angesetzt.
+                if (errorDist > SustainedDriftError)
+                    rp.driftTimer += Time.deltaTime;
+                else
+                    rp.driftTimer = 0f;
+                if (rp.driftTimer > SustainedDriftTime)
+                {
+                    rp.Truck.transform.position = targetPos;
+                    rp.Truck.transform.eulerAngles = rp.truckTargetRot;
+                    rb.position = targetPos;
+                    rb.rotation = Quaternion.Euler(rp.truckTargetRot);
+                    rb.velocity = rp.truckTrans.Vel;
+                    rb.angularVelocity = rp.truckTrans.AngVel;
+                    rp.driftTimer = 0f;
+                    playerList[kv.Key] = rp;
+                    StarTruckMP.Log.LogInfo($"SmoothTruckMovement[{kv.Key}]: sustained-drift snap, errorDist={errorDist:F1}m persistiert > {SustainedDriftTime}s, targetLocal={targetPos}");
                     continue;
                 }
                 if (errorDist > TruckMaxCorrection)

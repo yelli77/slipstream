@@ -51,6 +51,8 @@ namespace StarTruckMP.Utilities
         public bool isColliding;
         public bool collisionReady;
         public string destinationGateId;
+        // Build 320: Sustained-drift tracking — wie lange der Renderfehler schon > SustainedDriftError liegt.
+        public float driftTimer;
     }
 
     public struct movementTrans
