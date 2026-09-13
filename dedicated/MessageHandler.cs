@@ -142,8 +142,13 @@ public class MessageHandler
             if(inSeat){p.PlayerPosition=pos;p.PlayerRotation=rot;p.PlayerVelocity=vel;p.PlayerAngularVelocity=ang;}}
         else{p.PlayerPosition=pos;p.PlayerRotation=rot;p.PlayerVelocity=vel;p.PlayerAngularVelocity=ang;}
         p.InTruck=isTruck;p.Seated=inSeat;p.LastUpdate=DateTime.UtcNow;
+        bool gateChanged = p.DestinationGateId != destGate;
         p.DestinationGateId=destGate;
         _players[e.FromConnection.Id]=p;
+        if (gateChanged)
+        {
+            Console.WriteLine($"[INFO] HandleMovement: player {e.FromConnection.Id} destGate '{p.DestinationGateId}' -> '{destGate}'");
+        }
         server.SendToAll(ServerMessages.CreateMovement(e.FromConnection.Id,pos,rot,vel,ang,isTruck,inSeat,isHonking,destGate));
     }
 

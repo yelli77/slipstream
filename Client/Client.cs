@@ -16,6 +16,14 @@ namespace StarTruckMP.StarTruckClient
         public static Dictionary<ushort, playerInfo> playerList = new Dictionary<ushort, playerInfo>();
         public static string currentSector = "none";
         public static string currentDestinationGateId = "";
+
+        // BUG 1 (Name-Race) Fix: SetPlayerName-Broadcast kann ankommen, BEVOR der
+        // Empfänger den Spieler über clientJoin/playerConnected/movementUpdate in
+        // seiner playerList hat — der Name wurde dann still verworfen und das
+        //movementUpdate-Registration fiel spaeter auf den Placeholder 'Player_N'
+        // zurueck. Spaet ankommende Namen werden hier gepuffert und beim (spaeteren)
+        // Registrieren des Spielers angewendet.
+        public static readonly Dictionary<ushort, string> pendingNames = new Dictionary<ushort, string>();
         public static movementTrans playerTrans = new movementTrans();
         public static movementTrans truckTrans = new movementTrans();
         public static movementTrans trailerTrans = new movementTrans();
@@ -463,7 +471,14 @@ namespace StarTruckMP.StarTruckClient
                         newPlayer.Trailers = new Dictionary<long, GameObject>();
                         newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                         newPlayer.sector = sector;
-                        newPlayer.Name = remoteName;
+                        // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
+                        if (pendingNames.TryGetValue(id, out string pendingJoinName) && !string.IsNullOrEmpty(pendingJoinName))
+                        {
+                            newPlayer.Name = pendingJoinName;
+                            pendingNames.Remove(id);
+                            StarTruckMP.Log.LogInfo($"clientJoin: applied buffered name '{pendingJoinName}' for player {id}");
+                        }
+                        else newPlayer.Name = remoteName;
                         newPlayer.destinationGateId = remoteDestGate;
                         JumpgateOption1.ForceRefresh();
                         forceStateResend = true;
@@ -489,7 +504,14 @@ namespace StarTruckMP.StarTruckClient
                     newPlayer.Trailers = new Dictionary<long, GameObject>();
                     newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                     newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
-                    newPlayer.Name = remoteName;
+                    // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
+                    if (pendingNames.TryGetValue(id, out string pendingConnName) && !string.IsNullOrEmpty(pendingConnName))
+                    {
+                        newPlayer.Name = pendingConnName;
+                        pendingNames.Remove(id);
+                        StarTruckMP.Log.LogInfo($"playerConnected: applied buffered name '{pendingConnName}' for player {id}");
+                    }
+                    else newPlayer.Name = remoteName;
                     playerList.Add(id, newPlayer);
                     forceStateResend = true;
                 }
@@ -544,7 +566,16 @@ namespace StarTruckMP.StarTruckClient
                         currentPlayer.Trailers = new Dictionary<long, GameObject>();
                         currentPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                         currentPlayer.sector = currentSector;
-                        currentPlayer.Name = $"Player_{playerId}";
+                        // Bug 1: echten Namen aus pendingNames bevorzugen — der Placeholder
+                        // 'Player_N' wurde sonst dauerhaft angezeigt, wenn das Name-Broadcast
+                        // vor der Registrierung ankam und verworfen wurde.
+                        if (pendingNames.TryGetValue(playerId, out string pendingMvName) && !string.IsNullOrEmpty(pendingMvName))
+                        {
+                            currentPlayer.Name = pendingMvName;
+                            pendingNames.Remove(playerId);
+                            StarTruckMP.Log.LogInfo($"movementUpdate: applied buffered name '{pendingMvName}' for player {playerId}");
+                        }
+                        else currentPlayer.Name = $"Player_{playerId}";
                         currentPlayer.destinationGateId = remoteDestGate;
                         currentPlayer.truckTrans.Pos = playerPos;
                         currentPlayer.truckTrans.Rot = playerRot;
@@ -832,7 +863,14 @@ namespace StarTruckMP.StarTruckClient
                 if (namePlayerId != client.Id)
                 {
                     playerInfo currentPlayer;
-                    if (playerList.TryGetValue(namePlayerId, out currentPlayer))
+                    if (!playerList.TryGetValue(namePlayerId, out currentPlayer))
+                    {
+                        // Name-Race: Spieler noch nicht registriert — Name puffern,
+                        // statt ihn zu verwerfen (Fix fuer "Player_1" statt Steam-Name).
+                        pendingNames[namePlayerId] = newName;
+                        StarTruckMP.Log.LogInfo($"Player {namePlayerId} name '{newName}' buffered (player not yet registered)");
+                    }
+                    else
                     {
                         currentPlayer.Name = newName;
                         if (currentPlayer.NameLabel != null)
@@ -861,6 +899,7 @@ namespace StarTruckMP.StarTruckClient
                 if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
                 if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
                 playerList.Remove(clientId);
+                pendingNames.Remove(clientId);
             }
 
             if (e.MessageId == (ushort)messageType.updateSector)

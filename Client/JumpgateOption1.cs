@@ -128,6 +128,8 @@ namespace StarTruckMP.StarTruckClient
                     string entryId = JumpgateUtils.GetEntryGateIdForZone(zone);
 
                     // Find all players heading to this gate
+                    // (entryId bleibt als Anzeige-Label unnormalisiert, Boards-Dict-Key
+                    // wird unten unveraendert gefuehrt — Normalisierung nur im Vergleich)
                     var playerEntries = CollectPlayersForGate(entryId, zone.transform.position);
 
                     // Create the board (always — show FREE when no players)
@@ -156,12 +158,24 @@ namespace StarTruckMP.StarTruckClient
             var entries = new List<PlayerEntry>();
 
             // Remote players
+            string wantGate = JumpgateUtils.NormalizeGateId(entryGateId);
+            int candidates = 0, matched = 0;
             try
             {
                 foreach (var kv in StarTruckClient.playerList)
                 {
                     var p = kv.Value;
-                    if (p.destinationGateId != entryGateId) continue;
+                    candidates++;
+                    // Bug 2: exakter String-Vergleich scheiterte, wenn Sender und Board
+                    // unterschiedliche Gate-ID-Formate verwenden (entry vs. exit zone,
+                    // GameObject-Name vs. entryGateId). Vergleich ueber den kanonischen
+                    // Klammer-Kern ('03_Alpha') statt des rohen Strings.
+                    if (JumpgateUtils.NormalizeGateId(p.destinationGateId) != wantGate)
+                    {
+                        StarTruckMP.Log.LogInfo($"JumpgateOption1: gate mismatch — board '{entryGateId}' (norm '{wantGate}') vs player {kv.Key} destGate '{p.destinationGateId}' (norm '{JumpgateUtils.NormalizeGateId(p.destinationGateId)}')");
+                        continue;
+                    }
+                    matched++;
 
                     // p.truckTrans.Pos is the network-synced ABSOLUTE position (origin + local),
                     // while gateWorldPos is the local/recentered scene position — convert to the
@@ -182,12 +196,13 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"JumpgateOption1: playerList iteration error: {ex.Message}");
             }
+            StarTruckMP.Log.LogInfo($"JumpgateOption1: CollectPlayersForGate('{entryGateId}' -> norm '{JumpgateUtils.NormalizeGateId(entryGateId)}'): candidates={candidates}, matched={matched}");
 
             // Local player
             try
             {
                 if (!string.IsNullOrEmpty(StarTruckClient.currentDestinationGateId)
-                    && StarTruckClient.currentDestinationGateId == entryGateId
+                    && JumpgateUtils.NormalizeGateId(StarTruckClient.currentDestinationGateId) == JumpgateUtils.NormalizeGateId(entryGateId)
                     && StarTruckClient.myTruck != null)
                 {
                     // NOTE: gateWorldPos (zone.transform.position) is already in the local/

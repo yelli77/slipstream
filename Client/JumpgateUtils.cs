@@ -34,6 +34,27 @@ namespace StarTruckMP.StarTruckClient
             return "";
         }
 
+        /// <summary>
+        /// Bug 2 (Boards zeigen nur eigenen Namen): Gate-IDs werden an zwei Stellen
+        /// gewonnen — (a) Board-Seite: GetEntryGateIdForZone(zone) liefert z.B.
+        /// 'WarpGate [03_Alpha]' (Fallback: GameObject-Name), (b) Sender-Seite:
+        /// DetectDestinationGates liefert die ID der Ziel-Gate-Zone. Format/Frame
+        /// koennen abweichen (entry vs. exit, "(Clone)"-Suffix, Namensvarianz), sodass
+        /// der string-Vergleich in CollectPlayersForGate nie matcht. Kanonisierung:
+        /// der Inhalt der eckigen Klammer (z.B. '03_Alpha') ist der stabile Kern.
+        /// </summary>
+        public static string NormalizeGateId(string gateId)
+        {
+            if (string.IsNullOrEmpty(gateId)) return "";
+            string id = gateId.Trim();
+            int ci = id.IndexOf("(Clone)");
+            if (ci > 0) id = id.Substring(0, ci).Trim();
+            int o = id.IndexOf('[');
+            int c = id.IndexOf(']');
+            if (o >= 0 && c > o) id = id.Substring(o + 1, c - o - 1).Trim();
+            return id;
+        }
+
         public static SectorEntryPoint FindEntryPoint(GameObject go)
         {
             if (go == null) return null;
