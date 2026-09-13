@@ -286,14 +286,6 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"Verbindung vom Server abgelehnt: {reason}");
                 }
             }
-            else if (e.Reason == DisconnectReason.ServerFull)
-            {
-                serverFullRejected = true;
-                serverFullMessage = "Server ist voll — zu viele Spieler";
-                StarTruckMP.Log.LogWarning("Server ist voll: maximale Spieleranzahl erreicht.");
-                // Status-Overlay aktualisieren, damit die Meldung sichtbar bleibt
-                ShowServerFullOverlay();
-            }
 
             foreach (var player in playerList.Values)
             {
@@ -409,10 +401,17 @@ namespace StarTruckMP.StarTruckClient
 
         public static void Client_ConnectionFailed(object sender, ConnectionFailedEventArgs e)
         {
-            StarTruckMP.Log.LogInfo($"Connection Failed");
-            StarTruckMP.Log.LogWarning("Verbindung fehlgeschlagen — moeglicherweise Server voll (Fallback-Meldung).");
+            StarTruckMP.Log.LogInfo($"Connection Failed (Reason: {e.Reason})");
             isConnecting = false;
             ArmReconnectCooldown();
+
+            if (e.Reason == RejectReason.ServerFull)
+            {
+                serverFullRejected = true;
+                serverFullMessage = "Server ist voll — zu viele Spieler";
+                StarTruckMP.Log.LogWarning("Server ist voll: maximale Spieleranzahl erreicht.");
+                ShowServerFullOverlay();
+            }
         }
 
         /// <summary>
