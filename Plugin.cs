@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-333";
+    public const string customBuildNumber = "custom-build-334";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -69,6 +69,8 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
         global::StarTruckMP.StarTruckClient.ShopAtJobBoardBays.Apply();
+        // Build-334-Diagnose: beweist, dass der IdSync-Postfix wirklich applied ist.
+        StarTruckMP.Log.LogInfo("Harmony: JobBoardSyncPatches applied (Postfix auf ProceduralJobGenerator.GenerateJobsForAllSectors -> JobBoardIdSync.OnLocalJobsGenerated)");
 
     }
 

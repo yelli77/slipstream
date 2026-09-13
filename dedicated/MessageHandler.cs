@@ -140,11 +140,13 @@ public class MessageHandler
     // kein Blob/Chunking. Reiner Relay wie HandleJobBoardSync.
     private void HandleJobBoardIdents(MessageReceivedEventArgs e, Riptide.Server server)
     {
+        // Build-334: Client-Format ist [sector][count][idents...]. Das Relay muss
+        // EXAKT dasselbe Format wieder auspacken (333: hier wurde fromId zwischen
+        // sector und count gepackt => Empfänger las fromId als count => Parse tot).
         string sector = e.Message.GetString();
         ushort count = e.Message.GetUShort();
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardIdents);
         msg.AddString(sector);
-        msg.AddUShort(e.FromConnection.Id);
         msg.AddUShort(count);
         for (ushort i = 0; i < count; i++) msg.AddString(e.Message.GetString());
         server.SendToAll(msg, e.FromConnection.Id);
