@@ -1,3 +1,14 @@
+## Neu in custom-build-322: Departure-Board — TMP.enabled Re-Assert beim Klonen
+
+- Ursache eingegrenzt: Die ZWEITE Board-Generation nach Sektorwechsel klonite ein Template-TMP,
+  dessen Komponente zwischen Generation 1 und 2 von irgendwas (Rebuild-Pfad, andere Mods, Culling
+  im verlassenen Sektor) disabled wurde — Instantiate() kopiert den enabled-Zustand mit, der Klon
+  war also geboren disabled => schwarzer Kasten (Diag-Log: alles OK ausser tmp.enabled=False).
+- Fix (a): tmp.enabled=true FORCIERT direkt nach jedem Klon, symmetrisch zu alpha/canvas.
+- Fix (b): Template-Kandidaten mit disabled TMP werden nicht geklont (wie font-loses Template).
+- Fix (c): Eigene Board-TMPs (DepartureText / root DepartureBoard_*) werden nie als Template
+  benutzt — Boards koennen sich nicht mehr selbst als Quelle klonen.
+
 ## Neu in custom-build-308: Cleanup
 
 - Diagnose-Dumps entfernt (Cockpit-Experimente 300-303), Jobboard-Funktion unveraendert.

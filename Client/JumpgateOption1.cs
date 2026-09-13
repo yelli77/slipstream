@@ -72,6 +72,17 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (tmp != null && !string.IsNullOrEmpty(tmp.text) && tmp.gameObject.scene.IsValid())
                     {
+                        // build-322: never clone a TMP whose component is disabled —
+                        // Instantiate copies the enabled state, producing an invisible
+                        // black-box board. Also skip our own departure-board TMPs so a
+                        // board can never become the template for another board.
+                        bool enabled = false;
+                        try { enabled = tmp.enabled; } catch { }
+                        if (!enabled) continue;
+                        bool ownBoard = false;
+                        try { ownBoard = tmp.gameObject.name == "DepartureText" || tmp.transform.root.name.StartsWith("DepartureBoard_"); } catch { }
+                        if (ownBoard) continue;
+
                         bool hasFont = false;
                         try { hasFont = tmp.font != null; } catch { }
                         if (hasFont) return tmp;           // best candidate: text + live font
@@ -535,17 +546,36 @@ namespace StarTruckMP.StarTruckClient
                 return null;
             }
 
+            // 0-pre (build-322): IL2CPP Instantiate preserves the template's enabled state.
+            //     If anything disabled the template TMP between generation rounds (our own
+            //     rebuild path, other mods, or the game culling UIs in the departed sector),
+            //     the clone would be born disabled => invisible text => black box. Force
+            //     enabled=true unconditionally, symmetric to the alpha/canvas re-asserts.
+            try
+            {
+                if (!tmp.enabled)
+                {
+                    StarTruckMP.Log.LogWarning($"JumpgateOption1: clone for gate '{entryGateId}' inherited tmp.enabled=false from template — forcing enabled=true (build-322).");
+                    tmp.enabled = true;
+                }
+            }
+            catch (Exception enEx)
+            {
+                StarTruckMP.Log.LogWarning($"JumpgateOption1: tmp.enabled re-assert failed for gate '{entryGateId}': {enEx.Message}");
+            }
+
             // ── IL2CPP clone gotchas: fix them in the right order ──
 
             // 0. Fail-safe (build-321): a clone without ANY usable font asset/material
             //    renders as a black box in Purity (post-sector-change, URP). Rather than
             //    shipping a visibly broken board, bail out cleanly — no board at all.
             //    UpdatePositions will retry on the next tick with a fresh template.
+            //    (build-322): same for a template whose TMP is disabled — don't clone it.
             try
             {
-                if (tmp.font == null || sourceTMP.font == null)
+                if (tmp.font == null || sourceTMP.font == null || !sourceTMP.enabled)
                 {
-                    StarTruckMP.Log.LogWarning($"JumpgateOption1: clone for gate '{entryGateId}' has no usable font (clone.font={(tmp.font != null ? tmp.font.name : "null")}, template.font={(sourceTMP.font != null ? sourceTMP.font.name : "null")}) — refusing to create a black-box board.");
+                    StarTruckMP.Log.LogWarning($"JumpgateOption1: clone for gate '{entryGateId}' has no usable font (clone.font={(tmp.font != null ? tmp.font.name : "null")}, template.font={(sourceTMP.font != null ? sourceTMP.font.name : "null")}, template.enabled={sourceTMP.enabled}) — refusing to create a black-box board.");
                     UnityEngine.Object.Destroy(canvasObj);
                     return null;
                 }
