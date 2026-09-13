@@ -321,7 +321,7 @@ namespace StarTruckMP.StarTruckClient
                 // 313: Sektor-Gate - der Rewrite muss nur laufen, wenn ein neuer Sektor
                 // geladen wurde (Bays werden pro Sektor neu erzeugt). Vorher lief der
                 // Pfad alle 5 s (Log-Spam) und setzte zudem Text-Updates regelmaessig neu.
-                var sector = StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
+                var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
                 if (string.IsNullOrEmpty(sector) || sector == "none") return;
                 if (sector == lastPoiSector) return;
                 lastPoiSector = sector;
@@ -379,7 +379,7 @@ namespace StarTruckMP.StarTruckClient
                         // weiterhin 'Auftragsborse'. Bewiesener Pfad (statisch verifiziert
                         // via ilspycmd -t PointOfInterestMarker): PointsOfInterest.entries
                         // -> PointOfInterestEntry.marker (PointOfInterestMarker) ->
-                        // marker._name/_label (TextMeshProUGUI) + setter displayName
+                        // marker._name/_label (TMPro.TextMeshProUGUI) + setter displayName
                         // (Token 100665771). Den Live-Marker-Text direkt setzen.
                         var shopDesc = bay.ShopDescription ?? FindShopDescriptionViaGroup(bay);
                         var dispName = shopDesc?.shopDisplayName;
@@ -410,7 +410,7 @@ namespace StarTruckMP.StarTruckClient
         /// direkt auf den Shop-Namen. Statisch verifizierte Struktur (ilspycmd):
         ///   PointsOfInterest (MonoBehaviour, Feld 'entries' = List&lt;PointOfInterestEntry&gt;)
         ///     -> PointOfInterestEntry.marker : PointOfInterestMarker
-        ///        -> PointOfInterestMarker._name/_label : TextMeshProUGUI
+        ///        -> PointOfInterestMarker._name/_label : TMPro.TextMeshProUGUI
         ///        -> PointOfInterestMarker.set_displayName (public setter, Token 100665771).
         /// Diag-Log '313b text:' zeigt Marker + Text vorher/nachher (BepInEx-Log).
         /// </summary>
@@ -470,7 +470,7 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 string before = null;
-                TextMeshProUGUI label = null;
+                TMPro.TextMeshProUGUI label = null;
                 try
                 {
                     label = marker._name;
@@ -483,7 +483,7 @@ namespace StarTruckMP.StarTruckClient
                     // Fallback: erster TMP am Marker-GameObject.
                     try
                     {
-                        var tmps = marker.GetComponentsInChildren<TextMeshProUGUI>(true);
+                        var tmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
                         if (tmps != null && tmps.Length > 0) label = tmps[0];
                         if (label != null) before = label.text;
                     }
