@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Riptide;
 using StarTruckMP.Utilities;
 using HarmonyLib;
@@ -455,23 +456,6 @@ namespace StarTruckMP.StarTruckClient
             return _ssSerializer;
         }
 
-        private static FlatSharp.ISerializer<SystemSaveData> _ssdSerializer = null;
-        private static bool _ssdSerializerResolved = false;
-
-        private static FlatSharp.ISerializer<SystemSaveData> GetSystemSaveDataSerializer()
-        {
-            if (!_ssdSerializerResolved)
-            {
-                _ssdSerializer = SystemSaveData.Serializer;
-                _ssdSerializerResolved = true;
-                if (_ssdSerializer == null)
-                    StarTruckMP.Log.LogWarning("JobBoardSync: SystemSaveData.Serializer ist NULL - Union-Pfad unmoeglich.");
-                else
-                    StarTruckMP.Log.LogInfo($"JobBoardSync: SystemSaveData.Serializer aufgeloest ({_ssdSerializer.GetType().Name}).");
-            }
-            return _ssdSerializer;
-        }
-
         // SERIALISIEREN (Sender): QuestSaveData -> SaveSlotContainer -> native FlatSharp-Bytes.
         private static byte[] SerializeQuestSaveDataNative(QuestSaveData questSave, out int jobCount)
         {
@@ -487,8 +471,9 @@ namespace StarTruckMP.StarTruckClient
             container.content = new Il2CppSystem.Nullable<SystemSaveData>(ssd);
 
             var ssc = new SaveSlotContainer();
-            ssc.containers = new Il2CppSystem.Collections.Generic.List<SaveContainer>().Cast<Il2CppSystem.Collections.Generic.IList<SaveContainer>>();
-            ssc.containers.Add(container);
+            var containerList = new Il2CppSystem.Collections.Generic.List<SaveContainer>();
+            ssc.containers = containerList.Cast<Il2CppSystem.Collections.Generic.IList<SaveContainer>>();
+            containerList.Add(container);
             ssc.metadata = new SaveSlotMetadata();
 
             // GetMaxSize -> Puffer -> Write (nativ, via ISerializer<T>-Extension Write<T>)
@@ -507,7 +492,9 @@ namespace StarTruckMP.StarTruckClient
             using var w = new BinaryWriter(ms);
             w.Write(WIRE_FORMAT_V2);
             w.Write(written);
-            w.Write(new ArraySegment<byte>(buf.Array, 0, written).Array, 0, written);
+            var outBytes = new byte[written];
+            for (int i = 0; i < written; i++) outBytes[i] = buf[i];
+            w.Write(outBytes, 0, written);
             return ms.ToArray();
         }
 
