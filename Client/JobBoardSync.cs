@@ -456,6 +456,29 @@ namespace StarTruckMP.StarTruckClient
             return _ssSerializer;
         }
 
+        // Build-331: Managed Union-CTor 'new SystemSaveData(questSave)' liess den Discriminator
+        // auf 0 (NONE) -> GetMaxSize crashte mit 'Exception determining type of union.
+        // Discriminator = 0'. Fix: Union manuell aufbauen ueber die nativen Feld-Wrapper:
+        //   _Discriminator_k__BackingField (byte, direkter Offset-Write im Interop-Code)
+        //   value (Il2CppSystem.Object, il2cpp_gc_wbarrier_set_field im Interop-Code)
+        // Beide Setter sind reine Feldschreibungen (keine runtime_invoke), der native
+        // GetMaxSizeOf(SystemSaveData) liest genau diese beiden Felder.
+        private const byte UNION_ITEM_KIND_QUESTSAVEDATA = 12;
+
+        private static SystemSaveData CreateQuestSaveDataUnion(QuestSaveData questSave)
+        {
+            var ssd = new SystemSaveData(); // Default-CTor, keine Union-Zuweisung
+            ssd._Discriminator_k__BackingField = UNION_ITEM_KIND_QUESTSAVEDATA;
+            ssd.value = questSave; // native Feld-Wrapper (wbarrier), setzt den Union-Value direkt
+
+            byte disc = ssd._Discriminator_k__BackingField;
+            var valObj = ssd.value;
+            StarTruckMP.Log.LogInfo($"JobBoardSync: SystemSaveData-Union manuell: disc={disc} (erwartet {UNION_ITEM_KIND_QUESTSAVEDATA}), value={(valObj != null ? "gesetzt" : "NULL")}");
+            if (disc != UNION_ITEM_KIND_QUESTSAVEDATA)
+                throw new InvalidOperationException($"SystemSaveData-Discriminator-Write fehlgeschlagen (disc={disc})");
+            return ssd;
+        }
+
         // SERIALISIEREN (Sender): QuestSaveData -> SaveSlotContainer -> native FlatSharp-Bytes.
         private static byte[] SerializeQuestSaveDataNative(QuestSaveData questSave, out int jobCount)
         {
@@ -467,7 +490,7 @@ namespace StarTruckMP.StarTruckClient
             // Container mit key="mp_jobs" + content=SystemSaveData(Union idx 12 = QuestSaveData)
             var container = new SaveContainer();
             container.key = "mp_jobs";
-            var ssd = new SystemSaveData(questSave);
+            var ssd = CreateQuestSaveDataUnion(questSave);
             container.content = new Il2CppSystem.Nullable<SystemSaveData>(ssd);
 
             var ssc = new SaveSlotContainer();
