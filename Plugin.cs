@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-310";
+    public const string customBuildNumber = "custom-build-313";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -55,16 +55,27 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
+        global::StarTruckMP.StarTruckClient.ShopAtJobBoardBays.Apply();
 
     }
 
     [HarmonyPatch]
     public class TruckClient
     {
+        private static float poiUpdateTimer = 0f;
+
         [HarmonyPatch(typeof(PauseController), nameof(Update), new Type[] { })]
         [HarmonyPostfix]
         public static void Update()
         {
+            // 311b: throttle POI rewrite — run at most every 5 s and only when
+            // connected; FindObjectsOfType<DockingBay>() is not free.
+            poiUpdateTimer -= Time.unscaledDeltaTime;
+            if (poiUpdateTimer <= 0f)
+            {
+                poiUpdateTimer = 5f;
+                StarTruckClient.ShopAtJobBoardBays.ApplyShopPoiToJobsBoardBays();
+            }
             StarTruckClient.StarTruckClient.Update();
             StarTruckClient.StarTruckClient.FixedUpdate();
             StarTruckClient.StarTruckClient.CheckHonk();
