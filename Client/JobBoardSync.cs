@@ -198,20 +198,12 @@ namespace StarTruckMP.StarTruckClient
             return lowest == myId;
         }
 
-        // Build-323: Retry-Queue fuer ApplyRestore-Fehler (QuestTaskParameter.GenerateSector
-        // NREt, wenn ein Sektor-Parameter auf einen (noch) nicht geladenen Sektor verweist).
-        // - Generisch fuer ALLE Sektoren (keine Whitelist/Blacklist): Es wird nur geprueft,
-        //   ob die Sektor-Metadaten des aktuellen Sektors abrufbar sind; ein noch nicht
-        //   geladener Sektor loest sich auf, sobald das Spiel ihn laedt.
-        // - JOB-WEISES Apply ist mit dem Spiel-Pfad NICHT moeglich: QuestTracker.RestoreAvailableJobs
-        //   nimmt nur das ganze QuestSaveData (All-or-Nothing) - deshalb statt dessen Retry +
-        //   Diagnose-Log mit Job-Ids, um den problematischen Job zu identifizieren.
-        // - Max. MAX_RETRY_ATTEMPTS Versuche im Abstand RETRY_INTERVAL Sekunden; danach wird
-        //   der Blob endgueltig verworfen (Diagnose-Log mit Job-Ids).
-        // - Ein neuer Sync-Broadcast fuer denselben Sektor ersetzt den gepufferten (immer
-        //   der aktuellste Stand gewinnt).
-        // Wird ueber Client.FixedUpdate() -> TryApplyPending() nachgezogen.
-        private const int MAX_RETRY_ATTEMPTS = 10;
+        // Build-325: Retry-Queue fuer ApplyRestore-Fehler - obsolet geworden durch das
+        // JOB-WEISE Apply mit try/catch pro Job (ApplyJobsOneByOne): Ein unauflösbarer
+        // Parameter/JOB bricht nicht mehr alles ab, es gibt keinen All-or-Nothing-Fehler
+        // mehr, der einen Retry erfordert. Struktur bleibt (EnqueueRetry ist ab jetzt
+        // ein No-Op, falls HandleIncoming doch mal eine Exception wirft - z.B. Il2Cpp-
+        // Teardown-Fenster), TryApplyPending raumt leerstaende Entries sofort ab.
         private const float RETRY_INTERVAL = 2f;
 
         private class PendingRestore
@@ -227,15 +219,11 @@ namespace StarTruckMP.StarTruckClient
 
         private static void EnqueueRetry(string sector, QuestSaveData questSave, string error)
         {
-            // Neuer Broadcast fuer denselben Sektor ersetzt den alten gepufferten Stand.
-            if (pendingRestore != null && pendingRestore.sector == sector)
-            {
-                pendingRestore.jobs = questSave;
-                pendingRestore.attempts = 0;
-                pendingRestore.lastError = error;
-                pendingRestore.nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL;
-                return;
-            }
+            // Build-325: only kept as a safety net for HandleIncoming-level exceptions
+            // (Il2Cpp-Teardown windows). The per-job apply path cannot throw for one bad
+            // job anymore, so a retry is almost always pointless - TryApplyPending
+            // discards pending entries after a single failed attempt instead of
+            // re-trying 10x with an error that can never heal.
             pendingRestore = new PendingRestore
             {
                 sector = sector,
@@ -244,15 +232,98 @@ namespace StarTruckMP.StarTruckClient
                 nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL,
                 lastError = error,
             };
-            StarTruckMP.Log.LogInfo($"JobBoardSync: Retry-Queue fuer Sektor '{sector}' eingerichtet (max {MAX_RETRY_ATTEMPTS} Versuche alle {RETRY_INTERVAL:0}s).");
+            StarTruckMP.Log.LogInfo($"JobBoardSync: Retry-Entry fuer Sektor '{sector}' angelegt (1 Veruchs-Window von {RETRY_INTERVAL:0}s).");
         }
 
         private static void ApplyRestore(string sector, QuestSaveData questSave)
         {
             if (sector != StarTruckClient.currentSector) return;
             if (IsAuthorityForCurrentSector()) return;
-            QuestTracker.Get()?.RestoreAvailableJobs(questSave);
-            StarTruckMP.Log.LogInfo($"JobBoardSync: Jobs fuer Sektor '{sector}' uebernommen ({(questSave.availableJobs != null ? Il2CppCount(questSave.availableJobs) : 0)}).");
+            int applied = ApplyJobsOneByOne(questSave);
+            // Post-Check: lehnt RestoreAvailableJobs mit 1-Job-Blob nur AN statt ANZUHAENGEN,
+            // landet hier nur der letzte Job auf dem Board - das Test-Log zeigt es sofort.
+            try
+            {
+                var board = ProceduralJobGenerator.GetAvailableJobs();
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Board-Count nach ApplyRestore: {(board != null ? board.Count : -1)} (applied={applied}).");
+            }
+            catch { /* Diagnose darf nicht toeten */ }
+            StarTruckMP.Log.LogInfo($"JobBoardSync: Jobs fuer Sektor '{sector}' uebernommen ({applied}).");
+        }
+
+        // Build-325: RestoreAvailableJobs ist All-or-Nothing - ein einzelner Job, dessen
+        // Parameter im Spiel-Code nicht aufgeloest werden koennen (QuestTaskParameter.
+        // GenerateSector NREt z.B. auf fehlender Sektor-Registry bei Sektor-Params ohne
+        // value), killt damit ALLE 62 Jobs. Deshalb: job-weise ueber QuestTracker.
+        // ConvertQuestSaveDataToInstances anwenden - genau derselbe Pfad wie im Spiel -
+        // aber mit try/catch PRO JOB. Ein unauflösbarer Job wird uebersprungen (Log mit
+        // Diagnose), alle restlichen Jobs werden synchronisiert.
+        private static int ApplyJobsOneByOne(QuestSaveData questSave)
+        {
+            var jobs = questSave?.availableJobs;
+            if (jobs == null) return 0;
+
+            int applied = 0;
+            int skipped = 0;
+            int count = Il2CppCount(jobs);
+            for (int i = 0; i < count; i++)
+            {
+                var job = jobs[i];
+                var single = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>();
+                single.Add(job);
+                var singleSave = new QuestSaveData();
+                singleSave.availableJobs = single.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+                try
+                {
+                    QuestTracker.Get()?.RestoreAvailableJobs(singleSave);
+                    applied++;
+                }
+                catch (Exception jobEx)
+                {
+                    skipped++;
+                    string diag = DescribeSingleJob(job);
+                    StarTruckMP.Log.LogWarning($"JobBoardSync: Job {i + 1}/{count} '{job.id}' uebersprungen (Param nicht auflösbar): {jobEx.Message} | {diag}");
+                }
+            }
+            if (skipped > 0)
+                StarTruckMP.Log.LogWarning($"JobBoardSync: {skipped}/{count} Jobs konnten nicht restoriert und wurden uebersprungen ({applied} uebernommen).");
+            return applied;
+        }
+
+        // Build-325: Diagnose fuer EINEN Job - ALLE Parameter-Namen mit Kind und value
+        // loggen. Vorgaenger DescribeJobs zeigte fuer jeden Job '[]', weil nur
+        // sectorId-Parameter mit name+value aufgeschluesselt wurden; aus einem leeren
+        // Output konnte man nicht ablesen, ob die Parameter-Liste wirklich leer war oder
+        // nur keine sectorId-Parameter enthielt (oder sectorId ohne sectorId.value).
+        private static string DescribeSingleJob(QuestInstanceSaveData job)
+        {
+            try
+            {
+                var pars = job?.generatedParameters;
+                if (pars == null) return "generatedParameters=null";
+                int pc = Il2CppCount(pars);
+                var parts = new List<string>();
+                for (int p = 0; p < pc && p < 12; p++)
+                {
+                    var par = pars[p];
+                    string detail = par.Kind.ToString();
+                    // fuer die haeufigsten GenerateSector-Kandidaten auch die Werte zeigen
+                    if (par.Kind == QuestTaskParameterSaveData.ItemKind.sectorId && par.sectorId != null)
+                        detail = $"sectorId name='{par.sectorId.name}' value='{par.sectorId.value}'";
+                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.identifier && par.identifier != null)
+                        detail = $"identifier name='{par.identifier.name}' value='{par.identifier.value}'";
+                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.stringValue && par.stringValue != null)
+                        detail = $"stringValue name='{par.stringValue.name}' value='{par.stringValue.value}'";
+                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.intValue && par.intValue != null)
+                        detail = $"intValue name='{par.intValue.name}' value={par.intValue.value}";
+                    parts.Add(detail);
+                }
+                return $"params={pc}[{string.Join(", ", parts)}]";
+            }
+            catch (Exception ex)
+            {
+                return $"(DescribeSingleJob fehlgeschlagen: {ex.Message})";
+            }
         }
 
         public static void TryApplyPending()
@@ -288,55 +359,18 @@ namespace StarTruckMP.StarTruckClient
             catch (Exception retryEx)
             {
                 pending.lastError = retryEx.Message;
-                if (pending.attempts >= MAX_RETRY_ATTEMPTS)
-                {
-                    StarTruckMP.Log.LogWarning($"JobBoardSync: Retry ENDGUELTIG fehlgeschlagen (Sektor '{pending.sector}' nach {pending.attempts} Versuchen) - Blob verworfen. Letzter Fehler: {retryEx.Message}. Diagnose: {DescribeJobs(pending.jobs)}");
-                    pendingRestore = null;
-                    return;
-                }
-                pending.nextTryTime = Time.realtimeSinceStartup + RETRY_INTERVAL;
-                StarTruckMP.Log.LogInfo($"JobBoardSync: Retry {pending.attempts}/{MAX_RETRY_ATTEMPTS} fuer Sektor '{pending.sector}' fehlgeschlagen ({retryEx.Message}) - naechster Versuch in {RETRY_INTERVAL:0}s.");
+                // Build-325: Der per-Job-Apply kann fuer einen bad Job nicht mehr werfen -
+                // kommt es hier an, ist es ein struktureller Fehler (Teardown-Fenster o.ae.),
+                // der sich durch 10x Wiederholen nicht heilt. Sofort verwerfen.
+                StarTruckMP.Log.LogWarning($"JobBoardSync: Retry verworfen (Sektor '{pending.sector}', Versuch {pending.attempts}) - struktureller Fehler, Wiederholung sinnlos: {retryEx.Message}");
+                pendingRestore = null;
             }
         }
 
-        // Diagnose: Job-Ids + Parameter-Namen des gepufferten Standes loggen, damit der
-        // problematische Job/Parameter (QuestTaskParameter.GenerateSector) identifiziert
-        // werden kann, auch wenn das Spiel nur All-or-Nothing-Restore anbietet.
-        private static string DescribeJobs(QuestSaveData questSave)
-        {
-            try
-            {
-                var jobs = questSave?.availableJobs;
-                if (jobs == null) return "availableJobs=null";
-                var ids = new List<string>();
-                int count = Il2CppCount(jobs);
-                for (int i = 0; i < count && i < 20; i++)
-                {
-                    var job = jobs[i];
-                    var paramNames = new List<string>();
-                    var pars = job.generatedParameters;
-                    if (pars != null)
-                    {
-                        int pc = Il2CppCount(pars);
-                        for (int p = 0; p < pc && p < 10; p++)
-                        {
-                            var par = pars[p];
-                            // Nur Sektor-/Route-Parameter nennen - das sind die Kandidaten
-                            // fuer GenerateSector-NREs (Sektoren, die der Empfaenger noch
-                            // nie geladen hat).
-                            if (par.Kind == QuestTaskParameterSaveData.ItemKind.sectorId && par.sectorId != null)
-                                paramNames.Add($"sectorId:{par.sectorId.name}={par.sectorId.value}");
-                        }
-                    }
-                    ids.Add($"{job.id}[{string.Join(",", paramNames)}]");
-                }
-                return $"jobs={count}: {string.Join("; ", ids)}";
-            }
-            catch (Exception ex)
-            {
-                return $"(DescribeJobs fehlgeschlagen: {ex.Message})";
-            }
-        }
+        // Build-325: das alte All-jobs-DescribeJobs (das fuer jeden Job '[]' zeigte, weil
+        // es nur sectorId-Parameter mit Werten aufschluesselte) ist ersetzt durch
+        // DescribeSingleJob - pro Job ALLE Parameter mit Kind+Werten, nur noch im
+        // Fehlerfall eines einzelnen Jobs geloggt.
 
         // ---- Serialisierung (eigenes Blob-Format, unabhaengig von Riptide-Feld-API) ----
         // Spiegelt QuestInstanceSaveData / QuestTaskParameterSaveData - dasselbe Format, das
