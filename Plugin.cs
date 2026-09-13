@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-311";
+    public const string customBuildNumber = "custom-build-312";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
