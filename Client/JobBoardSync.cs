@@ -483,7 +483,7 @@ namespace StarTruckMP.StarTruckClient
                 _qtpsdFieldValue = IL2CPP.GetIl2CppField(classPtr, "value");
                 if (_qtpsdFieldDiscriminator == System.IntPtr.Zero)
                     throw new InvalidOperationException("Discriminator-Feld nicht gefunden");
-                _qtpsdOffsetDiscriminator = IL2CPP.il2cpp_field_get_offset(_qtpsdFieldDiscriminator);
+                _qtpsdOffsetDiscriminator = (int)IL2CPP.il2cpp_field_get_offset(_qtpsdFieldDiscriminator);
                 _qtpsdFieldsResolved = true;
                 StarTruckMP.Log.LogInfo($"JobBoardSync: Discriminator-Feld-Offset = {_qtpsdOffsetDiscriminator}");
             }
@@ -721,7 +721,7 @@ namespace StarTruckMP.StarTruckClient
                 var sb = new System.Text.StringBuilder("raw[");
                 for (int i = 0; i < dumpLen; i++)
                 {
-                    sb.Append(*((byte*)objPtr + i).ToString("X2"));
+                    sb.Append((*((byte*)objPtr + i)).ToString("X2"));
                     if (i < dumpLen - 1) sb.Append(' ');
                 }
                 sb.Append($"] kindReadback={p.Kind}");
