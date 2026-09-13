@@ -456,26 +456,72 @@ namespace StarTruckMP.StarTruckClient
             return _ssSerializer;
         }
 
-        // Build-331: Managed Union-CTor 'new SystemSaveData(questSave)' liess den Discriminator
-        // auf 0 (NONE) -> GetMaxSize crashte mit 'Exception determining type of union.
-        // Discriminator = 0'. Fix: Union manuell aufbauen ueber die nativen Feld-Wrapper:
-        //   _Discriminator_k__BackingField (byte, direkter Offset-Write im Interop-Code)
-        //   value (Il2CppSystem.Object, il2cpp_gc_wbarrier_set_field im Interop-Code)
-        // Beide Setter sind reine Feldschreibungen (keine runtime_invoke), der native
-        // GetMaxSizeOf(SystemSaveData) liest genau diese beiden Felder.
+        // Build-332: Der 331er-Fix schrieb Discriminator+value ueber die generierten
+        // Interop-Wrapper-Properties (_Discriminator_k__BackingField / value). Diese nutzen
+        // intern bereits il2cpp_field_get_offset - trotzdem las der NATIVE Serializer
+        // (GetMaxSizeOf(SystemSaveData)) weiterhin Discriminator=0 (Offset-Mismatch zwischen
+        // dem Objekt, auf das der Wrapper schreibt, und dem, das der Serializer liest).
+        //
+        // Neue Strategie (beide Ebenen):
+        //  1) NATIVER Write: IL2CPP.il2cpp_field_set_value mit dem ECHTEN FieldInfo-Pointer
+        //     (il2cpp_class_get_field_from_name auf der nativen SystemSaveData-Klasse) statt
+        //     der Wrapper-Property - und NATIVER Readback via il2cpp_field_get_value.
+        //  2) GATE mit der NATIVEN per-type-Funktion: SaveSlotContainer.GeneratedSerializer.
+        //     GetMaxSizeOf_0f0220f020f24c68a1c77969f8d98136(SystemSaveData) direkt aufrufen
+        //     (public unsafe static im Interop-DLL). Fliegt dort KEINE 'Exception determining
+        //     type of union', hat der native Serializer den Discriminator gesehen.
         private const byte UNION_ITEM_KIND_QUESTSAVEDATA = 12;
+
+        private static IntPtr _nativeSystemSaveDataClass = IntPtr.Zero;
+        private static IntPtr _nativeDiscriminatorField = IntPtr.Zero;
+        private static IntPtr _nativeValueField = IntPtr.Zero;
+        private static bool _nativeFieldsResolved = false;
+
+        private static void ResolveNativeSystemSaveDataFields()
+        {
+            if (_nativeFieldsResolved) return;
+            _nativeFieldsResolved = true;
+
+            _nativeSystemSaveDataClass = IL2CPP.GetIl2CppClass("Assembly-CSharp.dll", "StarTruckSaveData", "SystemSaveData");
+            if (_nativeSystemSaveDataClass == IntPtr.Zero)
+                throw new InvalidOperationException("native SystemSaveData-Klasse nicht gefunden");
+            IL2CPP.il2cpp_runtime_class_init(_nativeSystemSaveDataClass);
+
+            _nativeDiscriminatorField = IL2CPP.GetIl2CppField(_nativeSystemSaveDataClass, "<Discriminator>k__BackingField");
+            _nativeValueField = IL2CPP.GetIl2CppField(_nativeSystemSaveDataClass, "value");
+            if (_nativeDiscriminatorField == IntPtr.Zero || _nativeValueField == IntPtr.Zero)
+                throw new InvalidOperationException($"native SystemSaveData-Felder nicht gefunden (disc={_nativeDiscriminatorField}, value={_nativeValueField})");
+
+            StarTruckMP.Log.LogInfo($"JobBoardSync: native SystemSaveData-Felder aufgeloest (discField={_nativeDiscriminatorField}, valueField={_nativeValueField}, discOffset={IL2CPP.il2cpp_field_get_offset(_nativeDiscriminatorField)})");
+        }
 
         private static SystemSaveData CreateQuestSaveDataUnion(QuestSaveData questSave)
         {
-            var ssd = new SystemSaveData(); // Default-CTor, keine Union-Zuweisung
-            ssd._Discriminator_k__BackingField = UNION_ITEM_KIND_QUESTSAVEDATA;
-            ssd.value = questSave; // native Feld-Wrapper (wbarrier), setzt den Union-Value direkt
+            ResolveNativeSystemSaveDataFields();
 
-            byte disc = ssd._Discriminator_k__BackingField;
-            var valObj = ssd.value;
-            StarTruckMP.Log.LogInfo($"JobBoardSync: SystemSaveData-Union manuell: disc={disc} (erwartet {UNION_ITEM_KIND_QUESTSAVEDATA}), value={(valObj != null ? "gesetzt" : "NULL")}");
-            if (disc != UNION_ITEM_KIND_QUESTSAVEDATA)
-                throw new InvalidOperationException($"SystemSaveData-Discriminator-Write fehlgeschlagen (disc={disc})");
+            var ssd = new SystemSaveData(); // Default-CTor, keine Union-Zuweisung
+            IntPtr ssdPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(ssd);
+
+            // NATIVER Discriminator-Write am echten FieldInfo (nicht die Wrapper-Property):
+            byte discVal = UNION_ITEM_KIND_QUESTSAVEDATA;
+            IL2CPP.il2cpp_field_set_value(ssdPtr, _nativeDiscriminatorField, &discVal);
+            // NATIVER value-Write (Referenz-Feld -> wbarrier):
+            IntPtr questPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(questSave);
+            IL2CPP.il2cpp_gc_wbarrier_set_field(ssdPtr, IntPtr.Add(ssdPtr, (int)IL2CPP.il2cpp_field_get_offset(_nativeValueField)), questPtr);
+
+            // NATIVER Readback (unabhaengig vom Write-Pfad, am selben echten FieldInfo):
+            byte discBack = 0;
+            IL2CPP.il2cpp_field_get_value(ssdPtr, _nativeDiscriminatorField, &discBack);
+            IntPtr valBack = IL2CPP.il2cpp_field_get_value_object(_nativeValueField, ssdPtr);
+            StarTruckMP.Log.LogInfo($"JobBoardSync: SystemSaveData-Union NATIV: disc={discBack} (erwartet {UNION_ITEM_KIND_QUESTSAVEDATA}), value={(valBack != IntPtr.Zero ? "gesetzt" : "NULL")}");
+            if (discBack != UNION_ITEM_KIND_QUESTSAVEDATA)
+                throw new InvalidOperationException($"SystemSaveData-nativer-Discriminator-Write fehlgeschlagen (disc={discBack})");
+
+            // GATE: native per-type GetMaxSizeOf(SystemSaveData) - liest Union nativ.
+            // Exception hier = Write immer noch nicht am nativen Layout angekommen.
+            int ssdMax = SaveSlotContainer.GeneratedSerializer.GetMaxSizeOf_0f0220f020f24c68a1c77969f8d98136(ssd);
+            StarTruckMP.Log.LogInfo($"JobBoardSync: natives Union-Gate bestanden: GetMaxSizeOf(SystemSaveData)={ssdMax}");
+
             return ssd;
         }
 
