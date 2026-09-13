@@ -1,3 +1,28 @@
+## Neu in custom-build-333: PLAN B Same-Seed lite - Job-Sync ohne IL2CPP-Serialization
+
+- Entscheidung (Michael): die Serialize/Deserialize-Seite (FlatSharp/QuestTaskParameterSaveData-
+  Union-Restore) bleibt Dead-End und wird nicht weiterverfolgt. Neuer Weg: Kennungs-Broadcast +
+  lokale Filterung ("Same-Seed lite") - KEINE Job-Objekte/Save-Daten mehr ueber die Leitung.
+- Neu: Client/JobBoardIdSync.cs
+  - Autoritaet (niedrigste Spieler-ID im Sektor, wie JobBoardSync) broadcastet nach jeder
+    Job-Generierung (Postfix GenerateJobsForAllSectors), bei Spielerankunft im Sektor und
+    periodisch (2s) NUR Kennungen "(questId|displayName)" ihrer Live-Jobs
+    (neue Message jobBoardIdents=18, kleine Reliable-Message, kein ChunkedBlobTransfer).
+  - Empfaenger puffert die Kennungen je Sektor (60s Gueltigkeit) und FILTERT seine eigene
+    GetAvailableJobs()-Liste im JobBoardComputer genau auf diese Kennungen (reine Anzeige-
+    Ebene - ProceduralJobGenerator/QuestTracker werden NICHT angetastet, kein Restore-Pfad,
+    kein QuestTaskParameterSaveData).
+  - DIAGNOSE (Michael-Test): beim Board-Oeffnen (J) Log-Zeile "meine Jobs: [...] + empfangene
+    Kennungen: [...] + match: X/Y" (BepInEx-Log) und dieselbe Zeile unten im Board-Overlay.
+- Server: neues MessageType.JobBoardIdents=18 (common/MessageTypes.cs) + reiner Relay-Handler
+  HandleJobBoardIdents in dedicated/MessageHandler.cs (Strings + Absender-ID, SendToAll).
+  WICHTIG: ID 18 (nicht 16) - der Client-enum (Encoding/Utilities.cs) hat die Legacy-Eintraege
+  setDestinationGate=16/multiTrailerMovementUpdate=17 dazwischen.
+- Alte Blob-Sync-Infrastruktur (JobBoardSync v2 + CargoSync) bleibt unveraendert aktiv -
+  Kennungs-Broadcast ist zusaetzlich und unabhaengig.
+- Release: builds/StarTruckMP-custom-build-333.dll.gz, version.json -> custom-build-333,
+  Dedicated-Server-Image rebuilt + Container neu gestartet (Relay live).
+
 ## Neu in custom-build-332: SystemSaveData-Discriminator NATIV schreiben (Offset-Fix) + natives Union-Gate
 
 - Root Cause (331): Der Interop-Wrapper-Write (_Discriminator_k__BackingField / value) schrieb
