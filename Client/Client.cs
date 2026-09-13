@@ -35,6 +35,7 @@ namespace StarTruckMP.StarTruckClient
         // clients re-announce position + destinationGateId to the newcomer (bug: newcomer saw
         // existing trucks only after they moved).
         public static bool forceStateResend = false;
+        private static bool roundtripDone = false; // Build-328: Roundtrip-Verifikation einmalig
         public static bool inTruck = true;
         public static GameObject myPlayer = null;
         public static Rigidbody myPlayerRigid = null;
@@ -100,6 +101,16 @@ namespace StarTruckMP.StarTruckClient
             UpdateMapIndicators();
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
+            // Build-328: Roundtrip-Verifikation per Debug-Environment-Variable
+            // (STRUCKMP_ROUNDTRIP=1), einmalig nach QuestTracker-Ready.
+            if (!roundtripDone && Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP") == "1")
+            {
+                if (QuestTracker.ready && ProceduralJobGenerator.Get() != null)
+                {
+                    roundtripDone = true;
+                    JobBoardSync.RunRoundtripVerification();
+                }
+            }
             ChunkedBlobTransfer.Update();
             ChunkedBlobTransfer.ReceiveMaintenance();
 

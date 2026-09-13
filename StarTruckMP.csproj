@@ -64,6 +64,10 @@
       <HintPath>/bepinex/core/Il2CppInterop.Runtime.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="FlatSharp.Runtime">
+      <HintPath>/bepinex/interop/FlatSharp.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Il2Cppmscorlib">
       <HintPath>/bepinex/interop/Il2Cppmscorlib.dll</HintPath>
       <Private>False</Private>
