@@ -140,17 +140,23 @@ public class MessageHandler
     // kein Blob/Chunking. Reiner Relay wie HandleJobBoardSync.
     private void HandleJobBoardIdents(MessageReceivedEventArgs e, Riptide.Server server)
     {
-        // Build-334: Client-Format ist [sector][count][idents...]. Das Relay muss
-        // EXAKT dasselbe Format wieder auspacken (333: hier wurde fromId zwischen
-        // sector und count gepackt => Empfänger las fromId als count => Parse tot).
+        // custom-build-335: Client-Format ist chunked [sector][totalChunks(int)][chunkIndex(int)]
+        // [totalIdents(int)][payload(byte[], ohne Laengen-Praefix)]. Das Relay packt EXAKT
+        // dasselbe Format wieder aus und baut die Message identisch nach (reiner Re-Forward,
+        // KEINE eigenen Felder einfuegen - 333/334-Lesson).
         string sector = e.Message.GetString();
-        ushort count = e.Message.GetUShort();
+        int totalChunks = e.Message.GetInt();
+        int chunkIndex = e.Message.GetInt();
+        int totalIdents = e.Message.GetInt();
+        byte[] payload = e.Message.GetBytes();
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardIdents);
         msg.AddString(sector);
-        msg.AddUShort(count);
-        for (ushort i = 0; i < count; i++) msg.AddString(e.Message.GetString());
+        msg.AddInt(totalChunks);
+        msg.AddInt(chunkIndex);
+        msg.AddInt(totalIdents);
+        msg.AddBytes(payload, includeLength: false);
         server.SendToAll(msg, e.FromConnection.Id);
-        Console.WriteLine($"[INFO] HandleJobBoardIdents: relaying {count} job idents from client {e.FromConnection.Id} (sector '{sector}')");
+        Console.WriteLine($"[INFO] HandleJobBoardIdents: relaying job idents chunk {chunkIndex + 1}/{totalChunks} ({payload.Length} bytes, totalIdents={totalIdents}) from client {e.FromConnection.Id} (sector '{sector}')");
     }
 
     private void HandleMovement(MessageReceivedEventArgs e, Riptide.Server server)

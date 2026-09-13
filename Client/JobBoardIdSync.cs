@@ -20,7 +20,7 @@ namespace StarTruckMP.StarTruckClient
     ///     (ProceduralJobGenerator bleibt unangetastet - keine Injektion, kein Restore).
     ///  2. Der Autoritaets-Client (niedrigste Spieler-ID im Sektor, JobBoardSync.
     ///     IsAuthorityForCurrentSector) broadcastet NUR die Kennungen seiner Jobs:
-    ///     "(questId|displayName)"-Strings. Kleine Message, direkt via Riptide
+    ///     "(questId|displayName)"-Strings. Chunks direkt via Riptide
     ///     (kein ChunkedBlobTransfer noetig).
     ///  3. Nicht-Autoritaets-Clients FILTERN ihre eigene GetAvailableJobs()-Liste
     ///     genau auf diese Kennungen (Anzeige-/Board-Ebene, keine Spielobjekte
@@ -37,15 +37,37 @@ namespace StarTruckMP.StarTruckClient
     ///
     /// DIAGNOSE ( Build-333, Michael-Test): beim Board-Öffnen loggt JobBoardComputer
     /// 'meine Jobs: [...] + empfangene Kennungen: [...] + match: X/Y'.
+    ///
+    /// custom-build-335: Riptide.InsufficientCapacityException behoben. Verifiziert
+    /// gegen die verbauten Riptide 2.2-Assemblies (ilspycmd): Message.MaxSize ist ein
+    /// HARDES Limit von 1231 Bytes (MaxPayloadSize 1225) und Message.Create() hat
+    /// KEINEN Groesse-Parameter - 61 Kennungen (~2.2KB) passen schlicht nicht in EINE
+    /// Message. Loesung: der Payload wird in Chunks aufgeteilt. Format:
+    ///   Chunk 0: [sector][totalChunks][totalIdents] [chunk-idents...]
+    ///   Chunk k>0: [chunk-idents...]
+    /// Der Empfangler sammelt Chunks bis totalChunks erreicht sind. Reset bei
+    /// Sektorwechsel/Timeout (60s wie HasFreshIdents) ist implizit: empfangene
+    /// Teilmengen werden erst nach Completion uebernommen.
     /// </summary>
     public static class JobBoardIdSync
     {
         private const float IDENT_BROADCAST_INTERVAL = 2f;
 
+        // Chunks-Puffer-Budget: Riptide MaxSize=1231 => pro Reliable-Message bleiben
+        // nach Header+ID ~1200 Bytes. Sicherer Chunk-Grenzwert fuer die ident-Strings.
+        private const int MAX_CHUNKS = 16;
+
         // Empfangene Kennungen je Sektor (vom Autoritaets-Client).
         private static readonly HashSet<string> receivedIdents = new HashSet<string>();
         private static string receivedIdentsSector = null;
         private static float lastReceiveTime = -999f;
+
+        // Chunk-Sammel-Zustand (Empfangsseite, custom-build-335).
+        private static string chunkSector = null;
+        private static int chunkTotal = 0;
+        private static int chunkTotalIdents = 0;
+        private static int chunkNextIndex = 0;
+        private static readonly HashSet<string> chunkIdents = new HashSet<string>();
 
         // Sende-Seite: Re-Broadcast-Timer (auch wenn keine neue Generierung feuert,
         // damit Spaetankoemmlinge die Kennungen noch bekommen - zusaetzlich zum
@@ -142,49 +164,120 @@ namespace StarTruckMP.StarTruckClient
                 return;
             }
 
-            var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
-            msg.AddString(sector ?? "");
-            msg.AddUShort((ushort)idents.Count);
-            for (int i = 0; i < idents.Count; i++) msg.AddString(idents[i] ?? "");
-            try
+            if (idents == null || idents.Count == 0)
             {
-                client.Send(msg);
-            }
-            catch (Exception sendEx)
-            {
-                StarTruckMP.Log.LogWarning($"JobBoardIdSync: client.Send({trigger}) WIRF: {sendEx}");
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden abgebrochen ({trigger}): 0 Kennungen");
                 return;
             }
 
-            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen fuer Sektor '{sector}' gesendet ({trigger}, MessageType={(ushort)messageType.jobBoardIdents}): [{string.Join(", ", idents)}]");
+            // Payload-Groesse messen (UTF8-Bytes) und in Chunks aufteilen. Chunks sind
+            // WIRKLICH klein (EINE Message = max ~1200 Bytes Payload): JEDER Chunk ist
+            // eine eigene Message mit eigene sector/count/total-Header, damit das Relay
+            // und der Empfaenger keine partial-Felder mehr misvertstehen (334-Fehler).
+            // Das per-Chunk-Limit liegt konservativ bei 900 Bytes Nutzdaten (Riptide
+            // MaxPayloadSize=1225 - Header + VarULong-Overhead bleiben Reserve).
+            const int MAX_CHUNK_BYTES = 900;
+
+            var chunkPayloads = new List<byte[]>();
+            var cur = new List<byte[]>();
+            int curBytes = 0;
+            for (int i = 0; i < idents.Count; i++)
+            {
+                var entry = Encoding.UTF8.GetBytes((idents[i] ?? "") + "\n");
+                if (curBytes + entry.Length > MAX_CHUNK_BYTES && cur.Count > 0)
+                {
+                    chunkPayloads.Add(Encoding.UTF8.GetBytes(string.Join("", cur)));
+                    cur = new List<byte[]>();
+                    curBytes = 0;
+                }
+                cur.Add(entry);
+                curBytes += entry.Length;
+            }
+            if (cur.Count > 0) chunkPayloads.Add(Encoding.UTF8.GetBytes(string.Join("", cur)));
+
+            if (chunkPayloads.Count > MAX_CHUNKS)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync: Senden abgebrochen ({trigger}): {idents.Count} Kennungen benoetigen {chunkPayloads.Count} Chunks (> {MAX_CHUNKS}) - Payload zu gross fuer einen Broadcast");
+                return;
+            }
+
+            // Chunks senden - EINE Message pro Chunk, alles reliable.
+            int sentChunks = 0;
+            for (int ci = 0; ci < chunkPayloads.Count; ci++)
+            {
+                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
+                msg.AddString(sector ?? "");
+                msg.AddInt(chunkPayloads.Count);  // totalChunks
+                msg.AddInt(ci);                   // chunkIndex
+                msg.AddInt(idents.Count);         // totalIdents (fuer Empfangs-Log)
+                msg.AddBytes(chunkPayloads[ci], includeLength: false);
+                try
+                {
+                    client.Send(msg);
+                    sentChunks++;
+                }
+                catch (Exception sendEx)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardIdSync: client.Send({trigger}) Chunk {ci}/{chunkPayloads.Count} WIRF: {sendEx}");
+                    return;
+                }
+            }
+
+            // Verifikations-Gate (335): gesendet-Zeile mit Payload-Groesse.
+            int payloadTotal = 0;
+            foreach (var p in chunkPayloads) payloadTotal += p.Length;
+            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen gesendet (payload={payloadTotal} bytes, {sentChunks}/{chunkPayloads.Count} Chunks, Sektor '{sector}', {trigger})");
         }
 
         // ------------------------------------------------------------------
-        // EMPFANGEN (alle Nicht-Autoritaeten)
+        // EMPFANGEN (alle Nicht-Autoritaeten) - chunked, custom-build-335
         // ------------------------------------------------------------------
         public static void HandleIncoming(MessageReceivedEventArgs e)
         {
             try
             {
                 string sector = e.Message.GetString();
-                ushort n = e.Message.GetUShort();
-                var idents = new HashSet<string>();
-                for (int i = 0; i < n; i++)
+                int totalChunks = e.Message.GetInt();
+                int chunkIndex = e.Message.GetInt();
+                int totalIdents = e.Message.GetInt();
+                byte[] payload = e.Message.GetBytes();
+
+                // Ein neuer Broadcast (Sektorwechsel / neue totalIdents / Chunk 0) startet
+                // einen neuen Sammelvorgang.
+                if (chunkSector != sector || chunkTotal != totalChunks || chunkTotalIdents != totalIdents || chunkIndex == 0)
                 {
-                    string s = e.Message.GetString();
-                    if (!string.IsNullOrEmpty(s)) idents.Add(s);
+                    chunkSector = sector;
+                    chunkTotal = totalChunks;
+                    chunkTotalIdents = totalIdents;
+                    chunkIdents.Clear();
+                    chunkNextIndex = 0;
                 }
 
+                var text = Encoding.UTF8.GetString(payload);
+                var parts = text.Split('\n');
+                foreach (var p in parts)
+                {
+                    if (!string.IsNullOrEmpty(p)) chunkIdents.Add(p);
+                }
+                chunkNextIndex = chunkIndex + 1;
+
+                if (chunkIndex + 1 < totalChunks)
+                {
+                    StarTruckMP.Log.LogInfo($"JobBoardIdSync: Chunk {chunkIndex + 1}/{totalChunks} empfangen (Sektor '{sector}', {chunkIdents.Count} Kennungen bisher)");
+                    return;
+                }
+
+                // Alle Chunks da - uebernehmen.
                 receivedIdents.Clear();
-                foreach (var id in idents) receivedIdents.Add(id);
+                foreach (var id in chunkIdents) receivedIdents.Add(id);
                 receivedIdentsSector = sector;
                 lastReceiveTime = Time.unscaledTime;
 
-                StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen empfangen (Sektor '{sector}').");
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: {receivedIdents.Count} Kennungen empfangen (Sektor '{sector}', {totalChunks} Chunks, erwartet {totalIdents}).");
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardIdSync.HandleIncoming fehlgeschlagen (Sektor empfangen): {ex}");
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync.HandleIncoming fehlgeschlagen: {ex}");
             }
         }
 
@@ -237,7 +330,6 @@ namespace StarTruckMP.StarTruckClient
                 {
                     try { mine.Add(BuildJobKey(jobs[i])); } catch { }
                 }
-
                 bool fresh = HasFreshIdents(sector);
                 string recv = fresh
                     ? "[" + string.Join(", ", GetReceivedIdents()) + "]"
@@ -293,6 +385,11 @@ namespace StarTruckMP.StarTruckClient
             receivedIdents.Clear();
             receivedIdentsSector = null;
             lastReceiveTime = -999f;
+            chunkSector = null;
+            chunkTotal = 0;
+            chunkTotalIdents = 0;
+            chunkNextIndex = 0;
+            chunkIdents.Clear();
         }
     }
 }
