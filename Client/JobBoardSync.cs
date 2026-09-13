@@ -303,19 +303,43 @@ namespace StarTruckMP.StarTruckClient
                 if (pars == null) return "generatedParameters=null";
                 int pc = Il2CppCount(pars);
                 var parts = new List<string>();
-                for (int p = 0; p < pc && p < 12; p++)
+                for (int p = 0; p < pc && p < 16; p++)
                 {
                     var par = pars[p];
-                    string detail = par.Kind.ToString();
-                    // fuer die haeufigsten GenerateSector-Kandidaten auch die Werte zeigen
-                    if (par.Kind == QuestTaskParameterSaveData.ItemKind.sectorId && par.sectorId != null)
-                        detail = $"sectorId name='{par.sectorId.name}' value='{par.sectorId.value}'";
-                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.identifier && par.identifier != null)
-                        detail = $"identifier name='{par.identifier.name}' value='{par.identifier.value}'";
-                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.stringValue && par.stringValue != null)
-                        detail = $"stringValue name='{par.stringValue.name}' value='{par.stringValue.value}'";
-                    else if (par.Kind == QuestTaskParameterSaveData.ItemKind.intValue && par.intValue != null)
-                        detail = $"intValue name='{par.intValue.name}' value={par.intValue.value}";
+                    string detail;
+                    try
+                    {
+                        // Build-326: generisch - Kind + name + value JEDES Parameters loggen.
+                        // Die Discriminator-Variante entscheidet, welche typed Property den
+                        // Wrapper haelt - dort liegt name:string (alle 19 Varianten haben es).
+                        string nm = "?";
+                        string val = "?";
+                        var k = par.Kind;
+                        try
+                        {
+                            Il2CppSystem.Object vObj = null;
+                            string prop = KindToProp(k);
+                            if (prop != null)
+                            {
+                                var pi = typeof(QuestTaskParameterSaveData).GetProperty(prop);
+                                if (pi != null) vObj = pi.GetValue(par) as Il2CppSystem.Object;
+                            }
+                            if (vObj != null)
+                            {
+                                val = vObj.ToString();
+                                var nameProp = vObj.GetIl2CppType().GetProperty("name");
+                                if (nameProp != null)
+                                    nm = nameProp.GetValue(vObj)?.ToString() ?? "null";
+                            }
+                            else val = "null";
+                        }
+                        catch { }
+                        detail = $"{k} name='{nm}' value='{val}'";
+                    }
+                    catch (Exception pe)
+                    {
+                        detail = $"{par.Kind} (nicht lesbar: {pe.Message})";
+                    }
                     parts.Add(detail);
                 }
                 return $"params={pc}[{string.Join(", ", parts)}]";
@@ -323,6 +347,34 @@ namespace StarTruckMP.StarTruckClient
             catch (Exception ex)
             {
                 return $"(DescribeSingleJob fehlgeschlagen: {ex.Message})";
+            }
+        }
+
+        // Build-326: ItemKind -> Name der typed Value-Property an QuestTaskParameterSaveData.
+        private static string KindToProp(QuestTaskParameterSaveData.ItemKind k)
+        {
+            switch (k)
+            {
+                case QuestTaskParameterSaveData.ItemKind.intValue: return "intValue";
+                case QuestTaskParameterSaveData.ItemKind.stringValue: return "stringValue";
+                case QuestTaskParameterSaveData.ItemKind.trailerId: return "trailerId";
+                case QuestTaskParameterSaveData.ItemKind.cargoProperties: return "cargoProperties";
+                case QuestTaskParameterSaveData.ItemKind.cargoType: return "cargoType";
+                case QuestTaskParameterSaveData.ItemKind.sectorId: return "sectorId";
+                case QuestTaskParameterSaveData.ItemKind.cargoBayId: return "cargoBayId";
+                case QuestTaskParameterSaveData.ItemKind.galacticTime: return "galacticTime";
+                case QuestTaskParameterSaveData.ItemKind.corporationId: return "corporationId";
+                case QuestTaskParameterSaveData.ItemKind.conversation: return "conversation";
+                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags: return "inventoryItemTags";
+                case QuestTaskParameterSaveData.ItemKind.floatValue: return "floatValue";
+                case QuestTaskParameterSaveData.ItemKind.vector3: return "vector3";
+                case QuestTaskParameterSaveData.ItemKind.quest: return "quest";
+                case QuestTaskParameterSaveData.ItemKind.identifier: return "identifier";
+                case QuestTaskParameterSaveData.ItemKind.questFlag: return "questFlag";
+                case QuestTaskParameterSaveData.ItemKind.ventureLocation: return "ventureLocation";
+                case QuestTaskParameterSaveData.ItemKind.ventureType: return "ventureType";
+                case QuestTaskParameterSaveData.ItemKind.ventureJobType: return "ventureJobType";
+                default: return null;
             }
         }
 
@@ -383,6 +435,25 @@ namespace StarTruckMP.StarTruckClient
         private static bool IsSupportedKind(QuestTaskParameterSaveData.ItemKind k)
         {
             return k != QuestTaskParameterSaveData.ItemKind.NONE;
+        }
+
+        // Build-326: QuestTaskParameterSaveData ist ein FlatSharp-Union-Struct. Die Parameter-
+        // Konstruktoren des Interop-Assemblys setzen intern Discriminator+value, aber beim
+        // Konstruieren aus gemanagtem Code endet der Discriminator empirisch auf 0 (= NONE),
+        // egal welcher Konstruktor benutzt wurde -> beim Empfaenger dekodiert ALLE Parameter
+        // als Kind=NONE -> QuestTaskParameter.GenerateSector NREt (custom-build-325-Befund:
+        // 247 Jobs, alle 'params=16[NONE x12]', applied=0).
+        //
+        // Fix: Discriminator-Backingfield und value-Feld DIREKT per Feld-Offset setzen
+        // (beide sind als unsafe-Properties mit direktem Feldzugriff im Interop verfuegbar),
+        // statt dem IL2CPP-Konstruktor zu trauen. Der Direktzugriff umgeht den Union-Switch
+        // voellig und ist exakt das, was FlatSharp selbst schreibt.
+        private static QuestTaskParameterSaveData MakeParam(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        {
+            var p = new QuestTaskParameterSaveData();
+            p._Discriminator_k__BackingField = (byte)kind;
+            p.value = value;
+            return p;
         }
 
         private static byte[] SerializeJobs(Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData> jobs)
@@ -522,49 +593,49 @@ namespace StarTruckMP.StarTruckClient
             switch (kind)
             {
                 case QuestTaskParameterSaveData.ItemKind.intValue:
-                    { var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.stringValue:
-                    { var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.trailerId:
-                    { var v = new TrailerId(); v.name = r.ReadString(); v.value = r.ReadInt64(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new TrailerId(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.cargoProperties:
-                    { var v = new CargoProperties(); v.name = r.ReadString(); v.value = r.ReadInt32(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new CargoProperties(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.cargoType:
-                    { var v = new StarTruckSaveData.CargoType(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.CargoType(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.sectorId:
-                    { var v = new SectorId(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new SectorId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.cargoBayId:
-                    { var v = new CargoBayId(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new CargoBayId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.galacticTime:
-                    { var v = new StarTruckSaveData.GalacticTime(); v.name = r.ReadString(); v.value = r.ReadInt64(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.GalacticTime(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.corporationId:
-                    { var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.floatValue:
-                    { var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.vector3:
                     {
                         var v = new Vector3Value(); v.name = r.ReadString();
                         var vec = new Vector3Data();
                         vec.x = r.ReadSingle(); vec.y = r.ReadSingle(); vec.z = r.ReadSingle();
                         v.value = vec;
-                        return new QuestTaskParameterSaveData(v);
+                        return MakeParam(kind, v);
                     }
                 case QuestTaskParameterSaveData.ItemKind.conversation:
-                    { var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
-                    { var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.identifier:
-                    { var v = new StarTruckSaveData.Identifier(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.Identifier(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.quest:
-                    { var v = new Quest(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new Quest(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.questFlag:
-                    { var v = new StarTruckSaveData.QuestFlag(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.QuestFlag(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.ventureLocation:
-                    { var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.ventureType:
-                    { var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.ventureJobType:
-                    { var v = new VentureJobTypeData(); v.name = r.ReadString(); v.value = (VentureJobType)r.ReadInt32(); return new QuestTaskParameterSaveData(v); }
+                    { var v = new VentureJobTypeData(); v.name = r.ReadString(); v.value = (VentureJobType)r.ReadInt32(); return MakeParam(kind, v); }
                 default:
                     throw new InvalidOperationException($"JobBoardSync: unbekannter/nicht unterstuetzter ItemKind beim Lesen: {kind}");
             }
