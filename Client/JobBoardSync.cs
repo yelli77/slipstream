@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Riptide;
 using StarTruckMP.Utilities;
 using HarmonyLib;
 using StarTruckSaveData;
+using FlatSharp;
 using UnityEngine;
 
 namespace StarTruckMP.StarTruckClient
@@ -37,17 +39,28 @@ namespace StarTruckMP.StarTruckClient
     /// indexbasiert statt mit foreach/LINQ zugreifen (IL2CPP-IList-Interfaces liefern keinen
     /// GetEnumerator).
     ///
-    /// NOCH UNVERIFIZIERT (erster Test im Spiel noetig):
-    /// - Ob Nullable&lt;SystemSaveData&gt; im IL2CPP-Interop sich wie ein normales C#
-    ///   Nullable&lt;T&gt; verhaelt (HasValue/Value). Falls nicht: Fehler landet im Log,
-    ///   OnLocalJobsGenerated bricht sauber ab, nichts crasht.
-    /// - Ob `new QuestSaveData()` / `new QuestInstanceSaveData()` / `new IntValue()` etc. aus
-    ///   gemanagtem Code funktionieren (uebliches Il2CppInterop-Pattern fuer Save-Datentypen,
-    ///   aber im Mod bisher nicht fuer diese Art Typ verwendet).
-    /// - 8 "komplexe" Parameter-Varianten (cargoProperties, cargoType, conversation,
-    ///   inventoryItemTags, quest, ventureLocation, ventureType, ventureJobType) sind NICHT
-    ///   implementiert - Jobs, die diese nutzen, werden unvollstaendig synchronisiert (Log
-    ///   durchsuchen nach "nicht unterstuetzte Parameter").
+    /// Build-328 (PLAN C): Native FlatSharp-Serialisierung.
+    /// Der v1-Hand-Blob (BinaryWriter-Spiegel der Save-Datenstrukturen) konnte das FlatSharp-
+    /// Union-Problem (QuestTaskParameterSaveData._Discriminator_k__BackingField + value) nie
+    /// zuverlaessig loesen: sowohl der Union-CTor als auch der RawWrite mit il2cpp_field_get_offset
+    /// endeten beim Empfaenger auf Kind=NONE + value=null (326er/327er-Logs).
+    ///
+    /// v2 umgeht das Problem voellig: Wir serialisieren ein ECHTES QuestSaveData-Objekt mit dem
+    /// SPIEL-EIGENEN FlatSharp-Serializer (SaveSlotContainer.Serializer - statisches Property,
+    /// ISerializer&lt;SaveSlotContainer&gt; aus FlatSharp.Runtime) und parsen auf der Gegenseite
+    /// mit demselben Serializer zurueck. Discriminators und value-Pointer schreibt/liest dann
+    /// exakt der nativen Serializer-Codepfad, der auch echte Spielstaende schreibt/liest.
+    ///
+    /// Container-Layout (Dekompilierung SaveSlotContainer.cs):
+    ///   SaveSlotContainer { IList&lt;SaveContainer&gt; containers; SaveSlotMetadata metadata; }
+    ///   SaveContainer { string key; Nullable&lt;SystemSaveData&gt; content; }
+    ///   SystemSaveData = FlatSharp-Union, Variante 12 = QuestSaveData (SystemSaveData.cs: QuestSaveData = 12).
+    ///   SaveSlotContainer.Serializer (statisch) liefert ISerializer&lt;SaveSlotContainer&gt;.
+    ///
+    /// Wire-Format v2: [1 Byte Format-Tag=2][4 Bytes Little-Endian Laenge][FlatSharp-Bytes eines
+    /// SaveSlotContainer mit genau einem Container: key="mp_jobs", content=SystemSaveData(12, QuestSaveData)].
+    /// v1-Blobs (Format-Tag ungleich 2 bzw. Startbyte != 2 an dieser Position) werden verworfen.
+    /// Beide Spieler MUESSEN 328 haben (Updater zieht beide hoch).
     /// </summary>
     public static class JobBoardSync
     {
@@ -93,12 +106,24 @@ namespace StarTruckMP.StarTruckClient
                     saveList.Add(liveJobs[i].GetData());
                 }
 
-                byte[] blob = SerializeJobs(saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>());
-                int jobCount = saveList.Count;
+                var questSave = new QuestSaveData();
+                questSave.availableJobs = saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+
+                byte[] blob;
+                int jobCount;
+                try
+                {
+                    blob = SerializeQuestSaveDataNative(questSave, out jobCount);
+                }
+                catch (Exception serEx)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated: native Serialisierung fehlgeschlagen: {serEx.Message}");
+                    return;
+                }
 
                 ChunkedBlobTransfer.Send("job", (ushort)messageType.jobBoardSync, StarTruckClient.currentSector, blob);
 
-                StarTruckMP.Log.LogInfo($"JobBoardSync: {jobCount} Jobs fuer Sektor '{StarTruckClient.currentSector}' gesendet ({blob.Length} bytes).");
+                StarTruckMP.Log.LogInfo($"JobBoardSync: {jobCount} Jobs fuer Sektor '{StarTruckClient.currentSector}' gesendet ({blob.Length} bytes, native FlatSharp v2).");
             }
             catch (Exception ex)
             {
@@ -124,50 +149,21 @@ namespace StarTruckMP.StarTruckClient
                 // Syncs - unser eigener Stand ist die Quelle der Wahrheit.
                 if (IsAuthorityForCurrentSector()) return;
 
-                // Build-321: NullReferenceException-Quelle eingegrenzt - im Sektorwechsel-
-                // Fenster koennen DeserializeJobs oder der questSave-Cast NREs werfen
-                // (IL2CPP-Objekte, deren Managed-Wrapper waehrend des Sektor-Teardown
-                // bereits invalidiert sind).
-                // Build-323: Ein defekter Blob ist NICHT mehr endgueltig verworfen.
-                // Hintergrund (Testbefehl 322): ApplyRestore kann in Spiel-Code NREn
-                // (QuestTaskParameter.GenerateSector), wenn ein Sektor-Parameter auf einen
-                // Sektor verweist, den der EMPFAENGER-Client noch nicht geladen/registriert
-                // hat. Solche Races loesen sich binnen Sekunden (Sektor-Load, QuestTracker-
-                // Sektor-Ready). Deshalb: DeserializeJobs/Cast-Fehler -> Blob verwerfen
-                // (unlesbar, kein Retry sinnvoll); ApplyRestore-Fehler -> PUFFERN und
-                // mit Retry-Queue (max. 10 Versuche, alle 2s) nachziehen. Siehe
-                // EnqueueRetry/ProcessRetryQueue.
-                Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData> jobs = null;
-                try
-                {
-                    jobs = DeserializeJobs(blob);
-                }
-                catch (Exception desEx)
-                {
-                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: DeserializeJobs fehlgeschlagen (Sektor '{sector}', {blob?.Length ?? 0} bytes) - Blob verworfen, warte auf naechsten Sync: {desEx.Message}");
-                    return;
-                }
-
                 QuestSaveData questSave;
                 try
                 {
-                    questSave = new QuestSaveData();
-                    questSave.availableJobs = jobs.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+                    questSave = DeserializeQuestSaveDataNative(blob);
                 }
-                catch (Exception castEx)
+                catch (Exception desEx)
                 {
-                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: QuestSaveData-Cast fehlgeschlagen (Sektor '{sector}') - Sync verworfen: {castEx.Message}");
+                    // v1-Blobs (alter Hand-Format) und korrupte Blobs landen hier - verwerfen.
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: Deserialize fehlgeschlagen (Sektor '{sector}', {blob?.Length ?? 0} bytes) - Blob verworfen, warte auf naechsten Sync: {desEx.Message}");
                     return;
                 }
 
                 // QuestTracker kann beim Empfaenger im Sync-Moment noch nicht ready sein
-                // (Ready-Flag hinkt der lokalen Generierung hinterher). Frueher wurde der
-                // Blob hier hart verworfen -> Sync ging still verloren, jeder sah sein
-                // eigenes Board. Stattdessen puffern und Frame-fuer-Frame uebernehmen,
-                // sobald QuestTracker.ready ist.
-                // Build-323: QuestTracker nicht ready -> kein Vorab-Puffer mehr noetig,
-                // ApplyRestore-NREs landen in der Retry-Queue (TryApplyPending wartet
-                // ohnehin auf QuestTracker.ready).
+                // (Ready-Flag hinkt der lokalen Generierung hinterher). ApplyRestore-NREs
+                // landen in der Retry-Queue (TryApplyPending wartet auf QuestTracker.ready).
                 try
                 {
                     ApplyRestore(sector, questSave);
@@ -175,10 +171,7 @@ namespace StarTruckMP.StarTruckClient
                 catch (Exception applyEx)
                 {
                     // ApplyRestore toucht QuestTracker (Il2Cpp) - im Sektorwechsel-Fenster
-                    // kann das NREn. Build-323: NICHT mehr endgueltig verwerfen, sondern
-                    // in die Retry-Queue (Sektor-Load-Races loesen sich binnen Sekunden).
-                    // Nur wenn ALLE Versuche scheitern, wird der Blob endgueltig verworfen
-                    // (dann Log mit Diagnose: job-Ids + betroffene Parameter-Namen).
+                    // kann das NREn. NICHT endgueltig verwerfen, sondern in die Retry-Queue.
                     StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: ApplyRestore fehlgeschlagen (Sektor '{sector}') - Retry-Queue: {applyEx.Message}");
                     EnqueueRetry(sector, questSave, applyEx.Message);
                 }
@@ -257,7 +250,7 @@ namespace StarTruckMP.StarTruckClient
         // Build-325: RestoreAvailableJobs ist All-or-Nothing - ein einzelner Job, dessen
         // Parameter im Spiel-Code nicht aufgeloest werden koennen (QuestTaskParameter.
         // GenerateSector NREt z.B. auf fehlender Sektor-Registry bei Sektor-Params ohne
-        // value), killt damit ALLE 62 Jobs. Deshalb: job-weise ueber QuestTracker.
+        // value), killt damit ALLE Jobs. Deshalb: job-weise ueber QuestTracker.
         // ConvertQuestSaveDataToInstances anwenden - genau derselbe Pfad wie im Spiel -
         // aber mit try/catch PRO JOB. Ein unauflösbarer Job wird uebersprungen (Log mit
         // Diagnose), alle restlichen Jobs werden synchronisiert.
@@ -293,11 +286,7 @@ namespace StarTruckMP.StarTruckClient
             return applied;
         }
 
-        // Build-325: Diagnose fuer EINEN Job - ALLE Parameter-Namen mit Kind und value
-        // loggen. Vorgaenger DescribeJobs zeigte fuer jeden Job '[]', weil nur
-        // sectorId-Parameter mit name+value aufgeschluesselt wurden; aus einem leeren
-        // Output konnte man nicht ablesen, ob die Parameter-Liste wirklich leer war oder
-        // nur keine sectorId-Parameter enthielt (oder sectorId ohne sectorId.value).
+        // Diagnose fuer EINEN Job - ALLE Parameter-Namen mit Kind und value loggen.
         private static string DescribeSingleJob(QuestInstanceSaveData job)
         {
             try
@@ -312,7 +301,7 @@ namespace StarTruckMP.StarTruckClient
                     string detail;
                     try
                     {
-                        // Build-326: generisch - Kind + name + value JEDES Parameters loggen.
+                        // Generisch - Kind + name + value JEDES Parameters loggen.
                         // Die Discriminator-Variante entscheidet, welche typed Property den
                         // Wrapper haelt - dort liegt name:string (alle 19 Varianten haben es).
                         string nm = "?";
@@ -353,7 +342,7 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        // Build-326: ItemKind -> Name der typed Value-Property an QuestTaskParameterSaveData.
+        // ItemKind -> Name der typed Value-Property an QuestTaskParameterSaveData.
         private static string KindToProp(QuestTaskParameterSaveData.ItemKind k)
         {
             switch (k)
@@ -414,432 +403,202 @@ namespace StarTruckMP.StarTruckClient
             catch (Exception retryEx)
             {
                 pending.lastError = retryEx.Message;
-                // Build-325: Der per-Job-Apply kann fuer einen bad Job nicht mehr werfen -
-                // kommt es hier an, ist es ein struktureller Fehler (Teardown-Fenster o.ae.),
-                // der sich durch 10x Wiederholen nicht heilt. Sofort verwerfen.
+                // Struktureller Fehler (Teardown-Fenster o.ae.), der sich durch Wiederholen
+                // nicht heilt. Sofort verwerfen.
                 StarTruckMP.Log.LogWarning($"JobBoardSync: Retry verworfen (Sektor '{pending.sector}', Versuch {pending.attempts}) - struktureller Fehler, Wiederholung sinnlos: {retryEx.Message}");
                 pendingRestore = null;
             }
         }
 
-        // Build-325: das alte All-jobs-DescribeJobs (das fuer jeden Job '[]' zeigte, weil
-        // es nur sectorId-Parameter mit Werten aufschluesselte) ist ersetzt durch
-        // DescribeSingleJob - pro Job ALLE Parameter mit Kind+Werten, nur noch im
-        // Fehlerfall eines einzelnen Jobs geloggt.
-
-        // ---- Serialisierung (eigenes Blob-Format, unabhaengig von Riptide-Feld-API) ----
-        // Spiegelt QuestInstanceSaveData / QuestTaskParameterSaveData - dasselbe Format, das
-        // das Spiel selbst fuers Speichern nutzt (FlatSharp-generierte Save-Datentypen).
-
-        // Alle 19 ItemKind-Varianten sind FlatSharp-generierte name+value Wrapper (siehe
-        // WriteParam/ReadParam) - es gibt keine unterstuetzten/nicht unterstuetzten Varianten
-        // mehr. Bleibt als Stelle stehen, falls das Spiel per Update neue Varianten einfuehrt,
-        // die ReadParam/WriteParam noch nicht kennen (dann: NONE-Fall bzw. default-Fall).
-        private static bool IsSupportedKind(QuestTaskParameterSaveData.ItemKind k)
-        {
-            return k != QuestTaskParameterSaveData.ItemKind.NONE;
-        }
-
-<<<<<<< HEAD
-        // Build-326: QuestTaskParameterSaveData ist ein FlatSharp-Union-Struct. Die Parameter-
-        // Konstruktoren des Interop-Assemblys setzen intern Discriminator+value, aber beim
-        // Konstruieren aus gemanagtem Code endet der Discriminator empirisch auf 0 (= NONE),
-        // egal welcher Konstruktor benutzt wurde -> beim Empfaenger dekodiert ALLE Parameter
-        // als Kind=NONE -> QuestTaskParameter.GenerateSector NREt (custom-build-325-Befund:
-        // 247 Jobs, alle 'params=16[NONE x12]', applied=0).
+        // =====================================================================
+        // Build-328 PLAN C: Native FlatSharp-Serialisierung (jobFormatVersion=2)
+        // =====================================================================
         //
-        // Fix: Discriminator-Backingfield und value-Feld DIREKT per Feld-Offset setzen
-        // (beide sind als unsafe-Properties mit direktem Feldzugriff im Interop verfuegbar),
-        // statt dem IL2CPP-Konstruktor zu trauen. Der Direktzugriff umgeht den Union-Switch
-        // voellig und ist exakt das, was FlatSharp selbst schreibt.
-        private static QuestTaskParameterSaveData MakeParam(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
-        {
-            var p = new QuestTaskParameterSaveData();
-            p._Discriminator_k__BackingField = (byte)kind;
-            p.value = value;
-            return p;
-=======
-        // Build-327: QuestTaskParameterSaveData ist ein FlatSharp-Union-Struct
-        // (_Discriminator_k__BackingField + value). Build-326 versuchte, den Discriminator
-        // ueber die generierte unsafe-Property (Managed Field-Offset-Write) zu setzen - das
-        // griff nicht (Empfaenger-Log: alle Parameter Kind=NONE, value='null').
+        // v1 (Hand-Format via BinaryWriter) konnte das QuestTaskParameterSaveData-Union
+        // (Discriminator+value) nie korrekt uebertragen: Der Discriminator las sich beim
+        // Empfaenger immer als NONE (0), value immer als null - egal ob Union-CTor oder
+        // RawWrite mit il2cpp_field_get_offset. Der Kind-Getter liest den Discriminator
+        // offenbar ueber einen anderen Pfad als den reinen Feld-Offset.
         //
-        // Mehrstufige MakeParam mit ZWINGENDER Verifikation (Discriminator-Readback):
-        // 1) Typisierter Union-CTor: new QuestTaskParameterSaveData(value). Der interop-
-        //    generierte CTor ruft den nativen CTor per il2cpp_runtime_invoke (instanzgebunden).
-        // 2) Fallback: il2cpp_object_new + Direktzugriff auf das Discriminator-Backingfield
-        //    mit dem ECHTEN unmanaged Offset (il2cpp_field_get_offset) und value via
-        //    il2cpp_gc_wbarrier_set_field - exakt die Mechanik der generierten unsafe-Setter.
-        // 3) Readback nach jedem Versuch ueber denselben Offset. Erst wenn der Discriminator
-        //    wirklich auf kind steht, verlaesst das Objekt MakeParam - sonst Exception + Log.
-        private static QuestTaskParameterSaveData MakeParam(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        // v2 laesst das Spiel selbst serialisieren:
+        //   - QUESTSAVE-DATEN landen als echtes QuestSaveData-Objekt in einem
+        //     SaveSlotContainer (Spiel-Klasse mit statischem Serializer-Property).
+        //   - SaveSlotContainer.Serializer.Write(container) produziert byte[] mit sauber
+        //     geschriebenen Discriminators (der native Serializer kennt den Union-Layout).
+        //   - SaveSlotContainer.Serializer.Parse(bytes) erzeugt beim Empfaenger ein NEUES
+        //     QuestSaveData-Objekt ueber den nativen FlatSharp-Deserialisierungs-Pfad -
+        //     derselbe Pfad wie beim echten Spielstand-Load. Discriminators + value-Pointer
+        //     stimmen garantiert (das Spiel liest seine eigenen Spielstaende damit).
+        //
+        // Dekompiliert (Assembly-CSharp dekompiliert am 13.09.):
+        //   SaveSlotContainer.Serializer : ISerializer<SaveSlotContainer> (statisch, sauber)
+        //   SaveSlotContainer { IList<SaveContainer> containers; SaveSlotMetadata metadata; }
+        //   SaveContainer { string key; Nullable<SystemSaveData> content; }
+        //   SystemSaveData( QuestSaveData ) - Union-CTor, Item-Index 12.
+        //   SaveContainer.SetContent/GetContent ueber Nullable<SystemSaveData>.
+
+        private const byte WIRE_FORMAT_V2 = 2;
+
+        private static FlatSharp.ISerializer<SaveSlotContainer> _ssSerializer = null;
+        private static bool _ssSerializerResolved = false;
+
+        private static FlatSharp.ISerializer<SaveSlotContainer> GetSaveSlotContainerSerializer()
         {
-            byte expected = (byte)kind;
-
-            try
+            if (!_ssSerializerResolved)
             {
-                QuestTaskParameterSaveData p = MakeParamViaTypedCtor(kind, value);
-                byte readback = ReadDiscriminatorSafe(p, "ctor");
-                if (readback == expected) return p;
-                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: ctor-Variante lieferte Discriminator {readback} != {expected} - naechster Versuch: RawWrite.");
+                _ssSerializer = SaveSlotContainer.Serializer;
+                _ssSerializerResolved = true;
+                if (_ssSerializer == null)
+                    StarTruckMP.Log.LogWarning("JobBoardSync: SaveSlotContainer.Serializer ist NULL - native Serialisierung unmoeglich.");
+                else
+                    StarTruckMP.Log.LogInfo($"JobBoardSync: SaveSlotContainer.Serializer aufgeloest ({_ssSerializer.GetType().Name}).");
             }
-            catch (Exception ex1)
-            {
-                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: Union-CTor-Variante fehlgeschlagen: {ex1.Message}");
-            }
-
-            try
-            {
-                QuestTaskParameterSaveData p = MakeParamViaRawWrite(kind, value);
-                byte readback = ReadDiscriminatorSafe(p, "rawWrite");
-                if (readback == expected) return p;
-                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: rawWrite-Variante lieferte Discriminator {readback} != {expected}.");
-            }
-            catch (Exception ex2)
-            {
-                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: RawWrite-Variante fehlgeschlagen: {ex2.Message}");
-            }
-
-            throw new InvalidOperationException(
-                $"JobBoardSync.MakeParam: Discriminator konnte NICHT auf {expected} gesetzt werden - Job-Parameter nicht synchronisierbar (Plan-B-Hexdump im Log, siehe DescribeParamRaw).");
+            return _ssSerializer;
         }
 
-        // Typisierter Union-CTor je Variante.
-        private static QuestTaskParameterSaveData MakeParamViaTypedCtor(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        // SERIALISIEREN (Sender): QuestSaveData -> SaveSlotContainer -> native FlatSharp-Bytes.
+        private static byte[] SerializeQuestSaveDataNative(QuestSaveData questSave, out int jobCount)
         {
-            switch (kind)
-            {
-                case QuestTaskParameterSaveData.ItemKind.intValue: return new QuestTaskParameterSaveData((IntValue)value);
-                case QuestTaskParameterSaveData.ItemKind.stringValue: return new QuestTaskParameterSaveData((StringValue)value);
-                case QuestTaskParameterSaveData.ItemKind.trailerId: return new QuestTaskParameterSaveData((TrailerId)value);
-                case QuestTaskParameterSaveData.ItemKind.cargoProperties: return new QuestTaskParameterSaveData((CargoProperties)value);
-                case QuestTaskParameterSaveData.ItemKind.cargoType: return new QuestTaskParameterSaveData((StarTruckSaveData.CargoType)value);
-                case QuestTaskParameterSaveData.ItemKind.sectorId: return new QuestTaskParameterSaveData((SectorId)value);
-                case QuestTaskParameterSaveData.ItemKind.cargoBayId: return new QuestTaskParameterSaveData((CargoBayId)value);
-                case QuestTaskParameterSaveData.ItemKind.galacticTime: return new QuestTaskParameterSaveData((StarTruckSaveData.GalacticTime)value);
-                case QuestTaskParameterSaveData.ItemKind.corporationId: return new QuestTaskParameterSaveData((CorporationId)value);
-                case QuestTaskParameterSaveData.ItemKind.conversation: return new QuestTaskParameterSaveData((Conversation)value);
-                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags: return new QuestTaskParameterSaveData((StarTruckSaveData.InventoryItemTags)value);
-                case QuestTaskParameterSaveData.ItemKind.floatValue: return new QuestTaskParameterSaveData((FloatValue)value);
-                case QuestTaskParameterSaveData.ItemKind.vector3: return new QuestTaskParameterSaveData((Vector3Value)value);
-                case QuestTaskParameterSaveData.ItemKind.quest: return new QuestTaskParameterSaveData((Quest)value);
-                case QuestTaskParameterSaveData.ItemKind.identifier: return new QuestTaskParameterSaveData((StarTruckSaveData.Identifier)value);
-                case QuestTaskParameterSaveData.ItemKind.questFlag: return new QuestTaskParameterSaveData((StarTruckSaveData.QuestFlag)value);
-                case QuestTaskParameterSaveData.ItemKind.ventureLocation: return new QuestTaskParameterSaveData((StarTruckSaveData.VentureLocation)value);
-                case QuestTaskParameterSaveData.ItemKind.ventureType: return new QuestTaskParameterSaveData((VentureTypeData)value);
-                case QuestTaskParameterSaveData.ItemKind.ventureJobType: return new QuestTaskParameterSaveData((VentureJobTypeData)value);
-                default:
-                    throw new InvalidOperationException($"MakeParamViaTypedCtor: unbekannter ItemKind {kind}");
-            }
-        }
+            jobCount = 0;
+            var serializer = GetSaveSlotContainerSerializer();
+            if (serializer == null)
+                throw new InvalidOperationException("SaveSlotContainer.Serializer nicht aufgeloest");
 
-        // ---- IL2CPP-Rohzugriff (Fallback) ----
-        // fieldInfo-Handles einmalig auflösen; Offset via il2cpp_field_get_offset; Schreiben
-        // exakt wie die generierten unsafe-Setter (Pointer-Arithmetik bzw. wbarrier-Write).
-        private static System.IntPtr _qtpsdFieldDiscriminator = System.IntPtr.Zero;
-        private static System.IntPtr _qtpsdFieldValue = System.IntPtr.Zero;
-        private static int _qtpsdOffsetDiscriminator = -1;
-        private static bool _qtpsdFieldsResolved = false;
-        private static readonly object _qtpsdFieldLock = new object();
+            // Container mit key="mp_jobs" + content=SystemSaveData(Union idx 12 = QuestSaveData)
+            var container = new SaveContainer();
+            container.key = "mp_jobs";
+            var ssd = new SystemSaveData(questSave);
+            container.content = new Il2CppSystem.Nullable<SystemSaveData>(ssd);
 
-        private static void ResolveQtpsdFields()
-        {
-            lock (_qtpsdFieldLock)
-            {
-                if (_qtpsdFieldsResolved) return;
-                System.IntPtr classPtr = Il2CppClassPointerStore<QuestTaskParameterSaveData>.NativeClassPtr;
-                if (classPtr == System.IntPtr.Zero)
-                    throw new InvalidOperationException("QuestTaskParameterSaveData.NativeClassPtr == 0");
-                _qtpsdFieldDiscriminator = IL2CPP.GetIl2CppField(classPtr, "<Discriminator>k__BackingField");
-                _qtpsdFieldValue = IL2CPP.GetIl2CppField(classPtr, "value");
-                if (_qtpsdFieldDiscriminator == System.IntPtr.Zero)
-                    throw new InvalidOperationException("Discriminator-Feld nicht gefunden");
-                _qtpsdOffsetDiscriminator = (int)IL2CPP.il2cpp_field_get_offset(_qtpsdFieldDiscriminator);
-                _qtpsdFieldsResolved = true;
-                StarTruckMP.Log.LogInfo($"JobBoardSync: Discriminator-Feld-Offset = {_qtpsdOffsetDiscriminator}");
-            }
-        }
+            var ssc = new SaveSlotContainer();
+            var containerList = new Il2CppSystem.Collections.Generic.List<SaveContainer>();
+            ssc.containers = containerList.Cast<Il2CppSystem.Collections.Generic.IList<SaveContainer>>();
+            containerList.Add(container);
+            ssc.metadata = new SaveSlotMetadata();
 
-        private static unsafe byte ReadDiscriminatorSafe(QuestTaskParameterSaveData p, string variant)
-        {
-            try
-            {
-                ResolveQtpsdFields();
-                System.IntPtr objPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(p);
-                return *((byte*)objPtr + _qtpsdOffsetDiscriminator);
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: Discriminator-Readback ({variant}) fehlgeschlagen: {ex.Message}");
-                return 255;
-            }
-        }
+            // GetMaxSize -> Puffer -> Write (nativ, via ISerializer<T>-Extension Write<T>)
+            int maxSize = serializer.GetMaxSize(ssc);
+            if (maxSize <= 0)
+                throw new InvalidOperationException($"GetMaxSize lieferte {maxSize}");
+            var buf = new Il2CppStructArray<byte>(maxSize + 16);
+            int written = serializer.Write(buf, ssc);
+            if (written <= 0)
+                throw new InvalidOperationException($"Write lieferte {written}");
 
-        private static QuestTaskParameterSaveData MakeParamViaRawWrite(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
-        {
-            ResolveQtpsdFields();
-            System.IntPtr classPtr = Il2CppClassPointerStore<QuestTaskParameterSaveData>.NativeClassPtr;
-            System.IntPtr objPtr = IL2CPP.il2cpp_object_new(classPtr);
-            if (objPtr == System.IntPtr.Zero)
-                throw new InvalidOperationException("il2cpp_object_new lieferte 0");
-            unsafe
-            {
-                *((byte*)objPtr + _qtpsdOffsetDiscriminator) = (byte)kind;
-                if (value != null)
-                {
-                    System.IntPtr valuePtr = IL2CPP.Il2CppObjectBaseToPtr(value);
-                    IL2CPP.il2cpp_gc_wbarrier_set_field(objPtr, (System.IntPtr)((byte*)objPtr + IL2CPP.il2cpp_field_get_offset(_qtpsdFieldValue)), valuePtr);
-                }
-            }
-            return new QuestTaskParameterSaveData(objPtr);
->>>>>>> feature/jobboard-unionctor-327
-        }
+            jobCount = Il2CppCount(questSave.availableJobs);
 
-        private static byte[] SerializeJobs(Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData> jobs)
-        {
-            using var ms = new MemoryStream();
+            // Wire: [tag=2][4 len LE][payload]
+            var ms = new MemoryStream();
             using var w = new BinaryWriter(ms);
-
-            int jobsCount = Il2CppCount(jobs);
-            w.Write((ushort)jobsCount);
-            for (int ji = 0; ji < jobsCount; ji++)
-            {
-                var job = jobs[ji];
-                w.Write(job.id ?? "");
-                w.Write(job.questParametersAsset ?? "");
-
-                var taskStates = job.taskStates;
-                int stateCount = Il2CppCount(taskStates);
-                w.Write((ushort)stateCount);
-                for (int i = 0; i < stateCount; i++) w.Write(taskStates[i] ?? "");
-
-                var taskCounts = job.taskCompleteCounts;
-                int cCount = Il2CppCount(taskCounts);
-                w.Write((ushort)cCount);
-                for (int i = 0; i < cCount; i++) w.Write(taskCounts[i]);
-
-                var pars = job.generatedParameters;
-                int totalParams = Il2CppCount(pars);
-                int supportedCount = 0;
-                if (pars != null)
-                {
-                    for (int i = 0; i < totalParams; i++)
-                        if (IsSupportedKind(pars[i].Kind)) supportedCount++;
-                }
-                w.Write((ushort)supportedCount);
-                if (pars != null)
-                {
-                    for (int i = 0; i < totalParams; i++)
-                        if (IsSupportedKind(pars[i].Kind)) WriteParam(w, pars[i]);
-                }
-
-                if (totalParams > supportedCount)
-                {
-                    StarTruckMP.Log.LogWarning($"JobBoardSync: Job '{job.id}' hat {totalParams - supportedCount} nicht unterstuetzte Parameter (cargoType/cargoProperties/conversation/etc.) - diese werden NICHT synchronisiert.");
-                }
-            }
-
+            w.Write(WIRE_FORMAT_V2);
+            w.Write(written);
+            var outBytes = new byte[written];
+            for (int i = 0; i < written; i++) outBytes[i] = buf[i];
+            w.Write(outBytes, 0, written);
             return ms.ToArray();
         }
 
-        private static Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData> DeserializeJobs(byte[] blob)
+        // DESERIALISIEREN (Empfaenger): FlatSharp-Bytes -> SaveSlotContainer -> QuestSaveData.
+        private static QuestSaveData DeserializeQuestSaveDataNative(byte[] blob)
         {
-            var result = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>();
-            using var ms = new MemoryStream(blob);
-            using var r = new BinaryReader(ms);
+            if (blob == null || blob.Length < 5)
+                throw new InvalidOperationException($"Blob zu kurz ({blob?.Length ?? 0} bytes)");
+            if (blob[0] != WIRE_FORMAT_V2)
+                throw new InvalidOperationException($"Blob ist nicht v2 (Format-Tag {blob[0]}) - vermutlich v1 vom alten Client (<=327), wird verworfen");
 
-            ushort count = r.ReadUInt16();
-            for (int i = 0; i < count; i++)
+            int len = blob[1] | (blob[2] << 8) | (blob[3] << 16) | (blob[4] << 24);
+            if (len <= 0 || len > blob.Length - 5)
+                throw new InvalidOperationException($"Blob-Laenge {len} passt nicht zu {blob.Length} bytes");
+
+            var payload = new Il2CppStructArray<byte>(len);
+            System.Buffer.BlockCopy(blob, 5, payload, 0, len); // managed array copy
+
+            var serializer = GetSaveSlotContainerSerializer();
+            if (serializer == null)
+                throw new InvalidOperationException("SaveSlotContainer.Serializer nicht aufgeloest");
+
+            // Nativ PARSEN - derselbe Pfad wie beim echten Spielstand-Load.
+            var parsed = FlatSharp.ISerializerExtensions.Parse(serializer, payload);
+            if (parsed == null)
+                throw new InvalidOperationException("Parse lieferte null");
+
+            var containers = parsed.containers;
+            if (containers == null) throw new InvalidOperationException("parsed.containers == null");
+            int cc = Il2CppCount(containers);
+            for (int i = 0; i < cc; i++)
             {
-                var job = new QuestInstanceSaveData();
-                job.id = r.ReadString();
-                job.questParametersAsset = r.ReadString();
-
-                ushort stateCount = r.ReadUInt16();
-                var states = new Il2CppSystem.Collections.Generic.List<string>();
-                for (int s = 0; s < stateCount; s++) states.Add(r.ReadString());
-                job.taskStates = states.Cast<Il2CppSystem.Collections.Generic.IList<string>>();
-
-                ushort countCount = r.ReadUInt16();
-                var counts = new Il2CppSystem.Collections.Generic.List<int>();
-                for (int c = 0; c < countCount; c++) counts.Add(r.ReadInt32());
-                job.taskCompleteCounts = counts.Cast<Il2CppSystem.Collections.Generic.IList<int>>();
-
-                ushort paramCount = r.ReadUInt16();
-                var pars = new Il2CppSystem.Collections.Generic.List<QuestTaskParameterSaveData>();
-                for (int p = 0; p < paramCount; p++) pars.Add(ReadParam(r));
-                job.generatedParameters = pars.Cast<Il2CppSystem.Collections.Generic.IList<QuestTaskParameterSaveData>>();
-
-                result.Add(job);
+                var c = containers[i];
+                if (c?.key != "mp_jobs") continue;
+                if (c.content == null || !c.content.HasValue) continue;
+                // SystemSaveData-Union: Item 12 = QuestSaveData
+                if (c.content.Value.QuestSaveData is QuestSaveData qsd && qsd != null)
+                    return qsd;
             }
-            return result;
+            throw new InvalidOperationException("kein mp_jobs-Container mit QuestSaveData gefunden");
         }
 
-        private static void WriteParam(BinaryWriter w, QuestTaskParameterSaveData p)
-        {
-            w.Write((byte)p.Kind);
-            switch (p.Kind)
-            {
-                case QuestTaskParameterSaveData.ItemKind.intValue:
-                    w.Write(p.intValue.name ?? ""); w.Write(p.intValue.value); break;
-                case QuestTaskParameterSaveData.ItemKind.stringValue:
-                    w.Write(p.stringValue.name ?? ""); w.Write(p.stringValue.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.trailerId:
-                    w.Write(p.trailerId.name ?? ""); w.Write(p.trailerId.value); break;
-                case QuestTaskParameterSaveData.ItemKind.cargoProperties:
-                    w.Write(p.cargoProperties.name ?? ""); w.Write(p.cargoProperties.value); break;
-                case QuestTaskParameterSaveData.ItemKind.cargoType:
-                    w.Write(p.cargoType.name ?? ""); w.Write(p.cargoType.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.sectorId:
-                    w.Write(p.sectorId.name ?? ""); w.Write(p.sectorId.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.cargoBayId:
-                    w.Write(p.cargoBayId.name ?? ""); w.Write(p.cargoBayId.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.galacticTime:
-                    w.Write(p.galacticTime.name ?? ""); w.Write(p.galacticTime.value); break;
-                case QuestTaskParameterSaveData.ItemKind.corporationId:
-                    w.Write(p.corporationId.name ?? ""); w.Write(p.corporationId.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.conversation:
-                    w.Write(p.conversation.name ?? ""); w.Write(p.conversation.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
-                    w.Write(p.inventoryItemTags.name ?? ""); w.Write(p.inventoryItemTags.value); break;
-                case QuestTaskParameterSaveData.ItemKind.floatValue:
-                    w.Write(p.floatValue.name ?? ""); w.Write(p.floatValue.value); break;
-                case QuestTaskParameterSaveData.ItemKind.vector3:
-                    w.Write(p.vector3.name ?? "");
-                    w.Write(p.vector3.value.x); w.Write(p.vector3.value.y); w.Write(p.vector3.value.z);
-                    break;
-                case QuestTaskParameterSaveData.ItemKind.quest:
-                    w.Write(p.quest.name ?? ""); w.Write(p.quest.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.identifier:
-                    w.Write(p.identifier.name ?? ""); w.Write(p.identifier.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.questFlag:
-                    w.Write(p.questFlag.name ?? ""); w.Write(p.questFlag.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.ventureLocation:
-                    w.Write(p.ventureLocation.name ?? ""); w.Write(p.ventureLocation.value ?? ""); break;
-                case QuestTaskParameterSaveData.ItemKind.ventureType:
-                    w.Write(p.ventureType.name ?? ""); w.Write((int)p.ventureType.value); break;
-                case QuestTaskParameterSaveData.ItemKind.ventureJobType:
-                    w.Write(p.ventureJobType.name ?? ""); w.Write((int)p.ventureJobType.value); break;
-                default:
-                    StarTruckMP.Log.LogWarning($"JobBoardSync.WriteParam: unbekannter ItemKind {p.Kind}, wird uebersprungen.");
-                    break;
-            }
-        }
-
-        private static QuestTaskParameterSaveData ReadParam(BinaryReader r)
-        {
-            var kind = (QuestTaskParameterSaveData.ItemKind)r.ReadByte();
-            switch (kind)
-            {
-                case QuestTaskParameterSaveData.ItemKind.intValue:
-<<<<<<< HEAD
-                    { var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.stringValue:
-                    { var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.trailerId:
-                    { var v = new TrailerId(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoProperties:
-                    { var v = new CargoProperties(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoType:
-                    { var v = new StarTruckSaveData.CargoType(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.sectorId:
-                    { var v = new SectorId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoBayId:
-                    { var v = new CargoBayId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.galacticTime:
-                    { var v = new StarTruckSaveData.GalacticTime(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.corporationId:
-                    { var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.floatValue:
-                    { var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return MakeParam(kind, v); }
-=======
-{ var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.stringValue:
-{ var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.trailerId:
-{ var v = new TrailerId(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoProperties:
-{ var v = new CargoProperties(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoType:
-{ var v = new StarTruckSaveData.CargoType(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.sectorId:
-{ var v = new SectorId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.cargoBayId:
-{ var v = new CargoBayId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.galacticTime:
-{ var v = new StarTruckSaveData.GalacticTime(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.corporationId:
-{ var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.floatValue:
-{ var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return MakeParam(kind, v); }
->>>>>>> feature/jobboard-unionctor-327
-                case QuestTaskParameterSaveData.ItemKind.vector3:
-                    {
-                        var v = new Vector3Value(); v.name = r.ReadString();
-                        var vec = new Vector3Data();
-                        vec.x = r.ReadSingle(); vec.y = r.ReadSingle(); vec.z = r.ReadSingle();
-                        v.value = vec;
-                        return MakeParam(kind, v);
-                    }
-                case QuestTaskParameterSaveData.ItemKind.conversation:
-<<<<<<< HEAD
-                    { var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
-                    { var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.identifier:
-                    { var v = new StarTruckSaveData.Identifier(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.quest:
-                    { var v = new Quest(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.questFlag:
-                    { var v = new StarTruckSaveData.QuestFlag(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.ventureLocation:
-                    { var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.ventureType:
-                    { var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return MakeParam(kind, v); }
-=======
-{ var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
-{ var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.identifier:
-{ var v = new StarTruckSaveData.Identifier(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.quest:
-{ var v = new Quest(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.questFlag:
-{ var v = new StarTruckSaveData.QuestFlag(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.ventureLocation:
-{ var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
-                case QuestTaskParameterSaveData.ItemKind.ventureType:
-{ var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return MakeParam(kind, v); }
->>>>>>> feature/jobboard-unionctor-327
-                case QuestTaskParameterSaveData.ItemKind.ventureJobType:
-                    { var v = new VentureJobTypeData(); v.name = r.ReadString(); v.value = (VentureJobType)r.ReadInt32(); return MakeParam(kind, v); }
-                default:
-                    throw new InvalidOperationException($"JobBoardSync: unbekannter/nicht unterstuetzter ItemKind beim Lesen: {kind}");
-            }
-        }
-
-        // Build-327 Plan B (nur Diagnose): rohe Bytes eines Param-Objekts hexdumpen, damit im
-        // Test die wire bytes gegen die Dekompilierung validiert werden koennen. Liest die
-        // ersten 64 Bytes ab Objekt-Header (klassptr + Felder) - der Discriminator liegt
-        // irgendwo in den ersten Feldern, der Dump zeigt die echten Werte.
-        private static unsafe string DescribeParamRaw(QuestTaskParameterSaveData p)
+        // Build-328 Roundtrip-Verifikation (nur bei Debug-Flag): eigenes QuestSaveData nativ
+        // serialisieren + deserialisieren und Kinds vergleichen. Log: 'roundtrip kind match: X/Y'.
+        public static void RunRoundtripVerification()
         {
             try
             {
-                System.IntPtr objPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(p);
-                int dumpLen = Math.Min(64, 64);
-                var sb = new System.Text.StringBuilder("raw[");
-                for (int i = 0; i < dumpLen; i++)
+                var liveJobs = ProceduralJobGenerator.GetAvailableJobs();
+                int total = 0, matched = 0;
+                var questSave = new QuestSaveData();
+                if (liveJobs != null && liveJobs.Count > 0)
                 {
-                    sb.Append((*((byte*)objPtr + i)).ToString("X2"));
-                    if (i < dumpLen - 1) sb.Append(' ');
+                    var saveList = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>();
+                    int liveCount = liveJobs.Count;
+                    for (int i = 0; i < liveCount; i++)
+                        saveList.Add(liveJobs[i].GetData());
+                    questSave.availableJobs = saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
                 }
-                sb.Append($"] kindReadback={p.Kind}");
-                return sb.ToString();
+                else
+                {
+                    // Kein Live-Board: leeres QuestSaveData - Roundtrip ueber Struktur-only.
+                    questSave.availableJobs = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>().Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+                }
+
+                byte[] blob = SerializeQuestSaveDataNative(questSave, out _);
+                var rt = DeserializeQuestSaveDataNative(blob);
+
+                // Kinds aller Parameter vergleichen (326/327-Kern-Problemfeld: Discriminator).
+                var jobsBefore = questSave.availableJobs;
+                var jobsAfter = rt.availableJobs;
+                int jbCount = Il2CppCount(jobsBefore);
+                int jaCount = Il2CppCount(jobsAfter);
+                StarTruckMP.Log.LogInfo($"JobBoardSync.Roundtrip: Jobs vor={jbCount} nach={jaCount}.");
+                int n = Math.Min(jbCount, jaCount);
+                for (int j = 0; j < n; j++)
+                {
+                    CompareJobKinds(jobsBefore[j], jobsAfter[j], ref total, ref matched, j);
+                }
+                StarTruckMP.Log.LogInfo($"JobBoardSync: roundtrip kind match: {matched}/{total}");
             }
             catch (Exception ex)
             {
-                return $"(raw dump fehlgeschlagen: {ex.Message})";
+                StarTruckMP.Log.LogWarning($"JobBoardSync.Roundtrip-Verifikation fehlgeschlagen: {ex}");
+            }
+        }
+
+        private static void CompareJobKinds(QuestInstanceSaveData before, QuestInstanceSaveData after, ref int total, ref int matched, int jobIdx)
+        {
+            int pcB = Il2CppCount(before?.generatedParameters);
+            int pcA = Il2CppCount(after?.generatedParameters);
+            if (pcB != pcA)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardSync.Roundtrip: Job {jobIdx} '{before?.id}' Parameter-Anzahl {pcA} != {pcB}");
+                total += pcB; // die Soll-Werte zaehlen
+                return;
+            }
+            for (int p = 0; p < pcB; p++)
+            {
+                var kb = before.generatedParameters[p].Kind;
+                var ka = after.generatedParameters[p].Kind;
+                total++;
+                if (kb == ka) matched++;
+                else StarTruckMP.Log.LogWarning($"JobBoardSync.Roundtrip: Job {jobIdx} '{before?.id}' Param {p} Kind {ka} != {kb}");
             }
         }
     }
