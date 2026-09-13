@@ -144,15 +144,10 @@ namespace StarTruckMPUpdater
 
             bool buildMatch = localBuild.Length > 0 &&
                 string.Equals(remote.build.Trim(), localBuild, StringComparison.OrdinalIgnoreCase);
-            if (buildMatch && File.Exists(dllPath) && !freshBepInExInstall)
-            {
-                Log("Bereits aktuell.");
-                LaunchGame(gamePath);
-                return 0;
-            }
-
-            // 5. Make sure the game isn't running (file lock)
-            while (IsGameRunning())
+            // 5. Make sure the game isn't running (file lock) - passiert VOR dem Statusfenster,
+            //    damit der "Bitte Spiel schliessen"-Dialog nicht hinter dem Fenster landet.
+            bool updateNeeded = !(buildMatch && File.Exists(dllPath) && !freshBepInExInstall);
+            while (updateNeeded && IsGameRunning())
             {
                 var result = MessageBox.Show(
                     "Star Trucker is currently running and needs to be closed for the update.\n\nPlease close the game, then click OK.",
@@ -167,49 +162,99 @@ namespace StarTruckMPUpdater
                 }
             }
 
-            // 6. Download + install StarTruckMP.dll
-            try
+            // 6. Statusfenster mit Versionsvergleich zeigen und den Rest (Launch bzw.
+            //    Download+Install) im Hintergrund-Thread abhandeln.
+            return RunUpdateFlow(updateNeeded, freshBepInExInstall, localBuild, remote, gamePath, dllPath, localVersionPath);
+        }
+
+        /// <summary>
+        /// Zeigt das ProgressForm mit installierter/neuester Version und erledigt den Rest des
+        /// Ablaufs in einem Hintergrund-Thread, waehrend das Fenster auf dem UI-Thread lebt
+        /// (gleiches Muster wie der fruehere Fresh-Install-Flow):
+        ///  - Kein Update noetig: kurzer "Bereits aktuell"-Text, Spiel startet, Fenster schliesst
+        ///    sich nach ~2 Sekunden von selbst.
+        ///  - Update noetig: Spinner laeuft, Download+Install im Hintergrund; danach Status
+        ///    "Update installiert...", das Fenster schliesst, sobald das Spielfenster sichtbar
+        ///    ist (oder nach Timeout).
+        ///  - Fehler: Fenster schliessen und den ueblichen ShowError-Dialog zeigen.
+        /// </summary>
+        static int RunUpdateFlow(bool updateNeeded, bool freshBepInExInstall, string localBuild,
+                                 VersionInfo remote, string gamePath, string dllPath, string localVersionPath)
+        {
+            var form = new ProgressForm(localBuild, remote.build);
+            int exitCode = 0;
+
+            var worker = new System.Threading.Thread(() =>
             {
-                Log($"Lade {remote.build} herunter...");
-                if (string.IsNullOrWhiteSpace(remote.url))
+                try
                 {
-                    Log("Fehler: url-Feld in version.json ist leer.");
-                    ShowError("Update fehlgeschlagen: Die Download-URL in version.json ist leer.
-Bitte Slipstream manuell neu installieren.");
-                    return 1;
+                    if (!updateNeeded)
+                    {
+                        // Nichts zu tun: kurz anzeigen, dass alles aktuell ist, Spiel starten
+                        // und das Fenster nach ~2 Sekunden von selbst schliessen.
+                        form.UpdateStatus("Bereits aktuell");
+                        Log("Bereits aktuell.");
+                        LaunchGame(gamePath);
+                        System.Threading.Thread.Sleep(2000);
+                    }
+                    else
+                    {
+                        form.UpdateStatus($"Update wird heruntergeladen... {remote.build}");
+                        Log($"Lade {remote.build} herunter...");
+
+                        if (string.IsNullOrWhiteSpace(remote.url))
+                        {
+                            throw new InvalidOperationException(
+                                "Update fehlgeschlagen: Die Download-URL in version.json ist leer.\nBitte Slipstream manuell neu installieren.");
+                        }
+
+                        byte[] gz = DownloadBytes(remote.url);
+
+                        Log("Entpacke...");
+                        byte[] dll = GunzipBytes(gz);
+
+                        string? pluginsDir = Path.GetDirectoryName(dllPath);
+                        if (pluginsDir != null) Directory.CreateDirectory(pluginsDir);
+                        File.WriteAllBytes(dllPath, dll);
+                        File.WriteAllText(localVersionPath, remote.build);
+
+                        Log($"Erfolgreich installiert: {remote.build} ({dllPath})");
+
+                        if (freshBepInExInstall)
+                        {
+                            // Bei einer Frisch-Installation generiert BepInEx/IL2CppInterop beim
+                            // ersten Start erst die Interop-Assemblies - das kann mehrere Minuten
+                            // dauern, deshalb hier der laengere Hinweistext.
+                            form.UpdateStatus("Das Spiel wird vorbereitet, dies kann bis zu zwei Minuten dauern...");
+                        }
+                        else
+                        {
+                            form.UpdateStatus("Update installiert, Spiel wird gestartet...");
+                        }
+
+                        LaunchGame(gamePath);
+
+                        // Fenster offen lassen, bis das Spielfenster wirklich sichtbar ist -
+                        // so sieht der Nutzer, dass der Start geklappt hat (Timeout als Fallback).
+                        WaitForGameWindowVisible(freshBepInExInstall ? 180 : 60);
+                    }
                 }
-                byte[] gz = DownloadBytes(remote.url);
+                catch (Exception ex)
+                {
+                    Log($"Fehler im Update-Ablauf: {ex.Message}");
+                    exitCode = 1;
+                    // Fenster zuerst schliessen, dann den ueblichen Fehler-Dialog zeigen.
+                    form.CloseSafely();
+                    ShowError(ex.Message);
+                    return;
+                }
+                form.CloseSafely();
+            });
+            worker.IsBackground = true;
+            worker.Start();
 
-                Log("Entpacke...");
-                byte[] dll = GunzipBytes(gz);
-
-                Directory.CreateDirectory(pluginsDir);
-                File.WriteAllBytes(dllPath, dll);
-                File.WriteAllText(localVersionPath, remote.build);
-
-                Log($"Erfolgreich installiert: {remote.build} ({dllPath})");
-            }
-            catch (Exception ex)
-            {
-                Log($"Fehler beim Installieren: {ex.Message}");
-                ShowError($"Error installing:\n{ex.Message}");
-                return 1;
-            }
-
-            if (freshBepInExInstall)
-            {
-                // Bei einer Frisch-Installation muss BepInEx/IL2CppInterop beim allerersten Start
-                // erst die Interop-Assemblies generieren - der Mod ist in diesem ersten Lauf noch
-                // nicht wirklich aktiv nutzbar. Das kann mehrere Minuten dauern, deshalb zeigen wir
-                // ein Fortschrittsfenster statt eines blockierenden Dialogs, damit klar ist, dass
-                // im Hintergrund etwas passiert. Schliesst sich automatisch, sobald der zweite
-                // (eigentliche) Spielstart losgeht.
-                RunFreshInstallFlow(gamePath);
-                return 0;
-            }
-
-            LaunchGame(gamePath);
-            return 0;
+            Application.Run(form);
+            return exitCode;
         }
 
         /// <summary>
@@ -223,51 +268,6 @@ Bitte Slipstream manuell neu installieren.");
         // direkte .exe-Start ohne Steam-Initialisierung sofort abstuerzte (kurzes schwarzes Fenster,
         // dann nichts mehr, weil SteamAPI_Init() fehlschlaegt).
         const int SteamAppId = 2380050;
-
-        /// <summary>
-        /// Fuehrt den Frisch-Install-Doppelstart (Interop-Generierung + eigentlicher Start) mit
-        /// einem sichtbaren Fortschrittsfenster statt einem blockierenden Dialog durch. Laeuft in
-        /// einem Hintergrund-Thread, waehrend das Fenster auf dem UI-Thread lebt; schliesst sich
-        /// selbst, sobald der zweite Spielstart ausgeloest wurde.
-        /// </summary>
-        static void RunFreshInstallFlow(string gamePath)
-        {
-            // Kein Doppelstart mehr noetig: BepInEx generiert die Interop-Dateien beim ersten
-            // Start selbst und der Mod ist bereits in diesem einen Lauf aktiv (bestaetigt durch
-            // Testing). Das Bootstrap-Paket liefert ausserdem schon die fertige BepInEx.cfg mit
-            // deaktivierter Konsole mit, ein nachtraeglicher Patch ist also auch nicht mehr noetig.
-            // Das Fenster ist nur noch eine kurze "wird vorbereitet"-Anzeige, bis der Spielprozess
-            // sichtbar laeuft.
-            var form = new ProgressForm();
-
-            var worker = new System.Threading.Thread(() =>
-            {
-                try
-                {
-                    form.UpdateStatus("Preparing the game, this can take up to two minutes...");
-                    Log("Fresh-Install: Start...");
-                    LaunchGame(gamePath);
-
-                    bool gameAppeared = WaitForGameWindowVisible(timeoutSeconds: 180);
-                    if (!gameAppeared)
-                    {
-                        Log("Spielprozess wurde nach dem Start nicht erkannt (Timeout).");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log($"Fehler im Fresh-Install-Ablauf: {ex.Message}");
-                }
-                finally
-                {
-                    form.CloseSafely();
-                }
-            });
-            worker.IsBackground = true;
-            worker.Start();
-
-            Application.Run(form);
-        }
 
         static void LaunchGame(string gamePath)
         {
@@ -639,10 +639,11 @@ Bitte Slipstream manuell neu installieren.");
     }
 
     /// <summary>
-    /// Schlichtes Fortschrittsfenster fuer den Frisch-Install-Ablauf. Kein Schliessen-Button
-    /// (der Prozess soll nicht abgebrochen werden koennen), Statustext per Invoke von einem
-    /// Hintergrund-Thread aus aktualisierbar, schliesst sich selbst per CloseSafely().
-    /// </summary>
+            /// Zeigt ein schlichtes Fortschrittsfenster mit Spinner und Statustext. Kein Schliessen-Button
+            /// (der Prozess soll nicht abgebrochen werden koennen), Statustext per Invoke von einem
+            /// Hintergrund-Thread aus aktualisierbar, schliesst sich selbst per CloseSafely().
+            /// Im Kopf zeigt es immer installierte und neueste Version (wenn bekannt).
+            /// </summary>
     /// <summary>
     /// Selbst gezeichneter, rotierender Punkt-Spinner (Windows-Forms hat keinen eingebauten
     /// Spinner-Control) - 8 Punkte im Kreis mit abnehmender Deckkraft, per Timer alle 60ms
@@ -715,12 +716,17 @@ Bitte Slipstream manuell neu installieren.");
 
         private readonly Label statusLabel;
         private readonly SpinnerControl spinner;
+        private readonly Label versionLabel;
 
-        public ProgressForm()
+        /// <summary>
+        /// optionalLocal/optionalRemote: werden im Kopf als "Installierte Version: X" /
+        /// "Neueste Version: Y" angezeigt (leer = Zeile weglassen).
+        /// </summary>
+        public ProgressForm(string optionalLocal = "", string optionalRemote = "")
         {
             Text = "Slipstream";
             Width = 480;
-            Height = 200;
+            Height = 240;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
@@ -736,6 +742,23 @@ Bitte Slipstream manuell neu installieren.");
                 Anchor = AnchorStyles.None
             };
 
+            // Kopf: installierte + neueste Version anzeigen (auch bei "Bereits aktuell" sichtbar).
+            versionLabel = new Label
+            {
+                Text = string.IsNullOrWhiteSpace(optionalLocal) && string.IsNullOrWhiteSpace(optionalRemote)
+                    ? ""
+                    : (string.IsNullOrWhiteSpace(optionalLocal)
+                        ? $"Neueste Version: {optionalRemote}"
+                        : string.IsNullOrWhiteSpace(optionalRemote)
+                            ? $"Installierte Version: {optionalLocal}"
+                            : $"Installierte Version: {optionalLocal}\nNeueste Version: {optionalRemote}"),
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopCenter,
+                Dock = DockStyle.Top,
+                Height = 46,
+                Padding = new Padding(20, 8, 20, 0)
+            };
+
             statusLabel = new Label
             {
                 Text = "Preparing...",
@@ -748,13 +771,14 @@ Bitte Slipstream manuell neu installieren.");
 
             Controls.Add(statusLabel);
             Controls.Add(spinner);
+            Controls.Add(versionLabel);
 
-            // Spinner in der verbleibenden Flaeche oberhalb des Labels zentrieren.
+            // Spinner in der verbleibenden Flaeche zwischen Kopf- und Status-Label zentrieren.
             Layout += (s, e) =>
             {
                 spinner.Location = new Point(
                     (ClientSize.Width - spinner.Width) / 2,
-                    (ClientSize.Height - statusLabel.Height - spinner.Height) / 2);
+                    versionLabel.Height + (ClientSize.Height - versionLabel.Height - statusLabel.Height - spinner.Height) / 2);
             };
         }
 
