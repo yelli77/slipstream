@@ -55,6 +55,7 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
+        global::StarTruckMP.StarTruckClient.ShopAtJobBoardBays.Apply();
 
     }
 
