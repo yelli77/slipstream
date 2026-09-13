@@ -136,6 +136,20 @@ public class DedicatedServer
             }
         }
         _players.Add(e.Client.Id, p);
+        // Late-Joiner-Name-Fix (318): das SetPlayerName-Broadcast feuert nur zum Zeitpunkt,
+        // wo ein Spieler seinen Namen setzt. Wer SPAETER joint, erhielt die Namen der bereits
+        // vorhandenen Spieler nie (der Name im Join-Handshake reicht nicht, wenn die Nachricht
+        // verloren geht / raced) — der Client registrierte den anderen dann on-the-fly als
+        // 'Player_N'. Deshalb hier alle bekannten Namen einzeln + Reliable an den NEUEN Client.
+        foreach (var kv in _players)
+        {
+            if (kv.Key == e.Client.Id || string.IsNullOrEmpty(kv.Value.Name)) continue;
+            var nameMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.SetPlayerName);
+            nameMsg.AddUShort(kv.Key);
+            nameMsg.AddString(kv.Value.Name);
+            _server.Send(nameMsg, e.Client);
+            Log($"Sent name '{kv.Value.Name}' for player {kv.Key} to new client {e.Client.Id}");
+        }
         var bc = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.PlayerConnected);
         bc.AddUShort(e.Client.Id);
         bc.AddString(p.Name ?? "");

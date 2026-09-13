@@ -586,10 +586,39 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogInfo($"movementUpdate: registered unknown player {playerId} on the fly (sector={currentSector}, destGate='{remoteDestGate}')");
                     }
 
+                    // Spawn-Guard (318, Bug B): Spieler in einem ANDEREN Sektor duerfen hier
+                    // KEINEN Spawn ausloesen. Nach eigenem Jumpgate-Sprung laufen sonst
+                    // movementUpdates fuer den fremden Spieler in den deferred-spawn-Pfad
+                    // und erzeugen sein Truck im EIGENEN (falschen) Sektor — "nach jump
+                    // durchs gate habe ich den anderen nicht mehr gesehen". Nur Tracking-
+                    // Daten (Pos/Rot/destGate) aktualisieren; der Spawn passiert spaeter,
+                    // wenn updateSector den Spieler in den eigenen Sektor bringt (dort
+                    // ruft RemoveFromSector auf und spawnt sofort korrekt).
+                    bool inMySector = string.IsNullOrEmpty(currentPlayer.sector)
+                        || currentPlayer.sector == "none"
+                        || string.IsNullOrEmpty(currentSector)
+                        || currentSector == "none"
+                        || currentPlayer.sector == currentSector;
+
                     // Proceed — currentPlayer was just ensured above (existing entry or
                     // freshly registered), so handle this movementUpdate unconditionally.
                     {
-                        if (isTruck)
+                        if (!inMySector)
+                        {
+                            // Fremder Sektor: nur Tracking-Daten, kein Spawn/Appear.
+                            currentPlayer.truckTrans.Pos = playerPos;
+                            currentPlayer.truckTrans.Rot = playerRot;
+                            currentPlayer.truckTrans.Vel = playerVel;
+                            currentPlayer.truckTrans.AngVel = playerAngVel;
+                            currentPlayer.playerTrans.Pos = playerPos;
+                            currentPlayer.playerTrans.Rot = playerRot;
+                            bool gateChanged = remoteDestGate != currentPlayer.destinationGateId;
+                            currentPlayer.destinationGateId = remoteDestGate;
+                            if (gateChanged) JumpgateOption1.ForceRefresh();
+                            lastRemoteHonking[playerId] = remoteIsHonking;
+                            playerList[playerId] = currentPlayer;
+                        }
+                        else if (isTruck)
                         {
                             // DEFERRED SPAWN: if truck doesn't exist yet (e.g. playerConnected
                             // sent no position, RemoveFromSector deferred), create it here at
@@ -657,7 +686,7 @@ namespace StarTruckMP.StarTruckClient
                                     spawnedRb.velocity = playerVel;
                                     spawnedRb.angularVelocity = playerAngVel;
                                 }
-                                playerList[playerId] = currentPlayer;
+                                SnapRemotePlayerToLocal(playerId, currentPlayer);
                                 } // end else (Truck != null)
                                 } // end else (cooldown)
                             }
@@ -1358,12 +1387,44 @@ namespace StarTruckMP.StarTruckClient
                     var helper = clientInfo.Truck.AddComponent<RemoteTruckCollisionHelper>();
                     if (helper != null) helper.Init(clientId);
                 }
-                playerList[clientId] = clientInfo;
+                SnapRemotePlayerToLocal(clientId, clientInfo);
                 StarTruckMP.Log.LogInfo($"Spawn result for player {clientId}: truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}");
             }
         }
 
         private static Vector3 lastAnchoredOrigin = Vector3.zero;
+
+        // 318 (Bug B, Michael-Zusatz): nach JEDEM createPlayer/Respawn (deferred-spawn-Pfad
+        // UND RemoveFromSector-Rueckpfad) das Truck-GameObject SOFORT hart auf die korrekte
+        // lokale Szene-Position setzen: truckTrans.Pos (ABS) minus floatingOrigin. Sonst
+        // bleibt ein im selben Origin respawntes Truck an einer falschen Stelle haengen:
+        // ReanchorRemotePlayersToFloatingOrigin greift nicht (lastAnchoredOrigin ist schon
+        // gleich m_currentOrigin — Reanchor feuert nur bei Origin-AENDERUNG), und der
+        // Spawn-Pfad positioniert evtl. abs statt local.truckLocalScenePos muss immer
+        // lastKnownAbsPos - origin sein.
+        private static void SnapRemotePlayerToLocal(ushort id, playerInfo p)
+        {
+            if (floatingOrigin == null) return;
+            if (p.Truck != null)
+            {
+                Vector3 localPos = p.truckTrans.Pos - floatingOrigin.m_currentOrigin;
+                p.Truck.transform.position = localPos;
+                p.Truck.transform.eulerAngles = p.truckTrans.Rot;
+                var rb = p.Truck.GetComponent<Rigidbody>();
+                if (rb != null) { rb.position = localPos; rb.rotation = Quaternion.Euler(p.truckTrans.Rot); }
+            }
+            if (p.Player != null)
+            {
+                p.Player.transform.position = p.playerTrans.Pos - floatingOrigin.m_currentOrigin;
+            }
+            // Interpolations-Ziel auf denselben (abs-)Frame setzen, damit SmoothTruckMovement
+            // nicht von einer alten Local-Position los-lerpt.
+            p.truckTargetPos = p.truckTrans.Pos;
+            p.truckTargetRot = p.truckTrans.Rot;
+            playerList[id] = p;
+            StarTruckMP.Log.LogInfo($"SnapRemotePlayerToLocal[{id}]: abs={p.truckTrans.Pos}, origin={floatingOrigin.m_currentOrigin}, local={p.truckTrans.Pos - floatingOrigin.m_currentOrigin}");
+        }
+
 
         public static void ReanchorRemotePlayersToFloatingOrigin()
         {
