@@ -1,6 +1,9 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using Il2CppInterop.Runtime;
 using Riptide;
 using StarTruckMP.Utilities;
 using HarmonyLib;
@@ -437,6 +440,7 @@ namespace StarTruckMP.StarTruckClient
             return k != QuestTaskParameterSaveData.ItemKind.NONE;
         }
 
+<<<<<<< HEAD
         // Build-326: QuestTaskParameterSaveData ist ein FlatSharp-Union-Struct. Die Parameter-
         // Konstruktoren des Interop-Assemblys setzen intern Discriminator+value, aber beim
         // Konstruieren aus gemanagtem Code endet der Discriminator empirisch auf 0 (= NONE),
@@ -454,6 +458,141 @@ namespace StarTruckMP.StarTruckClient
             p._Discriminator_k__BackingField = (byte)kind;
             p.value = value;
             return p;
+=======
+        // Build-327: QuestTaskParameterSaveData ist ein FlatSharp-Union-Struct
+        // (_Discriminator_k__BackingField + value). Build-326 versuchte, den Discriminator
+        // ueber die generierte unsafe-Property (Managed Field-Offset-Write) zu setzen - das
+        // griff nicht (Empfaenger-Log: alle Parameter Kind=NONE, value='null').
+        //
+        // Mehrstufige MakeParam mit ZWINGENDER Verifikation (Discriminator-Readback):
+        // 1) Typisierter Union-CTor: new QuestTaskParameterSaveData(value). Der interop-
+        //    generierte CTor ruft den nativen CTor per il2cpp_runtime_invoke (instanzgebunden).
+        // 2) Fallback: il2cpp_object_new + Direktzugriff auf das Discriminator-Backingfield
+        //    mit dem ECHTEN unmanaged Offset (il2cpp_field_get_offset) und value via
+        //    il2cpp_gc_wbarrier_set_field - exakt die Mechanik der generierten unsafe-Setter.
+        // 3) Readback nach jedem Versuch ueber denselben Offset. Erst wenn der Discriminator
+        //    wirklich auf kind steht, verlaesst das Objekt MakeParam - sonst Exception + Log.
+        private static QuestTaskParameterSaveData MakeParam(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        {
+            byte expected = (byte)kind;
+
+            try
+            {
+                QuestTaskParameterSaveData p = MakeParamViaTypedCtor(kind, value);
+                byte readback = ReadDiscriminatorSafe(p, "ctor");
+                if (readback == expected) return p;
+                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: ctor-Variante lieferte Discriminator {readback} != {expected} - naechster Versuch: RawWrite.");
+            }
+            catch (Exception ex1)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: Union-CTor-Variante fehlgeschlagen: {ex1.Message}");
+            }
+
+            try
+            {
+                QuestTaskParameterSaveData p = MakeParamViaRawWrite(kind, value);
+                byte readback = ReadDiscriminatorSafe(p, "rawWrite");
+                if (readback == expected) return p;
+                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: rawWrite-Variante lieferte Discriminator {readback} != {expected}.");
+            }
+            catch (Exception ex2)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: RawWrite-Variante fehlgeschlagen: {ex2.Message}");
+            }
+
+            throw new InvalidOperationException(
+                $"JobBoardSync.MakeParam: Discriminator konnte NICHT auf {expected} gesetzt werden - Job-Parameter nicht synchronisierbar (Plan-B-Hexdump im Log, siehe DescribeParamRaw).");
+        }
+
+        // Typisierter Union-CTor je Variante.
+        private static QuestTaskParameterSaveData MakeParamViaTypedCtor(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        {
+            switch (kind)
+            {
+                case QuestTaskParameterSaveData.ItemKind.intValue: return new QuestTaskParameterSaveData((IntValue)value);
+                case QuestTaskParameterSaveData.ItemKind.stringValue: return new QuestTaskParameterSaveData((StringValue)value);
+                case QuestTaskParameterSaveData.ItemKind.trailerId: return new QuestTaskParameterSaveData((TrailerId)value);
+                case QuestTaskParameterSaveData.ItemKind.cargoProperties: return new QuestTaskParameterSaveData((CargoProperties)value);
+                case QuestTaskParameterSaveData.ItemKind.cargoType: return new QuestTaskParameterSaveData((StarTruckSaveData.CargoType)value);
+                case QuestTaskParameterSaveData.ItemKind.sectorId: return new QuestTaskParameterSaveData((SectorId)value);
+                case QuestTaskParameterSaveData.ItemKind.cargoBayId: return new QuestTaskParameterSaveData((CargoBayId)value);
+                case QuestTaskParameterSaveData.ItemKind.galacticTime: return new QuestTaskParameterSaveData((StarTruckSaveData.GalacticTime)value);
+                case QuestTaskParameterSaveData.ItemKind.corporationId: return new QuestTaskParameterSaveData((CorporationId)value);
+                case QuestTaskParameterSaveData.ItemKind.conversation: return new QuestTaskParameterSaveData((Conversation)value);
+                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags: return new QuestTaskParameterSaveData((StarTruckSaveData.InventoryItemTags)value);
+                case QuestTaskParameterSaveData.ItemKind.floatValue: return new QuestTaskParameterSaveData((FloatValue)value);
+                case QuestTaskParameterSaveData.ItemKind.vector3: return new QuestTaskParameterSaveData((Vector3Value)value);
+                case QuestTaskParameterSaveData.ItemKind.quest: return new QuestTaskParameterSaveData((Quest)value);
+                case QuestTaskParameterSaveData.ItemKind.identifier: return new QuestTaskParameterSaveData((StarTruckSaveData.Identifier)value);
+                case QuestTaskParameterSaveData.ItemKind.questFlag: return new QuestTaskParameterSaveData((StarTruckSaveData.QuestFlag)value);
+                case QuestTaskParameterSaveData.ItemKind.ventureLocation: return new QuestTaskParameterSaveData((StarTruckSaveData.VentureLocation)value);
+                case QuestTaskParameterSaveData.ItemKind.ventureType: return new QuestTaskParameterSaveData((VentureTypeData)value);
+                case QuestTaskParameterSaveData.ItemKind.ventureJobType: return new QuestTaskParameterSaveData((VentureJobTypeData)value);
+                default:
+                    throw new InvalidOperationException($"MakeParamViaTypedCtor: unbekannter ItemKind {kind}");
+            }
+        }
+
+        // ---- IL2CPP-Rohzugriff (Fallback) ----
+        // fieldInfo-Handles einmalig auflösen; Offset via il2cpp_field_get_offset; Schreiben
+        // exakt wie die generierten unsafe-Setter (Pointer-Arithmetik bzw. wbarrier-Write).
+        private static System.IntPtr _qtpsdFieldDiscriminator = System.IntPtr.Zero;
+        private static System.IntPtr _qtpsdFieldValue = System.IntPtr.Zero;
+        private static int _qtpsdOffsetDiscriminator = -1;
+        private static bool _qtpsdFieldsResolved = false;
+        private static readonly object _qtpsdFieldLock = new object();
+
+        private static void ResolveQtpsdFields()
+        {
+            lock (_qtpsdFieldLock)
+            {
+                if (_qtpsdFieldsResolved) return;
+                System.IntPtr classPtr = Il2CppClassPointerStore<QuestTaskParameterSaveData>.NativeClassPtr;
+                if (classPtr == System.IntPtr.Zero)
+                    throw new InvalidOperationException("QuestTaskParameterSaveData.NativeClassPtr == 0");
+                _qtpsdFieldDiscriminator = IL2CPP.GetIl2CppField(classPtr, "<Discriminator>k__BackingField");
+                _qtpsdFieldValue = IL2CPP.GetIl2CppField(classPtr, "value");
+                if (_qtpsdFieldDiscriminator == System.IntPtr.Zero)
+                    throw new InvalidOperationException("Discriminator-Feld nicht gefunden");
+                _qtpsdOffsetDiscriminator = (int)IL2CPP.il2cpp_field_get_offset(_qtpsdFieldDiscriminator);
+                _qtpsdFieldsResolved = true;
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Discriminator-Feld-Offset = {_qtpsdOffsetDiscriminator}");
+            }
+        }
+
+        private static unsafe byte ReadDiscriminatorSafe(QuestTaskParameterSaveData p, string variant)
+        {
+            try
+            {
+                ResolveQtpsdFields();
+                System.IntPtr objPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(p);
+                return *((byte*)objPtr + _qtpsdOffsetDiscriminator);
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardSync.MakeParam: Discriminator-Readback ({variant}) fehlgeschlagen: {ex.Message}");
+                return 255;
+            }
+        }
+
+        private static QuestTaskParameterSaveData MakeParamViaRawWrite(QuestTaskParameterSaveData.ItemKind kind, Il2CppSystem.Object value)
+        {
+            ResolveQtpsdFields();
+            System.IntPtr classPtr = Il2CppClassPointerStore<QuestTaskParameterSaveData>.NativeClassPtr;
+            System.IntPtr objPtr = IL2CPP.il2cpp_object_new(classPtr);
+            if (objPtr == System.IntPtr.Zero)
+                throw new InvalidOperationException("il2cpp_object_new lieferte 0");
+            unsafe
+            {
+                *((byte*)objPtr + _qtpsdOffsetDiscriminator) = (byte)kind;
+                if (value != null)
+                {
+                    System.IntPtr valuePtr = IL2CPP.Il2CppObjectBaseToPtr(value);
+                    IL2CPP.il2cpp_gc_wbarrier_set_field(objPtr, (System.IntPtr)((byte*)objPtr + IL2CPP.il2cpp_field_get_offset(_qtpsdFieldValue)), valuePtr);
+                }
+            }
+            return new QuestTaskParameterSaveData(objPtr);
+>>>>>>> feature/jobboard-unionctor-327
         }
 
         private static byte[] SerializeJobs(Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData> jobs)
@@ -593,6 +732,7 @@ namespace StarTruckMP.StarTruckClient
             switch (kind)
             {
                 case QuestTaskParameterSaveData.ItemKind.intValue:
+<<<<<<< HEAD
                     { var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.stringValue:
                     { var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
@@ -612,6 +752,27 @@ namespace StarTruckMP.StarTruckClient
                     { var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.floatValue:
                     { var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return MakeParam(kind, v); }
+=======
+{ var v = new IntValue(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.stringValue:
+{ var v = new StringValue(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.trailerId:
+{ var v = new TrailerId(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.cargoProperties:
+{ var v = new CargoProperties(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.cargoType:
+{ var v = new StarTruckSaveData.CargoType(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.sectorId:
+{ var v = new SectorId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.cargoBayId:
+{ var v = new CargoBayId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.galacticTime:
+{ var v = new StarTruckSaveData.GalacticTime(); v.name = r.ReadString(); v.value = r.ReadInt64(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.corporationId:
+{ var v = new CorporationId(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.floatValue:
+{ var v = new FloatValue(); v.name = r.ReadString(); v.value = r.ReadSingle(); return MakeParam(kind, v); }
+>>>>>>> feature/jobboard-unionctor-327
                 case QuestTaskParameterSaveData.ItemKind.vector3:
                     {
                         var v = new Vector3Value(); v.name = r.ReadString();
@@ -621,6 +782,7 @@ namespace StarTruckMP.StarTruckClient
                         return MakeParam(kind, v);
                     }
                 case QuestTaskParameterSaveData.ItemKind.conversation:
+<<<<<<< HEAD
                     { var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
                     { var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
@@ -634,10 +796,50 @@ namespace StarTruckMP.StarTruckClient
                     { var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
                 case QuestTaskParameterSaveData.ItemKind.ventureType:
                     { var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return MakeParam(kind, v); }
+=======
+{ var v = new Conversation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.inventoryItemTags:
+{ var v = new StarTruckSaveData.InventoryItemTags(); v.name = r.ReadString(); v.value = r.ReadInt32(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.identifier:
+{ var v = new StarTruckSaveData.Identifier(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.quest:
+{ var v = new Quest(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.questFlag:
+{ var v = new StarTruckSaveData.QuestFlag(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.ventureLocation:
+{ var v = new StarTruckSaveData.VentureLocation(); v.name = r.ReadString(); v.value = r.ReadString(); return MakeParam(kind, v); }
+                case QuestTaskParameterSaveData.ItemKind.ventureType:
+{ var v = new VentureTypeData(); v.name = r.ReadString(); v.value = (VentureType)r.ReadInt32(); return MakeParam(kind, v); }
+>>>>>>> feature/jobboard-unionctor-327
                 case QuestTaskParameterSaveData.ItemKind.ventureJobType:
                     { var v = new VentureJobTypeData(); v.name = r.ReadString(); v.value = (VentureJobType)r.ReadInt32(); return MakeParam(kind, v); }
                 default:
                     throw new InvalidOperationException($"JobBoardSync: unbekannter/nicht unterstuetzter ItemKind beim Lesen: {kind}");
+            }
+        }
+
+        // Build-327 Plan B (nur Diagnose): rohe Bytes eines Param-Objekts hexdumpen, damit im
+        // Test die wire bytes gegen die Dekompilierung validiert werden koennen. Liest die
+        // ersten 64 Bytes ab Objekt-Header (klassptr + Felder) - der Discriminator liegt
+        // irgendwo in den ersten Feldern, der Dump zeigt die echten Werte.
+        private static unsafe string DescribeParamRaw(QuestTaskParameterSaveData p)
+        {
+            try
+            {
+                System.IntPtr objPtr = IL2CPP.Il2CppObjectBaseToPtrNotNull(p);
+                int dumpLen = Math.Min(64, 64);
+                var sb = new System.Text.StringBuilder("raw[");
+                for (int i = 0; i < dumpLen; i++)
+                {
+                    sb.Append((*((byte*)objPtr + i)).ToString("X2"));
+                    if (i < dumpLen - 1) sb.Append(' ');
+                }
+                sb.Append($"] kindReadback={p.Kind}");
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                return $"(raw dump fehlgeschlagen: {ex.Message})";
             }
         }
     }
