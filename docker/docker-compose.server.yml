@@ -9,7 +9,7 @@ services:
       - "7777:7777/udp"
     environment:
       - SERVER_PORT=7777
-      - MAX_CLIENTS=8
+      - MAX_CLIENTS=20
       - SERVER_NAME=StarTruckMP Server
       - STARTTRUCKMP_BRIDGE_URL=http://discord-bridge-bot:4500
       - MIN_CLIENT_BUILD=152
