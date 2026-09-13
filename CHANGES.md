@@ -1,3 +1,20 @@
+## Neu in custom-build-330: Datei-basierter Roundtrip-Trigger (Env-Var kam nicht durch)
+
+- Root Cause: Der Slipstream-Updater startet das Spiel primaer via `steam://run/2380050`
+  (UseShellExecute=true). Damit ist STEAM der Elternprozess des Spiels - Environment-Variablen
+  des Updaters (auch via psi.EnvironmentVariables gesetzt) erreichen den Spiel-Prozess
+  nicht zuverlaessig. Der Blackscreen-Kommentar (SteamAPI_Init ohne Steam-Session) verbietet
+  den Direkt-.exe-Start als Primaerpfad, also ist keine Env-Kette sicher.
+- FIX (Datei-Trigger, startart-unabhaengig): Der Roundtrip-Trigger ist jetzt ERFUELLT wenn
+  ENV `STRUCKMP_ROUNDTRIP=1` ODER die Datei `<BepInEx>/config/STRUCKMP_ROUNDTRIP.txt`
+  existiert (Inhalt egal). Diagnose-Log beim Plugin-Init: `roundtrip trigger: env=<wert> file=<true|false>`;
+  Disabled-Zeile + Fallback-Trigger checken beide Quellen.
+- Updater: env-passthrough-Diagnose-Log (`env passthrough: STRUCKMP_ROUNDTRIP=<wert|missing>`)
+  beim steam://-Start - dokumentiert, was der Launcher sieht.
+- Test durch Michael: `echo. > "%GAME%\BepInEx\config\STRUCKMP_ROUNDTRIP.txt"` anlegen,
+  Spiel wie ueblich via Slipstream starten, Roundtrip-Zeile im Log pruefen, Datei danach
+  loeschen.
+
 ## Neu in custom-build-322: Departure-Board — TMP.enabled Re-Assert beim Klonen
 
 - Ursache eingegrenzt: Die ZWEITE Board-Generation nach Sektorwechsel klonite ein Template-TMP,
