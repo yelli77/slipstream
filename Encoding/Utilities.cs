@@ -22,7 +22,9 @@ namespace StarTruckMP.Utilities
         jobBoardSync,
         cargoSync,
         setDestinationGate,
-        multiTrailerMovementUpdate
+        multiTrailerMovementUpdate,
+        // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast (questId|displayName Strings).
+        jobBoardIdents
     }
 
     public struct playerInfo

@@ -135,6 +135,14 @@ private static void SetVisible(bool v)
             visible = v;
             if (visible)
             {
+                // DIAGNOSE (Build-333): Board-Oeffnen -> Kennungs-Listen + Matchquote ins Log.
+                try
+                {
+                    string sector = StarTruckClient.currentSector;
+                    var jobsNow = global::ProceduralJobGenerator.GetAvailableJobs();
+                    StarTruckMP.Log.LogInfo($"JobBoardComputer: {JobBoardIdSync.BuildDiagLine(sector, jobsNow)}");
+                }
+                catch (Exception diagEx) { StarTruckMP.Log.LogWarning($"JobBoardComputer: Diag-Zeile fehlgeschlagen: {diagEx.Message}"); }
                 // 307: PRIMAER erst das echte Jobboard via MenuState (A), dann DevPanel-Fallback (B).
                 if (TryOpenGameJobBoard())
                 {
@@ -548,12 +556,18 @@ private static void SetVisible(bool v)
             sb.AppendLine("Sektor: " + sector + " - " + count + " Auftraege");
             sb.AppendLine();
 
+            // Build-333 (PLAN B Same-Seed lite): Kennungs-Filter - wenn frische Kennungen
+            // vom Autoritaets-Client vorliegen, zeigen wir nur die Treffer an.
+            var filterIdx = JobBoardIdSync.FilterIndices(sector, jobs);
+            int filterCount = (filterIdx != null) ? filterIdx.Count : count;
+
             int shown = 0;
             for (int i = 0; i < count; i++)
             {
+                if (filterIdx != null && !filterIdx.Contains(i)) continue;
                 if (shown >= 10)
                 {
-                    sb.AppendLine("... und " + (count - shown) + " weitere (am Dock andocken)");
+                    sb.AppendLine("... und " + Math.Max(0, filterCount - shown) + " weitere (am Dock andocken)");
                     break;
                 }
                 var job = jobs[i];
@@ -568,19 +582,23 @@ private static void SetVisible(bool v)
                     string bay = "";
                     try { bay = job.DropOffBay(); } catch { }
 
-                    sb.Append((i + 1) + ". " + name);
+                    sb.Append((shown + 1) + ". " + name);
                     if (credits > 0) sb.Append("  |  " + credits + " cr");
                     if (!string.IsNullOrEmpty(bay)) sb.Append("\n    Ziel-Bay: " + bay);
                     sb.AppendLine();
                 }
                 catch (Exception ex)
                 {
-                    sb.AppendLine((i + 1) + ". (Anzeige-Fehler: " + ex.Message + ")");
+                    sb.AppendLine((shown + 1) + ". (Anzeige-Fehler: " + ex.Message + ")");
                 }
             }
 
             sb.AppendLine();
+            sb.AppendLine("... und " + Math.Max(0, filterCount - shown) + " weitere (am Dock andocken)");
+            sb.AppendLine();
             sb.AppendLine("[J] Schliessen");
+            // DIAGNOSE (Build-333, Michael-Test): Kennungs-Listen + Matchquote direkt im Board.
+            sb.AppendLine(JobBoardIdSync.BuildDiagLine(sector, jobs));
             return sb.ToString();
         }
 

@@ -106,6 +106,7 @@ namespace StarTruckMP.StarTruckClient
             UpdateMapIndicators();
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
+            JobBoardIdSync.Update();
             // Build-330: Roundtrip-Trigger = Env-Var ODER Config-Datei. Die Env-Var erreicht den
             // Spiel-Prozess nicht zuverlaessig (Start via steam:// - Steam ist der Elternprozess,
             // unsere Variablen kommen dort nicht an). Die Datei <BepInEx>/config/
@@ -1028,6 +1029,7 @@ namespace StarTruckMP.StarTruckClient
                     {
                         try { CargoSync.OnLocalCargoSpawned(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"CargoSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
                         try { JobBoardSync.OnLocalJobsGenerated(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"JobBoardSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
+                        try { JobBoardIdSync.OnLocalJobsGenerated(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"JobBoardIdSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
                     }
                 }
             }
@@ -1126,6 +1128,11 @@ namespace StarTruckMP.StarTruckClient
             if (e.MessageId == (ushort)messageType.cargoSync)
             {
                 CargoSync.HandleIncoming(e);
+            }
+
+            if (e.MessageId == (ushort)messageType.jobBoardIdents)
+            {
+                JobBoardIdSync.HandleIncoming(e);
             }
         }
 
