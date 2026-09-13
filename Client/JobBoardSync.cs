@@ -162,14 +162,9 @@ namespace StarTruckMP.StarTruckClient
                 // Blob hier hart verworfen -> Sync ging still verloren, jeder sah sein
                 // eigenes Board. Stattdessen puffern und Frame-fuer-Frame uebernehmen,
                 // sobald QuestTracker.ready ist.
-                if (!QuestTracker.ready)
-                {
-                    pendingRestoreSector = sector;
-                    pendingRestoreJobs = questSave;
-                    StarTruckMP.Log.LogInfo($"JobBoardSync: QuestTracker noch nicht ready, Sync fuer Sektor '{sector}' gepuffert (Retry ueber FixedUpdate).");
-                    return;
-                }
-
+                // Build-323: QuestTracker nicht ready -> kein Vorab-Puffer mehr noetig,
+                // ApplyRestore-NREs landen in der Retry-Queue (TryApplyPending wartet
+                // ohnehin auf QuestTracker.ready).
                 try
                 {
                     ApplyRestore(sector, questSave);
