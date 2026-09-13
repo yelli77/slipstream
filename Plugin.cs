@@ -21,7 +21,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-328";
+    public const string customBuildNumber = "custom-build-329";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -52,6 +52,11 @@ public class StarTruckMP : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>();
         ClassInjector.RegisterTypeInIl2Cpp<global::StarTruckMP.StarTruckClient.JobBoardComputer.CoroutineRunnerHelper>();
         
+        // Build-329: Diagnose-Env-Empfang beim Plugin-Init loggen - zeigt sofort, ob die
+        // Variable den Prozess (Slipstream-Launcher/Updater-Kette) erreicht hat oder nicht.
+        string roundtripEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
+        StarTruckMP.Log.LogInfo($"STRUCKMP_ROUNDTRIP={roundtripEnv ?? "<null>"}");
+
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
