@@ -1079,11 +1079,9 @@ namespace StarTruckMP.StarTruckClient
                 if (gateId != currentDestinationGateId)
                 {
                     StarTruckMP.Log.LogInfo($"DetectDestinationGates CHANGE: '{currentDestinationGateId}' -> '{gateId}' (nextSectorId='{nextSectorId}', waypointCount={waypointCount})");
+                    JumpgateOption1.ForceRefresh();
                 }
                 currentDestinationGateId = gateId;
-                JumpgateOption1.ForceRefresh();
-
-
             }
             catch { }
         }

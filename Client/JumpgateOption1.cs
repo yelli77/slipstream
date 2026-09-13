@@ -701,6 +701,14 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public static void ForceRefresh()
         {
+            // Idempotent: multiple calls per frame must be harmless. Only reset the
+            // timer (and log) when a forced rebuild is actually pending or scheduled —
+            // after lastUpdate=0 the next UpdatePositions tick rebuilds anyway.
+            if (lastUpdate == 0f)
+            {
+                StarTruckMP.Log.LogDebug("JumpgateOption1: ForceRefresh requested - already pending, skipping duplicate.");
+                return;
+            }
             lastUpdate = 0f;
             StarTruckMP.Log.LogInfo("JumpgateOption1: ForceRefresh requested - departure boards rebuild on next UpdatePositions tick.");
         }
