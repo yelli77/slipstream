@@ -208,6 +208,9 @@ namespace StarTruckMP.StarTruckClient
         // - Generisch fuer ALLE Sektoren (keine Whitelist/Blacklist): Es wird nur geprueft,
         //   ob die Sektor-Metadaten des aktuellen Sektors abrufbar sind; ein noch nicht
         //   geladener Sektor loest sich auf, sobald das Spiel ihn laedt.
+        // - JOB-WEISES Apply ist mit dem Spiel-Pfad NICHT moeglich: QuestTracker.RestoreAvailableJobs
+        //   nimmt nur das ganze QuestSaveData (All-or-Nothing) - deshalb statt dessen Retry +
+        //   Diagnose-Log mit Job-Ids, um den problematischen Job zu identifizieren.
         // - Max. MAX_RETRY_ATTEMPTS Versuche im Abstand RETRY_INTERVAL Sekunden; danach wird
         //   der Blob endgueltig verworfen (Diagnose-Log mit Job-Ids).
         // - Ein neuer Sync-Broadcast fuer denselben Sektor ersetzt den gepufferten (immer

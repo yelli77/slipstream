@@ -1,0 +1,12 @@
+/src/bin/Release/net6.0/StarTruckMP.deps.json
+/src/bin/Release/net6.0/StarTruckMP.dll
+/src/bin/Release/net6.0/StarTruckMP.pdb
+/src/obj/Release/net6.0/StarTruckMP.csproj.AssemblyReference.cache
+/src/obj/Release/net6.0/StarTruckMP.GeneratedMSBuildEditorConfig.editorconfig
+/src/obj/Release/net6.0/StarTruckMP.AssemblyInfoInputs.cache
+/src/obj/Release/net6.0/StarTruckMP.AssemblyInfo.cs
+/src/obj/Release/net6.0/StarTruckMP.csproj.CoreCompileInputs.cache
+/src/obj/Release/net6.0/StarTruckMP.dll
+/src/obj/Release/net6.0/refint/StarTruckMP.dll
+/src/obj/Release/net6.0/StarTruckMP.pdb
+/src/obj/Release/net6.0/ref/StarTruckMP.dll
