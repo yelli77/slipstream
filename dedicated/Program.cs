@@ -8,7 +8,7 @@ public static class Program
     public static void Main(string[] args)
     {
         int port = GetEnvInt("SERVER_PORT", 7777);
-        int maxClients = GetEnvInt("MAX_CLIENTS", 8);
+        int maxClients = GetEnvInt("MAX_CLIENTS", 20);
         int minClientBuild = GetEnvInt("MIN_CLIENT_BUILD", 151);
         string name = Environment.GetEnvironmentVariable("SERVER_NAME") ?? "StarTruckMP Server";
         Console.WriteLine($"[StarTruckMP Dedicated Server]");
