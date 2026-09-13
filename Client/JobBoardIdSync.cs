@@ -64,7 +64,7 @@ namespace StarTruckMP.StarTruckClient
         public static string BuildJobKey(global::StarTruckSaveData.QuestInstanceSaveData job)
         {
             if (job == null) return "";
-            string qid, dn;
+            string qid;
             try { qid = job.questParametersAsset ?? ""; } catch { qid = ""; }
             // QuestInstanceSaveData hat keinen displayName - Kennung hier nur aus den
             // vorhandenen Feldern; fuer den Ident-Vergleich auf Empfaengerseite wird
