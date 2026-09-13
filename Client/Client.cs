@@ -36,6 +36,9 @@ namespace StarTruckMP.StarTruckClient
         // existing trucks only after they moved).
         public static bool forceStateResend = false;
         private static bool roundtripDone = false; // Build-328: Roundtrip-Verifikation einmalig
+        private static int roundtripDiagLogged = 0; // Build-329: Diagnose-Zeile max. 2x (Warum blockiert der Trigger?)
+        private static bool roundtripDisabledLogged = false; // Build-329: einmal 'env not set' loggen
+        private static float roundtripFallbackAt = -1f; // Build-329: Sektor-Eintritt + 5s Fallback-Trigger
         public static bool inTruck = true;
         public static GameObject myPlayer = null;
         public static Rigidbody myPlayerRigid = null;
@@ -101,11 +104,40 @@ namespace StarTruckMP.StarTruckClient
             UpdateMapIndicators();
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
-            // Build-328: Roundtrip-Verifikation per Debug-Environment-Variable
-            // (STRUCKMP_ROUNDTRIP=1), einmalig nach QuestTracker-Ready.
-            if (!roundtripDone && Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP") == "1")
+            // Build-329: Roundtrip-Trigger robust. Diagnose-Zeile einmalig, damit wir im
+            // User-Log sehen, WELCHE Bedingung blockiert (env / QuestTracker.ready / Generator).
+            // Trigger-Pfade: (1) FixedUpdate-Hook, (2) Sektor-Eintritt + 5s Delay als Sicherheitsnetz.
+            string rtEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
+            if (!roundtripDone)
             {
-                if (QuestTracker.ready && ProceduralJobGenerator.Get() != null)
+                if (rtEnv == "1")
+                {
+                    if (roundtripDiagLogged < 2)
+                    {
+                        roundtripDiagLogged++;
+                        StarTruckMP.Log.LogInfo($"Roundtrip-Wait: QuestTracker.ready={QuestTracker.ready} generator={ProceduralJobGenerator.Get() != null}");
+                    }
+                    if (QuestTracker.ready && ProceduralJobGenerator.Get() != null)
+                    {
+                        roundtripDone = true;
+                        JobBoardSync.RunRoundtripVerification();
+                    }
+                }
+                else if (!roundtripDisabledLogged)
+                {
+                    // einmalig loggen - beweist, dass die Env-Var den Spiel-Prozess nicht erreichte
+                    roundtripDisabledLogged = true;
+                    StarTruckMP.Log.LogInfo($"roundtrip disabled (env not set, STRUCKMP_ROUNDTRIP={rtEnv ?? "<null>"})");
+                }
+            }
+            // Build-329: Fallback-Trigger - 5s nach Sektor-Eintritt nochmal probieren,
+            // falls der normale Pfad oben bis dahin nicht gefeuert hat.
+            if (!roundtripDone && roundtripFallbackAt > 0f && Time.realtimeSinceStartup >= roundtripFallbackAt)
+            {
+                roundtripFallbackAt = -1f; // nur ein Fallback-Versuch
+                string fbEnv = Environment.GetEnvironmentVariable("STRUCKMP_ROUNDTRIP");
+                StarTruckMP.Log.LogInfo($"Roundtrip-Fallback (5s nach Sektor): env={fbEnv ?? "<null>"} ready={QuestTracker.ready} generator={ProceduralJobGenerator.Get() != null}");
+                if (fbEnv == "1" && QuestTracker.ready && ProceduralJobGenerator.Get() != null)
                 {
                     roundtripDone = true;
                     JobBoardSync.RunRoundtripVerification();
@@ -1350,6 +1382,9 @@ namespace StarTruckMP.StarTruckClient
                 }
                 currentDestinationGateId = "";  // reset on sector change
                 JumpgateOption1.ForceRefresh();
+                // Build-329: Sicherheitsnetz - Roundtrip-Trigger 5s nach Sektor-Eintritt
+                // erneut probieren (FixedUpdate-Hook allein feuerte in 328 nicht).
+                roundtripFallbackAt = Time.realtimeSinceStartup + 5f;
                 client.Send(Messages.updateSector(client.Id, currentSector));
                 StarTruckMP.Log.LogInfo($"Entered Sector: {currentSector}");
                 UpdateStatusOverlay();
