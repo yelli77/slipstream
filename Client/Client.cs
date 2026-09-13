@@ -138,6 +138,11 @@ namespace StarTruckMP.StarTruckClient
         // sinnlos, ohne dass der Spieler zuerst Slipstream aktualisiert.
         public static bool versionRejected = false;
         public static string versionRejectedReason = "";
+        // Server voll: Server hat maximale Spieleranzahl erreicht. Blockiert automatischen
+        // Reconnect (sinnlos, waere sofort wieder abgelehnt) und zeigt dem Spieler eine
+        // sichtbare Meldung im Status-Overlay.
+        public static bool serverFullRejected = false;
+        public static string serverFullMessage = "";
         private static float nextConnectAttemptTime = 0f;
         // War 5s, auf Wunsch (nach Test mit schnellem Offline/Online-Hin-und-Her-Klicken) auf 10s
         // erhoeht: dem Server muss genug Zeit bleiben, den alten Disconnect sauber abzuschliessen
@@ -168,7 +173,7 @@ namespace StarTruckMP.StarTruckClient
             // OnlineModeToggle.CreateToggleButton) - trotzdem hier nochmal hart geprueft, damit ein
             // automatischer Verbindungsversuch bei einem Nicht-Slipstream-Start unter keinen
             // Umstaenden stattfinden kann.
-            if (StarTruckMP.LaunchedViaSlipstream && OnlineModeToggle.OnlineModeEnabled && !versionRejected && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
+            if (StarTruckMP.LaunchedViaSlipstream && OnlineModeToggle.OnlineModeEnabled && !versionRejected && !serverFullRejected && !client.IsConnected && !isConnecting && Time.realtimeSinceStartup >= nextConnectAttemptTime)
             {
                 if (GameObject.FindGameObjectWithTag("Player") != null && GameObject.Find("StarTruck(Clone)") != null)
                 {
@@ -281,6 +286,14 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"Verbindung vom Server abgelehnt: {reason}");
                 }
             }
+            else if (e.Reason == DisconnectReason.ServerFull)
+            {
+                serverFullRejected = true;
+                serverFullMessage = "Server ist voll — zu viele Spieler";
+                StarTruckMP.Log.LogWarning("Server ist voll: maximale Spieleranzahl erreicht.");
+                // Status-Overlay aktualisieren, damit die Meldung sichtbar bleibt
+                ShowServerFullOverlay();
+            }
 
             foreach (var player in playerList.Values)
             {
@@ -292,7 +305,7 @@ namespace StarTruckMP.StarTruckClient
             ushort[] keys = playerList.Keys.ToArray<ushort>();
             foreach (var pId in keys) { playerList.Remove(pId); }
 
-            if (statusOverlay != null)
+            if (statusOverlay != null && !serverFullRejected)
             {
                 statusOverlay.SetActive(false);
             }
@@ -397,6 +410,7 @@ namespace StarTruckMP.StarTruckClient
         public static void Client_ConnectionFailed(object sender, ConnectionFailedEventArgs e)
         {
             StarTruckMP.Log.LogInfo($"Connection Failed");
+            StarTruckMP.Log.LogWarning("Verbindung fehlgeschlagen — moeglicherweise Server voll (Fallback-Meldung).");
             isConnecting = false;
             ArmReconnectCooldown();
         }
@@ -1938,6 +1952,26 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
+        /// Zeigt dem Spieler eine sichtbare Meldung, dass der Server voll ist.
+        /// Nutzt den selben Status-Overlay-Mechanismus wie die Spielstand-Anzeige.
+        /// </summary>
+        private static void ShowServerFullOverlay()
+        {
+            if (statusOverlay == null || statusOverlayText == null)
+            {
+                // Overlay noch nicht initialisiert — wird beim naechsten UpdateStatusOverlay()-Aufruf
+                // erzeugt. ServerFull-Text wird dort geprueft.
+                return;
+            }
+            statusOverlayText.text = $"<color=#E53935>Server ist voll</color>\n<color=#E53935>{serverFullMessage}</color>";
+            statusOverlayText.fontSize = 22;
+            if (!statusOverlay.activeSelf)
+            {
+                statusOverlay.SetActive(true);
+            }
+        }
+
+        /// <summary>
         /// Small persistent top-left HUD overlay: player name, current sector,
         /// and (until linked) the Discord link code. Stays visible for the
         /// whole session — harmless to leave the code line up after linking,
@@ -1947,6 +1981,21 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
+                // Server voll: Meldung im Overlay anzeigen, normalen Status-Text ueberschreiben
+                if (serverFullRejected)
+                {
+                    if (statusOverlayText != null)
+                    {
+                        statusOverlayText.text = $"<color=#E53935>Server ist voll</color>\n<color=#E53935>{serverFullMessage}</color>";
+                        statusOverlayText.fontSize = 22;
+                        if (statusOverlay != null && !statusOverlay.activeSelf)
+                        {
+                            statusOverlay.SetActive(true);
+                        }
+                    }
+                    return;
+                }
+
                 string sectorDisplay = (!string.IsNullOrEmpty(currentSector) && currentSector != "none")
                     ? SectorToDisplayName(currentSector)
                     : "—";
