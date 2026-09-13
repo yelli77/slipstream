@@ -51,6 +51,7 @@ namespace StarTruckMP.StarTruckClient
         // damit Spaetankoemmlinge die Kennungen noch bekommen - zusaetzlich zum
         // Re-Broadcast-Trigger bei Spielerankunft in Client.cs).
         private static float nextPeriodicSend = 0f;
+        private static bool broadcastActiveLogged = false;
 
         public static string BuildJobKey(global::QuestInstance job)
         {
@@ -79,22 +80,39 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                var client = StarTruckClient.client;
-                if (client == null || !client.IsConnected) return;
-                if (!JobBoardSync.IsAuthorityForCurrentSector()) return;
-
-                SendCurrentIdents();
+                SendCurrentIdents("OnLocalJobsGenerated");
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardIdSync.OnLocalJobsGenerated fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync.OnLocalJobsGenerated fehlgeschlagen: {ex}");
             }
         }
 
-        private static void SendCurrentIdents()
+        // Sendet die Kennungen der aktuellen Live-Jobliste. Gibt die Anzahl gesendeter
+        // Kennungen zurueck (-1 = uebersprungen mit Grund im Log). Alle Skip-Gruende
+        // werden GELOGGT (Build-334-Diagnose: im 333-Test-Log erschien KEINE einzige
+        // Send-Zeile und auch kein Skip-Grund - der Pfad starb still).
+        private static int SendCurrentIdents(string trigger)
         {
+            var client = StarTruckClient.client;
+            if (client == null || !client.IsConnected)
+            {
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden uebersprungen ({trigger}): client={client != null} connected={(client != null && client.IsConnected)}");
+                return -1;
+            }
+            if (!JobBoardSync.IsAuthorityForCurrentSector())
+            {
+                // Einmal pro Sekunde reicht als Diagnose - der periodische Aufruf laeuft alle 2s.
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden uebersprungen ({trigger}): nicht Authority im Sektor '{StarTruckClient.currentSector}' (myId={StarTruckClient.client.Id}, Spieler im Sektor: {AuthorityDiagLine()})");
+                return -1;
+            }
+
             var liveJobs = global::ProceduralJobGenerator.GetAvailableJobs();
-            if (liveJobs == null) return;
+            if (liveJobs == null)
+            {
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden uebersprungen ({trigger}): GetAvailableJobs()=null");
+                return -1;
+            }
 
             int count = liveJobs.Count;
             var idents = new List<string>(count);
@@ -103,21 +121,42 @@ namespace StarTruckMP.StarTruckClient
                 try { idents.Add(BuildJobKey(liveJobs[i])); } catch { }
             }
 
-            SendIdents(StarTruckClient.currentSector, idents);
+            SendIdents(trigger, StarTruckClient.currentSector, idents);
+            return idents.Count;
         }
 
-        private static void SendIdents(string sector, List<string> idents)
+        private static string AuthorityDiagLine()
+        {
+            var parts = new List<string>();
+            foreach (var kv in StarTruckClient.playerList)
+                parts.Add($"{kv.Key}:{kv.Value.sector ?? "?"}");
+            return string.Join(", ", parts);
+        }
+
+        private static void SendIdents(string trigger, string sector, List<string> idents)
         {
             var client = StarTruckClient.client;
-            if (client == null || !client.IsConnected) return;
+            if (client == null || !client.IsConnected)
+            {
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden abgebrochen ({trigger}): client nicht verbunden");
+                return;
+            }
 
             var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
             msg.AddString(sector ?? "");
             msg.AddUShort((ushort)idents.Count);
             for (int i = 0; i < idents.Count; i++) msg.AddString(idents[i] ?? "");
-            client.Send(msg);
+            try
+            {
+                client.Send(msg);
+            }
+            catch (Exception sendEx)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync: client.Send({trigger}) WIRF: {sendEx}");
+                return;
+            }
 
-            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen fuer Sektor '{sector}' gesendet: [{string.Join(", ", idents)}]");
+            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen fuer Sektor '{sector}' gesendet ({trigger}, MessageType={(ushort)messageType.jobBoardIdents}): [{string.Join(", ", idents)}]");
         }
 
         // ------------------------------------------------------------------
@@ -145,7 +184,7 @@ namespace StarTruckMP.StarTruckClient
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardIdSync.HandleIncoming fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync.HandleIncoming fehlgeschlagen (Sektor empfangen): {ex}");
             }
         }
 
@@ -230,12 +269,23 @@ namespace StarTruckMP.StarTruckClient
             {
                 var client = StarTruckClient.client;
                 if (client == null || !client.IsConnected) return;
+                if (!broadcastActiveLogged)
+                {
+                    // Einmaliger Beweis, dass der periodische Broadcast-Pfad lebt.
+                    broadcastActiveLogged = true;
+                    StarTruckMP.Log.LogInfo($"JobBoardIdSync: periodic job idents broadcast active (Interval={IDENT_BROADCAST_INTERVAL}s, myId={client.Id}, Sektor='{StarTruckClient.currentSector}')");
+                }
                 if (Time.unscaledTime < nextPeriodicSend) return;
                 nextPeriodicSend = Time.unscaledTime + IDENT_BROADCAST_INTERVAL;
-                if (!JobBoardSync.IsAuthorityForCurrentSector()) return;
-                SendCurrentIdents();
+                SendCurrentIdents("periodic-2s");
             }
-            catch { /* periodischer Broadcast darf nie toeten */ }
+            catch (Exception ex)
+            {
+                // Auch der periodische Broadcast darf nie toeten - aber ERST NACH dem Log
+                // (333: leerer catch => jede Exception in diesem Pfad war komplett lautlos,
+                // genau deshalb erschien im Test-Log weder Send- noch Skip-Zeile).
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync.Update(periodic) Fehler: {ex}");
+            }
         }
 
         public static void OnDisconnect()
