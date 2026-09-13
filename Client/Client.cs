@@ -1465,6 +1465,17 @@ namespace StarTruckMP.StarTruckClient
                 if (rp.Trailer == null || !rp.trailerHitched) continue;
 
                 Vector3 targetLocal = rp.trailerTargetPos - floatingOrigin.m_currentOrigin;
+                float trailerErrDist = (targetLocal - rp.Trailer.transform.position).magnitude;
+                if (trailerErrDist > TruckSnapThreshold)
+                {
+                    // Build 319: Riesen-Delta (z.B. Gate-Jump des Remote-Spielers) — hart snappen.
+                    rp.Trailer.transform.position = targetLocal;
+                    rp.Trailer.transform.rotation = Quaternion.Euler(rp.trailerTargetRot);
+                    rp.trailerSmoothVel = Vector3.zero;
+                    playerList[kv.Key] = rp;
+                    StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[{kv.Key}]: hard snap, errorDist={trailerErrDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetLocal}");
+                    continue;
+                }
                 rp.Trailer.transform.position = Vector3.SmoothDamp(
                     rp.Trailer.transform.position,
                     targetLocal,
@@ -1490,6 +1501,10 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float TruckCorrectionK = 5.0f;      // spring constant for position
         private static readonly float TruckRotCorrectionK = 8.0f;   // spring constant for rotation
         private static readonly float TruckMaxCorrection = 10f;      // max correction distance (meters)
+        // Build 319: Gate-Sprung des Remote-Spielers springt truckTargetPos um Kilometer.
+        // Der velocity-cap (TruckMaxCorrection) liess den Truck minutenlang crawlen —
+        // ab diesem Fehler-Abstand hart snappen statt smooth korrigieren.
+        private static readonly float TruckSnapThreshold = 250f;     // meters; above = hard snap
         private static readonly float MaxVelocity = 40f;              // hard clamp: max linear velocity (m/s)
         private static readonly float MaxAngularVelocity = 10f;       // hard clamp: max angular velocity (rad/s)
         private static readonly float ReadyCorrectionK = 2.5f;        // moderate K after grace period (before first contact)
@@ -1508,6 +1523,20 @@ namespace StarTruckMP.StarTruckClient
                 Vector3 targetPos = rp.truckTargetPos - floatingOrigin.m_currentOrigin;
                 Vector3 error = targetPos - rb.position;
                 float errorDist = error.magnitude;
+                if (errorDist > TruckSnapThreshold)
+                {
+                    // Build 319: Riesen-Delta (z.B. Gate-Jump des Remote-Spielers / Origin-Reanchor)
+                    // — hart snappen wie SnapRemotePlayerToLocal, sonst crawlt der Truck minutenlang.
+                    rp.Truck.transform.position = targetPos;
+                    rp.Truck.transform.eulerAngles = rp.truckTargetRot;
+                    rb.position = targetPos;
+                    rb.rotation = Quaternion.Euler(rp.truckTargetRot);
+                    rb.velocity = rp.truckTrans.Vel;
+                    rb.angularVelocity = rp.truckTrans.AngVel;
+                    playerList[kv.Key] = rp;
+                    StarTruckMP.Log.LogInfo($"SmoothTruckMovement[{kv.Key}]: hard snap, errorDist={errorDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetPos}");
+                    continue;
+                }
                 if (errorDist > TruckMaxCorrection)
                     error = error.normalized * TruckMaxCorrection;
 
