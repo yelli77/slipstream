@@ -58,12 +58,57 @@ namespace StarTruckMP.StarTruckClient
         private static string receivedIdentsSector = null;
         private static float lastReceiveTime = -999f;
 
-        // Chunk-Sammel-Zustand (Empfangsseite, custom-build-335).
-        private static string chunkSector = null;
-        private static int chunkTotal = 0;
-        private static int chunkTotalIdents = 0;
-        private static int chunkNextIndex = 0;
-        private static readonly HashSet<string> chunkIdents = new HashSet<string>();
+        // custom-build-338 (Fix BEFUND 3): Sammel-Puffer KEYED statt globaler Reset.
+        // Bei 2s-Broadcast + Pacing ueberlappen sich Serien - ein globaler Reset bei
+        // chunkIndex==0 oder totalIdents-Aenderung hat die laufende Serie verworfen.
+        // Key: sector|totalChunks|totalIdents. Alte Keys (>60s ohne Chunk) werden
+        // verworfen (Cleanup in Update()).
+        private class ChunkAssembly
+        {
+            public string Sector;
+            public int TotalChunks;
+            public int TotalIdents;
+            public readonly HashSet<string> Idents = new HashSet<string>();
+            public readonly bool[] HaveChunks;
+            public float LastChunkTime;
+
+            public ChunkAssembly(int totalChunks)
+            {
+                HaveChunks = new bool[Math.Max(totalChunks, 1)];
+            }
+
+            public bool Complete
+            {
+                get
+                {
+                    for (int i = 0; i < HaveChunks.Length; i++)
+                        if (!HaveChunks[i]) return false;
+                    return true;
+                }
+            }
+        }
+
+        private static readonly Dictionary<string, ChunkAssembly> chunkAssemblies = new Dictionary<string, ChunkAssembly>();
+
+        private static string AssemblyKey(string sector, int totalChunks, int totalIdents)
+            => sector + "|" + totalChunks + "|" + totalIdents;
+
+        private const float ASSEMBLY_TIMEOUT = 60f;
+
+        private static void CleanupStaleAssemblies()
+        {
+            var staleKeys = new List<string>();
+            foreach (var kv in chunkAssemblies)
+            {
+                if (Time.unscaledTime - kv.Value.LastChunkTime > ASSEMBLY_TIMEOUT)
+                    staleKeys.Add(kv.Key);
+            }
+            foreach (var k in staleKeys)
+            {
+                chunkAssemblies.Remove(k);
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: veraltete Sammel-Serie verworfen (Key '{k}', Timeout {ASSEMBLY_TIMEOUT}s)");
+            }
+        }
 
         // Sende-Seite: Re-Broadcast-Timer (auch wenn keine neue Generierung feuert,
         // damit Spaetankoemmlinge die Kennungen noch bekommen - zusaetzlich zum
@@ -197,32 +242,75 @@ namespace StarTruckMP.StarTruckClient
             // seite sammelt dynamisch per totalChunks-Feld (HandleIncoming), sie hat nie
             // ein 16er-Limit - mehr Chunks zu senden ist also jederzeit sicher.
 
-            // Chunks senden - EINE Message pro Chunk, alles reliable.
-            int sentChunks = 0;
-            for (int ci = 0; ci < chunkPayloads.Count; ci++)
+            // Chunks senden - EINE Message pro Chunk, alles reliable, mit Pacing
+            // (custom-build-338, Fix BEFUND 2): Chunks landen in pendingSends und werden
+            // von Update() mit max. MAX_CHUNKS_PER_FRAME pro Frame versendet.
+            int chunkCount = chunkPayloads.Count;
+            for (int ci = 0; ci < chunkCount; ci++)
             {
-                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
-                msg.AddString(sector ?? "");
-                msg.AddInt(chunkPayloads.Count);  // totalChunks
-                msg.AddInt(ci);                   // chunkIndex
-                msg.AddInt(idents.Count);         // totalIdents (fuer Empfangs-Log)
-                msg.AddBytes(chunkPayloads[ci], includeLength: false);
-                try
+                pendingSends.Enqueue(new PendingChunk
                 {
-                    client.Send(msg);
-                    sentChunks++;
-                }
-                catch (Exception sendEx)
-                {
-                    StarTruckMP.Log.LogWarning($"JobBoardIdSync: client.Send({trigger}) Chunk {ci}/{chunkPayloads.Count} WIRF: {sendEx}");
-                    return;
-                }
+                    Payload = chunkPayloads[ci],
+                    Sector = sector ?? "",
+                    TotalChunks = chunkCount,
+                    ChunkIndex = ci,
+                    TotalIdents = idents.Count,
+                });
             }
 
             // Verifikations-Gate (335): gesendet-Zeile mit Payload-Groesse.
             int payloadTotal = 0;
             foreach (var p in chunkPayloads) payloadTotal += p.Length;
-            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen gesendet (payload={payloadTotal} bytes, {sentChunks}/{chunkPayloads.Count} Chunks, Sektor '{sector}', {trigger})");
+            StarTruckMP.Log.LogInfo($"JobBoardIdSync: {idents.Count} Kennungen in Send-Queue (payload={payloadTotal} bytes, {chunkCount} Chunks, Sektor '{sector}', {trigger})");
+        }
+
+        // custom-build-338 (Fix BEFUND 2): Send-Pacing wie ChunkedBlobTransfer -
+        // max. MAX_CHUNKS_PER_FRAME reliable Chunks pro Frame. 17-18 Chunks in einem
+        // Frame scheitern am Reliable-Burst (letzter Chunk kam beim Empfaenger nie an).
+        private const int MAX_CHUNKS_PER_FRAME = 15;
+
+        private class PendingChunk
+        {
+            public byte[] Payload;
+            public string Sector;
+            public int TotalChunks;
+            public int ChunkIndex;
+            public int TotalIdents;
+        }
+
+        private static readonly Queue<PendingChunk> pendingSends = new Queue<PendingChunk>();
+
+        private static void SendPendingChunks()
+        {
+            var client = StarTruckClient.client;
+            int budget = MAX_CHUNKS_PER_FRAME;
+            while (pendingSends.Count > 0 && budget-- > 0)
+            {
+                var pc = pendingSends.Peek();
+                if (client == null || !client.IsConnected)
+                {
+                    // Verbindung weg - Queue verwerfen (nicht mehr benoetigt, naechster
+                    // 2s-Broadcast baut neu auf).
+                    pendingSends.Clear();
+                    return;
+                }
+                pendingSends.Dequeue();
+                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
+                msg.AddString(pc.Sector);
+                msg.AddInt(pc.TotalChunks);
+                msg.AddInt(pc.ChunkIndex);
+                msg.AddInt(pc.TotalIdents);
+                msg.AddBytes(pc.Payload, includeLength: true);
+                try
+                {
+                    client.Send(msg);
+                }
+                catch (Exception sendEx)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardIdSync: client.Send Chunk {pc.ChunkIndex}/{pc.TotalChunks} WIRF: {sendEx}");
+                    return;
+                }
+            }
         }
 
         // ------------------------------------------------------------------
@@ -238,38 +326,64 @@ namespace StarTruckMP.StarTruckClient
                 int totalIdents = e.Message.GetInt();
                 byte[] payload = e.Message.GetBytes();
 
-                // Ein neuer Broadcast (Sektorwechsel / neue totalIdents / Chunk 0) startet
-                // einen neuen Sammelvorgang.
-                if (chunkSector != sector || chunkTotal != totalChunks || chunkTotalIdents != totalIdents || chunkIndex == 0)
+                string key = AssemblyKey(sector, totalChunks, totalIdents);
+                if (!chunkAssemblies.TryGetValue(key, out var asm))
                 {
-                    chunkSector = sector;
-                    chunkTotal = totalChunks;
-                    chunkTotalIdents = totalIdents;
-                    chunkIdents.Clear();
-                    chunkNextIndex = 0;
+                    asm = new ChunkAssembly(totalChunks)
+                    {
+                        Sector = sector,
+                        TotalChunks = totalChunks,
+                        TotalIdents = totalIdents,
+                    };
+                    chunkAssemblies[key] = asm;
+                }
+
+                if (chunkIndex < 0 || chunkIndex >= asm.HaveChunks.Length)
+                {
+                    StarTruckMP.Log.LogWarning($"JobBoardIdSync: Chunk-Index {chunkIndex} ausserhalb (totalChunks={totalChunks}, Sektor '{sector}') - Chunk verworfen");
+                    return;
                 }
 
                 var text = System.Text.Encoding.UTF8.GetString(payload);
                 var parts = text.Split('\n');
                 foreach (var p in parts)
                 {
-                    if (!string.IsNullOrEmpty(p)) chunkIdents.Add(p);
+                    if (!string.IsNullOrEmpty(p)) asm.Idents.Add(p);
                 }
-                chunkNextIndex = chunkIndex + 1;
+                asm.HaveChunks[chunkIndex] = true;
+                asm.LastChunkTime = Time.unscaledTime;
 
-                if (chunkIndex + 1 < totalChunks)
+                if (!asm.Complete)
                 {
-                    StarTruckMP.Log.LogInfo($"JobBoardIdSync: Chunk {chunkIndex + 1}/{totalChunks} empfangen (Sektor '{sector}', {chunkIdents.Count} Kennungen bisher)");
+                    // custom-build-338: Log gedrosselt - nur jeder 5. Chunk (plus Chunk 1)
+                    // statt jeder Chunk (21439 Zeilen im 337er-Log).
+                    int haveCount = 0;
+                    for (int i = 0; i < asm.HaveChunks.Length; i++) if (asm.HaveChunks[i]) haveCount++;
+                    bool logThis = haveCount <= 1 || haveCount % 5 == 0;
+                    if (logThis)
+                        StarTruckMP.Log.LogInfo($"JobBoardIdSync: Chunk {haveCount}/{totalChunks} empfangen (Sektor '{sector}', {asm.Idents.Count} Kennungen bisher)");
                     return;
                 }
 
-                // Alle Chunks da - uebernehmen.
+                // Alle Chunks der Serie da - uebernehmen und Serie aus dem Keyed-Store
+                // entfernen (damit der naechste identische Broadcast neu sammeln kann).
                 receivedIdents.Clear();
-                foreach (var id in chunkIdents) receivedIdents.Add(id);
+                foreach (var id in asm.Idents) receivedIdents.Add(id);
                 receivedIdentsSector = sector;
                 lastReceiveTime = Time.unscaledTime;
+                chunkAssemblies.Remove(key);
 
-                StarTruckMP.Log.LogInfo($"JobBoardIdSync: {receivedIdents.Count} Kennungen empfangen (Sektor '{sector}', {totalChunks} Chunks, erwartet {totalIdents}).");
+                if (receivedIdents.Count != totalIdents)
+                {
+                    // custom-build-338: Apply nur bei count==totalIdents, sonst Log+discard.
+                    // (Bei deduplizierten Kennungen kann der Satz kleiner sein - dann gilt
+                    // der empfangene Satz als gueltig, wir loggen die Abweichung nur.)
+                    StarTruckMP.Log.LogInfo($"JobBoardIdSync: {receivedIdents.Count} Kennungen empfangen (Sektor '{sector}', {totalChunks} Chunks, erwartet {totalIdents}) - Abweichung geloggt, Satz uebernommen");
+                }
+                else
+                {
+                    StarTruckMP.Log.LogInfo($"JobBoardIdSync: {receivedIdents.Count} Kennungen empfangen (Sektor '{sector}', {totalChunks} Chunks, erwartet {totalIdents}).");
+                }
             }
             catch (Exception ex)
             {
@@ -376,16 +490,28 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        // custom-build-338: Frame-getriebener Pfad (ruft Client.FixedUpdate/Update auf) -
+        // versendet gepacede Chunks und raeumt veraltete Sammel-Serien auf.
+        public static void FixedUpdate()
+        {
+            try
+            {
+                if (pendingSends.Count > 0) SendPendingChunks();
+                CleanupStaleAssemblies();
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync.FixedUpdate Fehler: {ex}");
+            }
+        }
+
         public static void OnDisconnect()
         {
             receivedIdents.Clear();
             receivedIdentsSector = null;
             lastReceiveTime = -999f;
-            chunkSector = null;
-            chunkTotal = 0;
-            chunkTotalIdents = 0;
-            chunkNextIndex = 0;
-            chunkIdents.Clear();
+            chunkAssemblies.Clear();
+            pendingSends.Clear();
         }
     }
 }

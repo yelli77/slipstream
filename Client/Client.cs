@@ -107,6 +107,7 @@ namespace StarTruckMP.StarTruckClient
             DetectDestinationGates();
             JobBoardSync.TryApplyPending();
             JobBoardIdSync.Update();
+            JobBoardIdSync.FixedUpdate();
             // Build-330: Roundtrip-Trigger = Env-Var ODER Config-Datei. Die Env-Var erreicht den
             // Spiel-Prozess nicht zuverlaessig (Start via steam:// - Steam ist der Elternprozess,
             // unsere Variablen kommen dort nicht an). Die Datei <BepInEx>/config/

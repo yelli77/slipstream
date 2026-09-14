@@ -141,9 +141,12 @@ public class MessageHandler
     private void HandleJobBoardIdents(MessageReceivedEventArgs e, Riptide.Server server)
     {
         // custom-build-335: Client-Format ist chunked [sector][totalChunks(int)][chunkIndex(int)]
-        // [totalIdents(int)][payload(byte[], ohne Laengen-Praefix)]. Das Relay packt EXAKT
-        // dasselbe Format wieder aus und baut die Message identisch nach (reiner Re-Forward,
-        // KEINE eigenen Felder einfuegen - 333/334-Lesson).
+        // [totalIdents(int)][payload(byte[], MIT Laengen-Praefix - custom-build-338)].
+        // Das Relay packt EXAKT dasselbe Format wieder aus und baut die Message identisch
+        // nach (reiner Re-Forward, KEINE eigenen Felder einfuegen - 333/334-Lesson).
+        // Fix BEFUND 1 (verifiziert via ilspycmd gegen Riptide 2.2): GetBytes() liest
+        // IMMER zuerst den VarULong-Praefix; includeLength:true beim Re-Add schreibt
+        // ihn wieder - frueher (false) dekodierte der Empfaenger nur 1-2 Kennungen.
         string sector = e.Message.GetString();
         int totalChunks = e.Message.GetInt();
         int chunkIndex = e.Message.GetInt();
@@ -154,7 +157,7 @@ public class MessageHandler
         msg.AddInt(totalChunks);
         msg.AddInt(chunkIndex);
         msg.AddInt(totalIdents);
-        msg.AddBytes(payload, includeLength: false);
+        msg.AddBytes(payload, includeLength: true);
         server.SendToAll(msg, e.FromConnection.Id);
         Console.WriteLine($"[INFO] HandleJobBoardIdents: relaying job idents chunk {chunkIndex + 1}/{totalChunks} ({payload.Length} bytes, totalIdents={totalIdents}) from client {e.FromConnection.Id} (sector '{sector}')");
     }
