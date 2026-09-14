@@ -109,6 +109,13 @@ namespace StarTruckMP.StarTruckClient
                 var questSave = new QuestSaveData();
                 questSave.availableJobs = saveList.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
 
+                // custom-build-335: defekte Jobs VOR der Serialisierung entfernen -
+                // ein Discriminator-0-Parameter crasht sonst den nativen FlatSharp-
+                // Serializer ('Exception determining type of union. Discriminator = 0').
+                int sanitizedOut = SanitizeQuestSaveData(questSave, "Senden");
+                if (sanitizedOut > 0)
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated: {sanitizedOut} defekte Jobs aus dem Sync-Blob entfernt (Rest wird gesendet).");
+
                 byte[] blob;
                 int jobCount;
                 try
@@ -117,9 +124,14 @@ namespace StarTruckMP.StarTruckClient
                 }
                 catch (Exception serEx)
                 {
-                    StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated: native Serialisierung fehlgeschlagen: {serEx.Message}");
+                    // custom-build-335: NICHT mehr komplett abbrechen - bis auf Weiteres
+                    // nur die Kennungen (JobBoardIdSync) senden, damit Clients zumindest
+                    // die Board-Filterung behalten statt ein leeres Board zu bekommen.
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.OnLocalJobsGenerated: native Serialisierung fehlgeschlagen - Blob-Sync uebersprungen (Kennungs-Sync laeuft unabhaengig weiter): {serEx.Message}");
                     return;
                 }
+                if (sanitizedOut > 0)
+                    StarTruckMP.Log.LogInfo($"JobBoardSync: {sanitizedOut} defekte Jobs entfernt, {jobCount} gesunde Jobs fuer Sektor '{StarTruckClient.currentSector}' im Blob.");
 
                 ChunkedBlobTransfer.Send("job", (ushort)messageType.jobBoardSync, StarTruckClient.currentSector, blob);
 
@@ -477,6 +489,101 @@ namespace StarTruckMP.StarTruckClient
             if (disc != UNION_ITEM_KIND_QUESTSAVEDATA)
                 throw new InvalidOperationException($"SystemSaveData-Discriminator-Write fehlgeschlagen (disc={disc})");
             return ssd;
+        }
+
+        // =====================================================================
+        // custom-build-335: Zentrales Sanitizing der QuestSave-Daten.
+        //
+        // Zwei Live-Probleme aus den Logs von custom-build-335:
+        //  a) 'InvalidOperationException: Exception determining type of union.
+        //     Discriminator = 0' beim nativen FlatSharp-Serialisieren: ein
+        //     QuestTaskParameterSaveData mit Kind=0 (NONE, ungesetzter Variant)
+        //     oder einem NULL-Value laesst den Serializer crashen - und der alte
+        //     catch→return-Pfad ließClients OHNE Jobs fuer den Sektor zurueck.
+        //  b) NRE beim nativen Restore (QuestTaskParameter.GenerateSector →
+        //     QuestTracker.RestoreAvailableJobs): ein Parameter ohne auflösbare
+        //     Property-Referenz killt RestoreAvailableJobs strukturell (10/10
+        //     Retries failed, Blob verworfen).
+        //
+        // Beide Probleme haben dieselbe Wurzel (defekte Parameter-Union) und
+        // werden deshalb an EINER Stelle behandelt: SanitizeQuestSaveData laeuft
+        // VOR der Serialisierung (Seite Sender) und wird via Deserialize-Layout
+        // auch vor ApplyRestore wirksam, weil nur noch gesäuberte Jobs im Blob
+        // landen. Defekte Jobs werden GANZ entfernt (LogWarning mit Job-Id +
+        // Parameter-Index), gesunde Jobs des Sektors bleiben erhalten.
+        // =====================================================================
+
+        // Entfernt alle Jobs, deren Parameter-Union nicht serialisierbar/auflösbar
+        // ist (Kind = NONE/0 oder value null bzw. typed value-Property null).
+        // Liefert die Anzahl entfernter Jobs zurueck.
+        private static int SanitizeQuestSaveData(QuestSaveData questSave, string context)
+        {
+            var jobs = questSave?.availableJobs;
+            if (jobs == null) return 0;
+
+            int removed = 0;
+            var keep = new Il2CppSystem.Collections.Generic.List<QuestInstanceSaveData>();
+            int count = Il2CppCount(jobs);
+            for (int i = 0; i < count; i++)
+            {
+                var job = jobs[i];
+                int badParam = FindBadParameterIndex(job);
+                if (badParam >= 0)
+                {
+                    removed++;
+                    StarTruckMP.Log.LogWarning($"JobBoardSync[{context}]: Job '{JobIdOf(job)}' (Index {i}) entfernt - Parameter {badParam} hat ungueltige Union (Kind=0/NONE oder value=null).");
+                    continue;
+                }
+                keep.Add(job);
+            }
+
+            if (removed > 0)
+                questSave.availableJobs = keep.Cast<Il2CppSystem.Collections.Generic.IList<QuestInstanceSaveData>>();
+            return removed;
+        }
+
+        // Liefert den Index des ERSTEN defekten Parameters oder -1, wenn alle ok sind.
+        // Defekt = Kind ist NONE (Discriminator 0, kein gesetzter Variant - FlatSharp
+        // wirft sonst 'Exception determining type of union. Discriminator = 0') ODER
+        // die typed Value-Property des Variants ist null (NRE-Quelle im nativen
+        // GenerateSector/RestoreAvailableJobs-Pfad).
+        private static int FindBadParameterIndex(QuestInstanceSaveData job)
+        {
+            try
+            {
+                var pars = job?.generatedParameters;
+                if (pars == null) return -1;
+                int pc = Il2CppCount(pars);
+                for (int p = 0; p < pc; p++)
+                {
+                    var par = pars[p];
+                    try
+                    {
+                        var kind = par.Kind;
+                        if (kind == default(QuestTaskParameterSaveData.ItemKind))
+                            return p; // Discriminator 0 = ungesetzter Variant
+                        string prop = KindToProp(kind);
+                        if (prop == null) return p; // unbekannter Variant nicht sicher syncbar
+                        var pi = typeof(QuestTaskParameterSaveData).GetProperty(prop);
+                        if (pi == null) return p;
+                        if (pi.GetValue(par) as Il2CppSystem.Object == null) return p;
+                    }
+                    catch
+                    {
+                        return p; // Parameter nicht lesbar -> im Zweifel rausschmeissen
+                    }
+                }
+            }
+            catch
+            {
+                return 0; // Parameterliste selbst nicht lesbar -> Job defekt
+            }
+            return -1;
+        }
+
+        private static string JobIdOf(QuestInstanceSaveData job)
+        {
+            try { return job?.id ?? "<null-id>"; } catch { return "<unreadable>"; }
         }
 
         // SERIALISIEREN (Sender): QuestSaveData -> SaveSlotContainer -> native FlatSharp-Bytes.
