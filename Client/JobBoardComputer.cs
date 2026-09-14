@@ -23,6 +23,12 @@ namespace StarTruckMP.StarTruckClient
         // 338: true nur, wenn WIR das Board via J geoeffnet haben. Wenn es nativ (am
         // JobBoard-PC) geoeffnet wurde, duerfen wir Input/Cursor NICHT doppelt togglen.
         private static bool weOpenedGameBoard = false;
+        // 338: Echter Fokus-Kontext (gesetzt in ApplyUIFocus, cleared in ReleaseUIFocus).
+        // Close-Detection haengt an diesem Bool, nicht an weOpenedGameBoard.
+        private static bool hasUIFocus = false;
+        // 338: Merker "Fokus gerade released, Board evtl. noch async da" - nach der Grace
+        // prueft Update() und loggt zur Diagnose (Re-Acquire passiert via Punkt 1 beim naechsten J).
+        private static float focusReleasedPendingUntil = 0f;
         private static float boardOpenGraceUntil = 0f;
         private static float nextToggleCheck = 0f;
         private static float nextTextRefresh = 0f;
@@ -176,11 +182,27 @@ private static void SetVisible(bool v)
                     StarTruckMP.Log.LogInfo($"JobBoardComputer: {JobBoardIdSync.BuildDiagLine(sector, jobsNow)}");
                 }
                 catch (Exception diagEx) { StarTruckMP.Log.LogWarning($"JobBoardComputer: Diag-Zeile fehlgeschlagen: {diagEx.Message}"); }
-                // 338 IDEMPOTENZ: Board schon offen (natuerlich am PC geoeffnet)? Dann NICHT
-                // erneut oeffnen und Fokus-Kontext NICHT doppelt togglen.
+                // 338 IDEMPOTENZ + FOKUS-RE-ACQUIRE: Board schon offen (nativ am PC geoeffnet
+                // oder noch aus asyncem Schließen vorhanden)? Dann NICHT erneut oeffnen.
+                // ABER: wenn wir keinen aktiven Fokus-Kontext haben (weOpenedGameBoard==false,
+                // z.B. Fokus war via J-Toggle released waehrend das Board async noch da war,
+                // oder Board wurde nativ ohne unseren Kontext geoeffnet), MUSS der Fokus
+                // (wieder) angelegt werden - sonst offen das Board ohne Input-Fokus und die
+                // Close-Detection + J-Toggle-Close funktionieren nicht mehr.
                 if (GameJobBoardScreenPresent())
                 {
-                    StarTruckMP.Log.LogInfo("338 JobBoard bereits offen (nativ) - kein Doppel-Toggle.");
+                    if (!hasUIFocus)
+                    {
+                        try { ApplyUIFocus(); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 ApplyUIFocus re-acquire fehlgeschlagen: " + ex.Message); }
+                        weOpenedGameBoard = true; // Close-Detection + J-Toggle-Close wieder aktiv
+                        boardOpenGraceUntil = Time.unscaledTime + 2f; // kurz: Board ist ja schon da
+                        focusReleasedPendingUntil = 0f;
+                        StarTruckMP.Log.LogInfo("338 Fokus re-acquired auf vorhandenes Board.");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogInfo("338 JobBoard bereits offen (nativ) - kein Doppel-Toggle.");
+                    }
                 }
                 // 307: PRIMAER erst das echte Jobboard via MenuState (A), dann DevPanel-Fallback (B).
                 else if (TryOpenGameJobBoard())
@@ -198,10 +220,18 @@ private static void SetVisible(bool v)
             }
             else
             {
-                bool wasOurs = weOpenedGameBoard;
+                bool wasOurs = hasUIFocus; // 338: am echten Fokus-Kontext orientieren, nicht an weOpenedGameBoard
                 TryInvokeGameJobBoard(false);
                 if (wasOurs) ReleaseUIFocus();
                 weOpenedGameBoard = false;
+                if (wasOurs)
+                {
+                    // 338: Release sofort, aber merken: das native Schliessen (MenuState/ScreenController)
+                    // ist ASYNC - GameJobBoardScreenPresent() kann nach dem Release noch eine Weile true
+                    // bleiben. focusReleasedPendingUntil ermoeglicht in Update() die saubere Diagnose,
+                    // ohne hier ein doppeltes ReleaseUIFocus zu riskieren (Cursor dauerhaft gelockt).
+                    focusReleasedPendingUntil = Time.unscaledTime + 1f;
+                }
                 if (canvasObj != null) { canvasObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay aus."); }
             }
         }
@@ -217,6 +247,7 @@ private static void SetVisible(bool v)
         // im Fehlerfall Truck-Input sicher wieder aktivieren.
         private static void ApplyUIFocus()
         {
+            hasUIFocus = true; // 338: Fokus-Kontext aktiv (Close-Detection haengt hieran)
             // Pause wie im nativen ScreenController_Pauser (Board schliessen laeuft darueber).
             try
             {
@@ -242,6 +273,7 @@ private static void SetVisible(bool v)
 
         private static void ReleaseUIFocus()
         {
+            hasUIFocus = false; // 338: Fokus-Kontext aufgehoben (kein doppeltes Release mehr)
             // Reihenfolge invers: erst Cursor/Input, zuletzt Pauser entfernen.
             try { Cursor.lockState = CursorLockMode.Locked; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.lock fehlgeschlagen: " + ex.Message); }
             try { Cursor.visible = false; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.invisible fehlgeschlagen: " + ex.Message); }
@@ -275,16 +307,26 @@ private static void SetVisible(bool v)
         {
             CheckToggle();
             TickJobBoardVerify();
-            // 338: Native Schliessung erkennen (Escape/Back-Button im Board). Wenn WIR das
-            // Board geoeffnet hatten und es ist weg -> Fokus-Kontext sauber reverten,
-            // sonst bleibt der Truck ohne Input haengen. Grace-Periode: LoadAndShow ist eine
-            // Coroutine (Asset-Load) - das Screen existiert erst nach 1-2 Frames/sekunden.
-            if (weOpenedGameBoard && Time.unscaledTime > boardOpenGraceUntil && !GameJobBoardScreenPresent())
+            // 338: Native Schliessung erkennen (Escape/Back-Button im Board). Wenn WIR einen
+            // Fokus-Kontext haben (hasUIFocus, nicht weOpenedGameBoard - der war auch false,
+            // wenn Fokus nie re-acquired wurde) und das Board ist weg -> Fokus-Kontext sauber
+            // reverten, sonst bleibt der Truck ohne Input haengen. Grace-Periode: LoadAndShow
+            // ist eine Coroutine (Asset-Load) - das Screen existiert erst nach 1-2 Frames/sekunden.
+            if (hasUIFocus && Time.unscaledTime > boardOpenGraceUntil && !GameJobBoardScreenPresent())
             {
-                weOpenedGameBoard = false;
                 ReleaseUIFocus();
+                weOpenedGameBoard = false;
                 visible = false;
                 StarTruckMP.Log.LogInfo("338 JobBoard nativ geschlossen - Fokus reverted.");
+            }
+            // 338: Diagnose - Board noch present nach Release-Grace (async Schliessen). Re-Acquire
+            // passiert via SetVisible(true) beim naechsten J (Punkt 1: Fokus re-acquired auf
+            // vorhandenes Board). KEIN Release hier - das gaebe ein doppeltes ReleaseUIFocus
+            // ohne Gegenstaende (Cursor dauerhaft gelockt).
+            else if (focusReleasedPendingUntil > 0f && Time.unscaledTime > focusReleasedPendingUntil && GameJobBoardScreenPresent())
+            {
+                focusReleasedPendingUntil = 0f;
+                StarTruckMP.Log.LogInfo("338 Board nach Release noch present (async Schliessen) - Re-Acquire beim naechsten J.");
             }
             if (!visible) return;
             if (canvasObj == null && cockpitObj == null) return;
