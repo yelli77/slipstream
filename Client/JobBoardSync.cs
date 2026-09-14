@@ -173,6 +173,15 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
 
+                // custom-build-335: defekte Jobs VOR dem nativen Restore entfernen -
+                // RestoreAvailableJobs ist All-or-Nothing: ein QuestTaskParameter mit
+                // fehlender/null Property-Referenz NREt in QuestTaskParameter.GenerateSector
+                // und wirft damit den GESAMten Sektor-Restore (10/10 Retries failed, Blob
+                // verworfen, Sektor 'Sector_02_AtlasPrime'). Gesunde Jobs bleiben erhalten.
+                int sanitizedIn = SanitizeQuestSaveData(questSave, "Restore");
+                if (sanitizedIn > 0)
+                    StarTruckMP.Log.LogWarning($"JobBoardSync.HandleIncoming: {sanitizedIn} defekte Jobs aus dem Restore-Set entfernt (Sektor '{sector}').");
+
                 // QuestTracker kann beim Empfaenger im Sync-Moment noch nicht ready sein
                 // (Ready-Flag hinkt der lokalen Generierung hinterher). ApplyRestore-NREs
                 // landen in der Retry-Queue (TryApplyPending wartet auf QuestTracker.ready).
