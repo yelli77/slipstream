@@ -106,6 +106,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 JumpgateUtils.CacheReflection();
                 Cleanup();
+                CleanupLogThrottleState();
 
                 if (!StarTruckClient.client.IsConnected) return;
                 if (StarTruckClient.myTruck == null) return;
@@ -172,6 +173,35 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        // custom-build-335: Log-Drossel fuer die per-Frame-Diagnose in CollectPlayersForGate
+        // ('gate mismatch' + 'matched=0' wurden pro Board pro Spieler pro Frame geloggt -
+        // 8,9 MB Log). Pro Gate-Board nur loggen, wenn sich der Zustand aendert (Spieler-
+        // Satz/Gate-Kombi) oder max. 1x pro 10s.
+        private const float LOG_THROTTLE_SECONDS = 10f;
+        private static readonly Dictionary<string, float> lastMismatchLog = new Dictionary<string, float>();
+        private static readonly Dictionary<string, string> lastMismatchSignature = new Dictionary<string, string>();
+        private static readonly Dictionary<string, float> lastCollectLog = new Dictionary<string, float>();
+        private static readonly Dictionary<string, string> lastCollectSignature = new Dictionary<string, string>();
+
+        private static bool ShouldLogThrottled(Dictionary<string, float> timeMap, Dictionary<string, string> sigMap,
+            string key, string signature, float now)
+        {
+            bool sigChanged = !sigMap.TryGetValue(key, out var prevSig) || prevSig != signature;
+            timeMap.TryGetValue(key, out var last);
+            if (!sigChanged && now - last < LOG_THROTTLE_SECONDS) return false;
+            sigMap[key] = signature;
+            timeMap[key] = now;
+            return true;
+        }
+
+        private static void CleanupLogThrottleState()
+        {
+            lastMismatchLog.Clear();
+            lastMismatchSignature.Clear();
+            lastCollectLog.Clear();
+            lastCollectSignature.Clear();
+        }
+
         /// <summary>
         /// Collect all players heading to a specific gate, ranked by distance.
         /// </summary>
@@ -194,7 +224,17 @@ namespace StarTruckMP.StarTruckClient
                     // Klammer-Kern ('03_Alpha') statt des rohen Strings.
                     if (JumpgateUtils.NormalizeGateId(p.destinationGateId) != wantGate)
                     {
-                        StarTruckMP.Log.LogInfo($"JumpgateOption1: gate mismatch — board '{entryGateId}' (norm '{wantGate}') vs player {kv.Key} destGate '{p.destinationGateId}' (norm '{JumpgateUtils.NormalizeGateId(p.destinationGateId)}')");
+                        // custom-build-335: gedrosselt - frueher pro Frame pro Spieler pro
+                        // Board geloggt (8,9 MB Log). Nur bei geaenderter Kombination
+                        // (Board/Gate vs. Spieler-Destination) oder max. 1x pro 10s.
+                        try
+                        {
+                            string mmSig = $"{kv.Key}:{p.destinationGateId}";
+                            string mmKey = entryGateId ?? "?";
+                            if (ShouldLogThrottled(lastMismatchLog, lastMismatchSignature, mmKey, mmSig, Time.realtimeSinceStartup))
+                                StarTruckMP.Log.LogInfo($"JumpgateOption1: gate mismatch — board '{entryGateId}' (norm '{wantGate}') vs player {kv.Key} destGate '{p.destinationGateId}' (norm '{JumpgateUtils.NormalizeGateId(p.destinationGateId)}')");
+                        }
+                        catch { }
                         continue;
                     }
                     matched++;
@@ -218,7 +258,16 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"JumpgateOption1: playerList iteration error: {ex.Message}");
             }
-            StarTruckMP.Log.LogInfo($"JumpgateOption1: CollectPlayersForGate('{entryGateId}' -> norm '{JumpgateUtils.NormalizeGateId(entryGateId)}'): candidates={candidates}, matched={matched}");
+            // custom-build-335: gedrosselt - nur bei veraenderter Spieler-Situation oder
+            // max. 1x pro 10s pro Board (frueher pro Frame).
+            try
+            {
+                string sig = $"candidates={candidates},matched={matched},entries={entries.Count}";
+                string key = entryGateId ?? "?";
+                if (ShouldLogThrottled(lastCollectLog, lastCollectSignature, key, sig, Time.realtimeSinceStartup))
+                    StarTruckMP.Log.LogInfo($"JumpgateOption1: CollectPlayersForGate('{entryGateId}' -> norm '{JumpgateUtils.NormalizeGateId(entryGateId)}'): candidates={candidates}, matched={matched}");
+            }
+            catch { }
 
             // Local player
             try
