@@ -531,6 +531,8 @@ namespace StarTruckMP.StarTruckClient
                         playerInfo newPlayer = new playerInfo();
                         newPlayer.Trailers = new Dictionary<long, GameObject>();
                         newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
+                        newPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
+                        newPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
                         newPlayer.sector = sector;
                         // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
                         if (pendingNames.TryGetValue(id, out string pendingJoinName) && !string.IsNullOrEmpty(pendingJoinName))
@@ -564,6 +566,8 @@ namespace StarTruckMP.StarTruckClient
                     playerInfo newPlayer = new playerInfo();
                     newPlayer.Trailers = new Dictionary<long, GameObject>();
                     newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
+                    newPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
+                    newPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
                     newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
                     // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
                     if (pendingNames.TryGetValue(id, out string pendingConnName) && !string.IsNullOrEmpty(pendingConnName))
@@ -626,6 +630,8 @@ namespace StarTruckMP.StarTruckClient
                         currentPlayer = new playerInfo();
                         currentPlayer.Trailers = new Dictionary<long, GameObject>();
                         currentPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
+                        currentPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
+                        currentPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
                         currentPlayer.sector = currentSector;
                         // Bug 1: echten Namen aus pendingNames bevorzugen — der Placeholder
                         // 'Player_N' wurde sonst dauerhaft angezeigt, wenn das Name-Broadcast
@@ -913,6 +919,9 @@ namespace StarTruckMP.StarTruckClient
                         }
 
                         currentPlayer.trailerHitched = trailerCount > 0;
+                        // Velocity-Extrapolation: Zeitstempel des letzten Trailer-Targets
+                        // (Legacy UND Multi setzen ihn beim Empfang).
+                        currentPlayer.lastTrailerTargetTime = UnityEngine.Time.realtimeSinceStartup;
                     }
                     else
                     {
@@ -952,6 +961,9 @@ namespace StarTruckMP.StarTruckClient
                             currentPlayer.trailerTargetPos = trailerPos;
                             currentPlayer.trailerTargetRot = trailerRot;
                         }
+                        // Velocity-Extrapolation: Zeitstempel des letzten Trailer-Targets
+                        // (Legacy-Pfad).
+                        currentPlayer.lastTrailerTargetTime = UnityEngine.Time.realtimeSinceStartup;
                     }
 
                     playerList[playerId] = currentPlayer;
@@ -1554,55 +1566,112 @@ namespace StarTruckMP.StarTruckClient
         // to the target with only a tiny, constant lag — no visible stuttering at any speed.
         private static readonly float TrailerSmoothTime = 0.1f;
         private static readonly float TrailerRotationSpeed = 12f;
+    // Velocity-Extrapolation: max Vorschau in Sekunden — bei Paket-Stau nicht endlos extrapoliert.
+    private static readonly float TrailerVelocityPreview = 0.25f;
 
         public static void SmoothTrailerMovement()
         {
             foreach (var kv in playerList)
             {
                 playerInfo rp = kv.Value;
-                if (rp.Trailer == null || !rp.trailerHitched) continue;
 
-                Vector3 targetLocal = rp.trailerTargetPos - floatingOrigin.m_currentOrigin;
-                float trailerErrDist = (targetLocal - rp.Trailer.transform.position).magnitude;
-                if (trailerErrDist > TruckSnapThreshold)
+                // ---- Legacy single-trailer path (rp.Trailer) ----
+                if (rp.Trailer != null && rp.trailerHitched)
                 {
-                    // Build 319: Riesen-Delta (z.B. Gate-Jump des Remote-Spielers) — hart snappen.
-                    rp.Trailer.transform.position = targetLocal;
-                    rp.Trailer.transform.rotation = Quaternion.Euler(rp.trailerTargetRot);
-                    rp.trailerSmoothVel = Vector3.zero;
-                    playerList[kv.Key] = rp;
-                    StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[{kv.Key}]: hard snap, errorDist={trailerErrDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetLocal}");
-                    continue;
+                    rp = SmoothSingleTrailer(kv.Key, rp, rp.Trailer, rp.trailerTargetPos, rp.trailerTargetRot,
+                        ref rp.trailerDriftTimer, ref rp.trailerSmoothVel, -1);
                 }
-                // Build 320: Sustained drift (analog SmoothTruckMovement) — kein bleibender Offset.
-                rp.driftTimer += Time.deltaTime;
-                if (rp.driftTimer > SustainedDriftTime)
+
+                // ---- Multi-container path: EVERY extra trailer against its own target ----
+                if (rp.Trailers != null && rp.trailerExtraTargets != null)
                 {
-                    rp.Trailer.transform.position = targetLocal;
-                    rp.Trailer.transform.rotation = Quaternion.Euler(rp.trailerTargetRot);
-                    rp.trailerSmoothVel = Vector3.zero;
-                    playerList[kv.Key] = rp;
-                    StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[{kv.Key}]: sustained-drift snap, errorDist={trailerErrDist:F1}m persistiert > {SustainedDriftTime}s, targetLocal={targetLocal}");
-                    continue;
+                    // Snapshot keys — the loop writes nothing to the dict itself.
+                    var ids = new List<long>(rp.Trailers.Keys);
+                    foreach (long trackingId in ids)
+                    {
+                        GameObject trailerObj = rp.Trailers[trackingId];
+                        if (trailerObj == null) continue;
+                        if (!rp.trailerExtraTargets.TryGetValue(trackingId, out movementTrans et)) continue;
+
+                        if (!rp.trailerExtraDriftTimers.ContainsKey(trackingId))
+                            rp.trailerExtraDriftTimers[trackingId] = 0f;
+                        if (!rp.trailerExtraSmoothVels.ContainsKey(trackingId))
+                            rp.trailerExtraSmoothVels[trackingId] = Vector3.zero;
+
+                        float driftT = rp.trailerExtraDriftTimers[trackingId];
+                        Vector3 smoothV = rp.trailerExtraSmoothVels[trackingId];
+                        rp = SmoothSingleTrailer(kv.Key, rp, trailerObj, et.Pos, et.Rot, ref driftT, ref smoothV,
+                            trackingId);
+                        rp.trailerExtraDriftTimers[trackingId] = driftT;
+                        rp.trailerExtraSmoothVels[trackingId] = smoothV;
+                    }
                 }
-                // Timer nur zurücksetzen, wenn der Fehler klein ist; sonst weiterticken.
-                if (trailerErrDist < SustainedDriftError) rp.driftTimer = 0f;
-                rp.Trailer.transform.position = Vector3.SmoothDamp(
-                    rp.Trailer.transform.position,
-                    targetLocal,
-                    ref rp.trailerSmoothVel,
-                    TrailerSmoothTime
-                );
 
-                Quaternion targetQuat = Quaternion.Euler(rp.trailerTargetRot);
-                rp.Trailer.transform.rotation = Quaternion.Slerp(
-                    rp.Trailer.transform.rotation,
-                    targetQuat,
-                    Time.deltaTime * TrailerRotationSpeed
-                );
-
+                // Struktur-Copy-Semantik: playerInfo ist ein Struct — ohne diesen Write
+                // verfallen alle Feld-Änderungen (Timer, SmoothVel, ...).
                 playerList[kv.Key] = rp;
             }
+        }
+
+        // Shared per-trailer smoothing: snap threshold, sustained-drift guard, SmoothDamp,
+        // Slerp — plus velocity extrapolation of the target between 100ms updates.
+        private static playerInfo SmoothSingleTrailer(ushort playerKey, playerInfo rp, GameObject trailerObj,
+            Vector3 targetAbsPos, Vector3 targetRot, ref float driftTimer, ref Vector3 smoothVel,
+            long trackingId)
+        {
+            string idTag = (trackingId >= 0) ? $" trackingId={trackingId}," : "";
+
+            Vector3 targetLocal = targetAbsPos - floatingOrigin.m_currentOrigin;
+
+            // Velocity extrapolation: between the ~100ms network updates the trailer target
+            // moves on with the remote truck's velocity (capped at 0.25s preview so packet
+            // stall can't extrapolate endlessly).
+            float dt = Time.realtimeSinceStartup - rp.lastTrailerTargetTime;
+            if (dt > 0f)
+            {
+                float clampedDt = Mathf.Min(dt, TrailerVelocityPreview);
+                targetLocal += rp.truckTrans.Vel * clampedDt;
+            }
+
+            float trailerErrDist = (targetLocal - trailerObj.transform.position).magnitude;
+            if (trailerErrDist > TruckSnapThreshold)
+            {
+                // Build 319: Riesen-Delta (z.B. Gate-Jump des Remote-Spielers) — hart snappen.
+                trailerObj.transform.position = targetLocal;
+                trailerObj.transform.rotation = Quaternion.Euler(targetRot);
+                smoothVel = Vector3.zero;
+                driftTimer = 0f;
+                StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[player={playerKey},{idTag}]: hard snap, errorDist={trailerErrDist:F0}m > {TruckSnapThreshold}m, targetLocal={targetLocal}");
+                return rp;
+            }
+            // Build 320: Sustained drift (per trailer, getrennt vom Truck-Timer) — kein bleibender Offset.
+            if (trailerErrDist > SustainedDriftError)
+                driftTimer += Time.deltaTime;
+            else
+                driftTimer = 0f;
+            if (driftTimer > SustainedDriftTime)
+            {
+                trailerObj.transform.position = targetLocal;
+                trailerObj.transform.rotation = Quaternion.Euler(targetRot);
+                smoothVel = Vector3.zero;
+                driftTimer = 0f;
+                StarTruckMP.Log.LogInfo($"SmoothTrailerMovement[player={playerKey},{idTag}]: sustained-drift snap, errorDist={trailerErrDist:F1}m persistiert > {SustainedDriftTime}s, targetLocal={targetLocal}");
+                return rp;
+            }
+            trailerObj.transform.position = Vector3.SmoothDamp(
+                trailerObj.transform.position,
+                targetLocal,
+                ref smoothVel,
+                TrailerSmoothTime
+            );
+
+            Quaternion targetQuat = Quaternion.Euler(targetRot);
+            trailerObj.transform.rotation = Quaternion.Slerp(
+                trailerObj.transform.rotation,
+                targetQuat,
+                Time.deltaTime * TrailerRotationSpeed
+            );
+            return rp;
         }
 
         // Smooth velocity-correction for remote trucks.

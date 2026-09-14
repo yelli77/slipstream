@@ -55,6 +55,16 @@ namespace StarTruckMP.Utilities
         public string destinationGateId;
         // Build 320: Sustained-drift tracking — wie lange der Renderfehler schon > SustainedDriftError liegt.
         public float driftTimer;
+        // Trailer-Sync-Fix: getrennter Drift-Timer für den Legacy-Trailer (darf den
+        // Truck-Timer NICHT teilen — sonst löst ein Truck-Snap einen Trailer-Snap aus
+        // und umgekehrt).
+        public float trailerDriftTimer;
+        // Pro Extra-Trailer (trackingId) eigener Drift-Timer + SmoothDamp-Velocity.
+        public Dictionary<long, float> trailerExtraDriftTimers;
+        public Dictionary<long, Vector3> trailerExtraSmoothVels;
+        // Zeitstempel (Time.realtimeSinceStartup) des letzten empfangenen Trailer-Targets,
+        // für die Velocity-Extrapolation zwischen den 100ms-Updates.
+        public float lastTrailerTargetTime;
     }
 
     public struct movementTrans
