@@ -10,3 +10,11 @@
 /src/obj/Release/net6.0/refint/StarTruckMP.dll
 /src/obj/Release/net6.0/StarTruckMP.pdb
 /src/obj/Release/net6.0/ref/StarTruckMP.dll
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.csproj.AssemblyReference.cache
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.GeneratedMSBuildEditorConfig.editorconfig
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.AssemblyInfoInputs.cache
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.AssemblyInfo.cs
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.csproj.CoreCompileInputs.cache
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.dll
+/opt/data/slipstream/obj/Release/net6.0/refint/StarTruckMP.dll
+/opt/data/slipstream/obj/Release/net6.0/StarTruckMP.pdb

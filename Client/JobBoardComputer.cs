@@ -20,6 +20,10 @@ namespace StarTruckMP.StarTruckClient
         private static GameObject canvasObj;
         private static TMPro.TextMeshProUGUI text;
         private static bool visible = false;
+        // 338: true nur, wenn WIR das Board via J geoeffnet haben. Wenn es nativ (am
+        // JobBoard-PC) geoeffnet wurde, duerfen wir Input/Cursor NICHT doppelt togglen.
+        private static bool weOpenedGameBoard = false;
+        private static float boardOpenGraceUntil = 0f;
         private static float nextToggleCheck = 0f;
         private static float nextTextRefresh = 0f;
         // Cockpit-Panel (build-292): World-Space-TMP als Kind unter MonitorOverlaySwitcher.popupsRootTransform
@@ -129,6 +133,35 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo("307 JobBoardScreen-Instanz vorhanden: " + found);
         }
 
+        // 338: Existiert gerade eine JobBoardScreen-Instanz (auch inactive)? Wiederverwendet
+        // die bewaehrte Assembly-Scan-Logik aus TickJobBoardVerify.
+        private static bool GameJobBoardScreenPresent()
+        {
+            try
+            {
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    System.Type[] types = null;
+                    try { types = asm.GetTypes(); } catch { continue; }
+                    foreach (var t in types)
+                    {
+                        if (t == null || t.Name != "JobBoardScreen" || !typeof(UnityEngine.Component).IsAssignableFrom(t)) continue;
+                        try
+                        {
+                            var insts = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppInterop.Runtime.Il2CppType.From(t));
+                            if (insts != null && insts.Length > 0) return true;
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                StarTruckMP.Log.LogWarning("338 JobBoardScreen-Presenz-Check fehlgeschlagen: " + ex.Message);
+            }
+            return false;
+        }
+
 private static void SetVisible(bool v)
         {
             if (v == visible && !(v && canvasObj == null)) return;
@@ -143,9 +176,18 @@ private static void SetVisible(bool v)
                     StarTruckMP.Log.LogInfo($"JobBoardComputer: {JobBoardIdSync.BuildDiagLine(sector, jobsNow)}");
                 }
                 catch (Exception diagEx) { StarTruckMP.Log.LogWarning($"JobBoardComputer: Diag-Zeile fehlgeschlagen: {diagEx.Message}"); }
-                // 307: PRIMAER erst das echte Jobboard via MenuState (A), dann DevPanel-Fallback (B).
-                if (TryOpenGameJobBoard())
+                // 338 IDEMPOTENZ: Board schon offen (natuerlich am PC geoeffnet)? Dann NICHT
+                // erneut oeffnen und Fokus-Kontext NICHT doppelt togglen.
+                if (GameJobBoardScreenPresent())
                 {
+                    StarTruckMP.Log.LogInfo("338 JobBoard bereits offen (nativ) - kein Doppel-Toggle.");
+                }
+                // 307: PRIMAER erst das echte Jobboard via MenuState (A), dann DevPanel-Fallback (B).
+                else if (TryOpenGameJobBoard())
+                {
+                    weOpenedGameBoard = true;
+                    boardOpenGraceUntil = Time.unscaledTime + 5f; // LoadAndShow ist async - Grace vor Close-Detection
+                    ApplyUIFocus();
                     StarTruckMP.Log.LogInfo("JobBoardComputer: 307 Original-Jobboard geoeffnet.");
                 }
                 else
@@ -156,9 +198,76 @@ private static void SetVisible(bool v)
             }
             else
             {
+                bool wasOurs = weOpenedGameBoard;
                 TryInvokeGameJobBoard(false);
+                if (wasOurs) ReleaseUIFocus();
+                weOpenedGameBoard = false;
                 if (canvasObj != null) { canvasObj.SetActive(false); StarTruckMP.Log.LogInfo("JobBoardComputer: Overlay aus."); }
             }
+        }
+
+        // 338: NATIVER Fokus-Kontext. Recherche (api-dump):
+        // - JobBoardScreen : ScreenController_Pauser  -> pausiert das Spiel ueber PauseController
+        //   (MenuState.RequestMenuPause/WaitRemovePauser-Pattern).
+        // - StarTruckerInput.Get() hat EnablePlayerInput(bool)/EnableTruckInput(bool): genau die
+        //   Kombination, die das Spiel selbst via NodeCanvas SetInputMode(playerControls,
+        //   truckControls) in Menues setzt.
+        // - Cursor.lockState/visible: klassische UI-Oeffnung (None + sichtbar).
+        // Alles try/catch: schlaegt ein Call fehl, darf der Truck nicht steuerlos bleiben ->
+        // im Fehlerfall Truck-Input sicher wieder aktivieren.
+        private static void ApplyUIFocus()
+        {
+            // Pause wie im nativen ScreenController_Pauser (Board schliessen laeuft darueber).
+            try
+            {
+                var pc = PauseController_Inst();
+                if (pc != null) pc.AddPauser(pc.gameObject);
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 AddPauser fehlgeschlagen: " + ex.Message); }
+            // Fahr-Input aus (wie SetInputMode(playerControls=false, truckControls=false) in Menues).
+            try
+            {
+                var inp = StarTruckerInput.Get();
+                if (inp != null)
+                {
+                    try { inp.EnableTruckInput(false); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 EnableTruckInput(false) fehlgeschlagen: " + ex.Message); }
+                    try { inp.EnablePlayerInput(false); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 EnablePlayerInput(false) fehlgeschlagen: " + ex.Message); }
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 StarTruckerInput-Fokus fehlgeschlagen: " + ex.Message); }
+            // Cursor freigeben + sichtbar.
+            try { Cursor.lockState = CursorLockMode.None; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.unlock fehlgeschlagen: " + ex.Message); }
+            try { Cursor.visible = true; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.visible fehlgeschlagen: " + ex.Message); }
+        }
+
+        private static void ReleaseUIFocus()
+        {
+            // Reihenfolge invers: erst Cursor/Input, zuletzt Pauser entfernen.
+            try { Cursor.lockState = CursorLockMode.Locked; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.lock fehlgeschlagen: " + ex.Message); }
+            try { Cursor.visible = false; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.invisible fehlgeschlagen: " + ex.Message); }
+            try
+            {
+                var inp = StarTruckerInput.Get();
+                if (inp != null)
+                {
+                    // SICHERHEIT (Pflicht 5): Truck-Input IMMER wieder an, auch wenn Player-Input scheitert.
+                    try { inp.EnablePlayerInput(true); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 EnablePlayerInput(true) fehlgeschlagen: " + ex.Message); }
+                    try { inp.EnableTruckInput(true); } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 EnableTruckInput(true) fehlgeschlagen: " + ex.Message); }
+                }
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 StarTruckerInput-Release fehlgeschlagen: " + ex.Message); }
+            try
+            {
+                var pc = PauseController_Inst();
+                if (pc != null) pc.RemovePauser(pc.gameObject);
+            }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 RemovePauser fehlgeschlagen: " + ex.Message); }
+        }
+
+        private static PauseController PauseController_Inst()
+        {
+            try { return UnityEngine.Object.FindObjectOfType<PauseController>(); }
+            catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 PauseController-Suche fehlgeschlagen: " + ex.Message); return null; }
         }
 
         // Wird aus TruckClient.Update() (Plugin.cs, PauseController-Postfix) aufgerufen.
@@ -166,6 +275,17 @@ private static void SetVisible(bool v)
         {
             CheckToggle();
             TickJobBoardVerify();
+            // 338: Native Schliessung erkennen (Escape/Back-Button im Board). Wenn WIR das
+            // Board geoeffnet hatten und es ist weg -> Fokus-Kontext sauber reverten,
+            // sonst bleibt der Truck ohne Input haengen. Grace-Periode: LoadAndShow ist eine
+            // Coroutine (Asset-Load) - das Screen existiert erst nach 1-2 Frames/sekunden.
+            if (weOpenedGameBoard && Time.unscaledTime > boardOpenGraceUntil && !GameJobBoardScreenPresent())
+            {
+                weOpenedGameBoard = false;
+                ReleaseUIFocus();
+                visible = false;
+                StarTruckMP.Log.LogInfo("338 JobBoard nativ geschlossen - Fokus reverted.");
+            }
             if (!visible) return;
             if (canvasObj == null && cockpitObj == null) return;
             if (canvasObj == null && cockpitObj != null && !cockpitObj.activeInHierarchy) return;

@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/src/StarTruckMP.csproj": {}
+    "/opt/data/slipstream/StarTruckMP.csproj": {}
   },
   "projects": {
-    "/src/StarTruckMP.csproj": {
+    "/opt/data/slipstream/StarTruckMP.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/src/StarTruckMP.csproj",
+        "projectUniqueName": "/opt/data/slipstream/StarTruckMP.csproj",
         "projectName": "StarTruckMP",
-        "projectPath": "/src/StarTruckMP.csproj",
-        "packagesPath": "/root/.nuget/packages/",
-        "outputPath": "/src/obj/",
+        "projectPath": "/opt/data/slipstream/StarTruckMP.csproj",
+        "packagesPath": "/opt/data/.nuget/packages/",
+        "outputPath": "/opt/data/slipstream/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/root/.nuget/NuGet/NuGet.Config"
+          "/opt/data/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net6.0"
@@ -35,6 +35,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -57,12 +62,22 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/6.0.428/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/opt/data/.dotnet/sdk/8.0.425/RuntimeIdentifierGraph.json"
         }
       }
     }
