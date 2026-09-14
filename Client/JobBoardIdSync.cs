@@ -53,10 +53,6 @@ namespace StarTruckMP.StarTruckClient
     {
         private const float IDENT_BROADCAST_INTERVAL = 2f;
 
-        // Chunks-Puffer-Budget: Riptide MaxSize=1231 => pro Reliable-Message bleiben
-        // nach Header+ID ~1200 Bytes. Sicherer Chunk-Grenzwert fuer die ident-Strings.
-        private const int MAX_CHUNKS = 16;
-
         // Empfangene Kennungen je Sektor (vom Autoritaets-Client).
         private static readonly HashSet<string> receivedIdents = new HashSet<string>();
         private static string receivedIdentsSector = null;
@@ -195,11 +191,11 @@ namespace StarTruckMP.StarTruckClient
             }
             if (cur.Count > 0) chunkPayloads.Add(System.Text.Encoding.UTF8.GetBytes(string.Join("", cur)));
 
-            if (chunkPayloads.Count > MAX_CHUNKS)
-            {
-                StarTruckMP.Log.LogWarning($"JobBoardIdSync: Senden abgebrochen ({trigger}): {idents.Count} Kennungen benoetigen {chunkPayloads.Count} Chunks (> {MAX_CHUNKS}) - Payload zu gross fuer einen Broadcast");
-                return;
-            }
+            // custom-build-335-Nachbesserung: KEIN Chunk-Cap mehr. Das alte MAX_CHUNKS=16
+            // hat den GESAMTEN Broadcast verworfen, sobald 215-228 Kennungen 17-18 Chunks
+            // benoetigten (3.477x 'Senden abgebrochen ... > 16' im Live-Log). Die Empfangs-
+            // seite sammelt dynamisch per totalChunks-Feld (HandleIncoming), sie hat nie
+            // ein 16er-Limit - mehr Chunks zu senden ist also jederzeit sicher.
 
             // Chunks senden - EINE Message pro Chunk, alles reliable.
             int sentChunks = 0;
