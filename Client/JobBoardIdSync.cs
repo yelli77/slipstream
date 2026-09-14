@@ -27,9 +27,11 @@ namespace StarTruckMP.StarTruckClient
     ///     werden angefasst). Ziel: alle Spieler sehen dieselbe Jobliste pro Sektor,
     ///     fuer Coop-Missionen.
     ///
-    /// Kennung (BuildJobKey): questId + displayName. Die questId eines prozedural
-    /// generierten Jobs enthaelt typischerweise bereits die Template-Id; zusammen mit
-    /// dem Anzeigenamen ist die Kombination in der Praxis eindeutig pro Sektor-Board.
+    /// Kennung (BuildJobKey, custom-build-339): NUR questId (UUID). Die questId eines
+    /// prozedural generierten Jobs ist sprachunabhaengig und auf allen Clients identisch.
+    /// Der fruehere Key "questId|displayName" enthielt den LOKALISIERTEN Anzeigenamen -
+    /// deutsch- und englischsprachige Clients bauten damit unterschiedliche Keys und der
+    /// Match war immer 0 (Build-339-Log-Beweis). UUID-only ist eindeutig pro Sektor-Board.
     /// (QuestInstanceSaveData.id existiert als Feld, wird hier aber NICHT benutzt,
     /// weil wir keine SaveData-Objekte mehr austauschen - und die QuestInstance-
     /// Wrapper-Klasse keinen id-Getter exponiert. Der Key ist bewusst NUR ein
@@ -116,13 +118,15 @@ namespace StarTruckMP.StarTruckClient
         private static float nextPeriodicSend = 0f;
         private static bool broadcastActiveLogged = false;
 
+        // custom-build-339: questId-only (sprachunabhaengig). Der displayName ist
+        // LOKALISIERT und machte die Kennung sprachabhaengig -> Keys matchten nie
+        // ueber verschiedene Client-Sprachen hinweg.
         public static string BuildJobKey(global::QuestInstance job)
         {
             if (job == null) return "";
-            string qid, dn;
+            string qid;
             try { qid = job.questId ?? ""; } catch { qid = ""; }
-            try { dn = job.displayName ?? ""; } catch { dn = ""; }
-            return "(" + qid + "|" + dn + ")";
+            return "(" + qid + ")";
         }
 
         public static string BuildJobKey(global::StarTruckSaveData.QuestInstanceSaveData job)
@@ -133,7 +137,7 @@ namespace StarTruckMP.StarTruckClient
             // QuestInstanceSaveData hat keinen displayName - Kennung hier nur aus den
             // vorhandenen Feldern; fuer den Ident-Vergleich auf Empfaengerseite wird
             // aber ohnehin der Live-QuestInstance-Key benutzt.
-            return "(" + qid + "|?)";
+            return "(" + qid + ")";
         }
 
         // ------------------------------------------------------------------
@@ -385,7 +389,11 @@ namespace StarTruckMP.StarTruckClient
                 foreach (var p in parts)
                 {
                     if (string.IsNullOrEmpty(p)) continue;
-                    if (p.Contains("System.Byte[]") || !p.StartsWith("(") || !p.EndsWith(")") || !p.Contains("|"))
+                    // custom-build-339: questId-only Keys. ALTES Format "(qid|Name)" von
+                    // evtl. noch alten Clients defensiv tolerieren: nur der questId-Teil
+                    // vor '|' landet im Set. Neues Format "(qid)" enthaelt kein '|'.
+                    bool isGarbage = p.Contains("System.Byte[]") || !p.StartsWith("(") || !p.EndsWith(")");
+                    if (isGarbage)
                     {
                         if (!warnedGarbage)
                         {
@@ -394,7 +402,11 @@ namespace StarTruckMP.StarTruckClient
                         }
                         continue;
                     }
-                    asm.Idents.Add(p);
+                    string body = p.Substring(1, p.Length - 2);
+                    int pipe = body.IndexOf('|');
+                    string qidOnly = pipe >= 0 ? body.Substring(0, pipe) : body;
+                    if (string.IsNullOrEmpty(qidOnly)) continue;
+                    asm.Idents.Add("(" + qidOnly + ")");
                 }
                 asm.HaveChunks[chunkIndex] = true;
                 asm.LastChunkTime = Time.unscaledTime;
