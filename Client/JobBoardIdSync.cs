@@ -196,6 +196,22 @@ namespace StarTruckMP.StarTruckClient
             return string.Join(", ", parts);
         }
 
+        // custom-build-338 (Payload-Fix): byte-level Konkatenation statt string.Join
+        // (das rief byte[].ToString() auf -> 'System.Byte[]'-Muell im Payload).
+        private static byte[] ConcatBytes(List<byte[]> parts)
+        {
+            int total = 0;
+            foreach (var p in parts) total += p.Length;
+            var buf = new byte[total];
+            int off = 0;
+            foreach (var p in parts)
+            {
+                Buffer.BlockCopy(p, 0, buf, off, p.Length);
+                off += p.Length;
+            }
+            return buf;
+        }
+
         private static void SendIdents(string trigger, string sector, List<string> idents)
         {
             var client = StarTruckClient.client;
@@ -227,14 +243,30 @@ namespace StarTruckMP.StarTruckClient
                 var entry = System.Text.Encoding.UTF8.GetBytes((idents[i] ?? "") + "\n");
                 if (curBytes + entry.Length > MAX_CHUNK_BYTES && cur.Count > 0)
                 {
-                    chunkPayloads.Add(System.Text.Encoding.UTF8.GetBytes(string.Join("", cur)));
+                    chunkPayloads.Add(ConcatBytes(cur));
                     cur = new List<byte[]>();
                     curBytes = 0;
                 }
                 cur.Add(entry);
                 curBytes += entry.Length;
             }
-            if (cur.Count > 0) chunkPayloads.Add(System.Text.Encoding.UTF8.GetBytes(string.Join("", cur)));
+            if (cur.Count > 0) chunkPayloads.Add(ConcatBytes(cur));
+
+            // custom-build-338 (Payload-Fix): Sicherheit vor dem Senden - der fertige
+            // Chunk-Payload muss als UTF8 decodierbar sein und darf NIEMALS 'System.Byte[]'
+            // enthalten (das war der 335er-Bug: string.Join ueber byte[] rief ToString()
+            // auf). Validierung 1x pro Broadcast (nicht pro Chunk), LogError bei Fehlschlag.
+            bool byteGarbage = false;
+            foreach (var p in chunkPayloads)
+            {
+                string decoded = System.Text.Encoding.UTF8.GetString(p);
+                if (decoded.Contains("System.Byte[]")) { byteGarbage = true; break; }
+            }
+            if (byteGarbage)
+                StarTruckMP.Log.LogError($"JobBoardIdSync: Chunk-Payload enthaelt 'System.Byte[]' (Sendefehler) - Broadcast abgebrochen ({trigger}, {idents.Count} Kennungen, Sektor '{sector}')");
+            else
+                StarTruckMP.Log.LogInfo($"JobBoardIdSync: Payload-Validierung OK (kein 'System.Byte[]', {chunkPayloads.Count} Chunks, {trigger})");
+            if (byteGarbage) return;
 
             // custom-build-335-Nachbesserung: KEIN Chunk-Cap mehr. Das alte MAX_CHUNKS=16
             // hat den GESAMTEN Broadcast verworfen, sobald 215-228 Kennungen 17-18 Chunks
@@ -346,9 +378,23 @@ namespace StarTruckMP.StarTruckClient
 
                 var text = System.Text.Encoding.UTF8.GetString(payload);
                 var parts = text.Split('\n');
+                // custom-build-338 (Payload-Fix): defensiv auf Empfaengerseite - ein Ident
+                // der Form 'System.Byte[]' oder ohne '|' bzw. ohne Klammern ist Muell
+                // (Sender-Bug) und wird verworfen. LogWarning nur 1x pro Serie.
+                bool warnedGarbage = false;
                 foreach (var p in parts)
                 {
-                    if (!string.IsNullOrEmpty(p)) asm.Idents.Add(p);
+                    if (string.IsNullOrEmpty(p)) continue;
+                    if (p.Contains("System.Byte[]") || !p.StartsWith("(") || !p.EndsWith(")") || !p.Contains("|"))
+                    {
+                        if (!warnedGarbage)
+                        {
+                            warnedGarbage = true;
+                            StarTruckMP.Log.LogWarning($"JobBoardIdSync: ungueltige Kennung empfangen (Sektor '{sector}', Chunk {chunkIndex}/{totalChunks}) - verworfen: '{p.Substring(0, Math.Min(40, p.Length))}'");
+                        }
+                        continue;
+                    }
+                    asm.Idents.Add(p);
                 }
                 asm.HaveChunks[chunkIndex] = true;
                 asm.LastChunkTime = Time.unscaledTime;
