@@ -221,6 +221,17 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         private static string lastShopDisplayName = null;
 
+        /// <summary>315b: ShopDescription der letzten Umleitung (fuer Kontext-Injection).</summary>
+        private static ShopDescription lastStationShop = null;
+
+        /// <summary>
+        /// 315b: True, wenn das bay.m_amenityType-Rewrite im Prefix erfolgreich war.
+        /// Dann oeffnet der NATIVE Dock-Pfad selbst den ShopScreen (die
+        /// AmenitySetup-GameEvent-Bindung entscheidet am amenityType) - wir duerfen
+        /// dann NICHT zusaetzlich LoadAndShow("ShopScreen") feuern (kein Flackern).
+        /// </summary>
+        private static bool lastAmenitySet = false;
+
         /// <summary>
         /// Prefix vor DockingBaySharedAssets.EnterAmenity - DER Punkt, den die native
         /// DockingCoroutine nach dem Dock-Cinematic aufruft. amenityType und shopDesc
@@ -298,43 +309,73 @@ namespace StarTruckMP.StarTruckClient
                     lastShopDisplayName = displayName;
                 }
 
-                // 315 Fix (Aufgabe 1, Kandidat a): m_amenityType der BAY vorschalten.
-                //
-                // Dekompilat-Beweis, warum die umgeschriebenen EnterAmenity-EventArgs
-                // allein NICHT genuegen (User-Log: Jobboerse-UI oeffnet sich weiter):
-                //   DockingBay.<DockingCoroutine>d__82.MoveNext (Token 100671310)
-                //   liest am Anfang `this.<>4__this.m_amenityType` (DockingBay.
-                //   m_amenityType, Feld-Token via GetIl2CppField("m_amenityType")) und
-                //   steuert DAMIT den Screen-Open. Das Shop-UI haengt an
-                //   bay.m_amenityType == StationAmenity.Shop - nicht an den EventArgs.
-                //   Ein Subscriber-Filter (Kandidat c) ist ausgeschlossen:
-                //   TruckAmenityTerminal.OnAmenityEnter (Token 100671950) nimmt
-                //   sender+EventArgs generisch entgegen und filtert nicht nach Bay.
-                // Rewrite muss VOR dem Coroutine-Read greifen -> direkt hier im
-                // EnterAmenityPrefix (der feuert, bevor die Coroutine die EventArgs
-                // weiterverarbeitet und bevor der Screen-Open-Zweig liest).
-                // Enum.ToObject-Regel (game-and-server-ops.md, Interop-Falle): das
-                // Feld hat den nativen Enum-Typ StationAmenity.
+                // 315b Fix (Aufgabe 1): Dekompilat-Beweis (ilspycmd -t DockingBay):
+                //   m_amenityType ist auf dem interop-Proxy eine PROPERTY
+                //   ('public unsafe StationAmenity m_amenityType { get; set; }',
+                //   Zeile ~937, NativeFieldInfoPtr_m_amenityType -> GetIl2CppField
+                //   (DockingBay, "m_amenityType"), Token-Zeile 1960). GetField()
+                //   schlug deshalb IMMER fehl (User-Log 344). Property setzen,
+                //   Enum.ToObject-Regel (game-and-server-ops.md, Interop-Falle).
+                //   Ebenso verifiziert: m_shopDescription Property (Zeile ~950,
+                //   NativeFieldInfoPtr Zeile 1961) - der native Screen-Open liest den
+                //   Shop-Kontext teils direkt von der Bay; damit laedt der ShopScreen
+                //   seine Items/Preise nativ (kein leerer Shop).
+                var amenitySet = false;
                 try
                 {
                     var bayType = bay.GetType();
-                    var amenityField = bayType.GetField("m_amenityType",
+                    // Property zuerst (Proxy-Realitaet), Field als Fallback.
+                    var amenityProp = bayType.GetProperty("m_amenityType",
                         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (amenityField != null)
+                    if (amenityProp != null && amenityProp.CanWrite)
                     {
-                        var enumObj = Enum.ToObject(amenityField.FieldType, AmenityTypes.Shop);
-                        amenityField.SetValue(bay, enumObj);
-                        StarTruckMP.Log.LogInfo($"315 ShopAtJobBoardBays: bay.m_amenityType -> Shop gesetzt (bay={bay.gameObject?.name}, field={amenityField.FieldType.Name}).");
+                        var enumObj = Enum.ToObject(amenityProp.PropertyType, AmenityTypes.Shop);
+                        amenityProp.SetValue(bay, enumObj);
+                        amenitySet = true;
+                        StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_amenityType (Property) -> Shop gesetzt (bay={bay.gameObject?.name}, type={amenityProp.PropertyType.Name}).");
                     }
                     else
                     {
-                        StarTruckMP.Log.LogWarning("315 ShopAtJobBoardBays: DockingBay.m_amenityType-Feld nicht gefunden (Screen-Open bleibt evtl. Jobboard).");
+                        var amenityField = bayType.GetField("m_amenityType",
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (amenityField != null)
+                        {
+                            var enumObj = Enum.ToObject(amenityField.FieldType, AmenityTypes.Shop);
+                            amenityField.SetValue(bay, enumObj);
+                            amenitySet = true;
+                            StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_amenityType (Field) -> Shop gesetzt (bay={bay.gameObject?.name}).");
+                        }
+                    }
+                    if (!amenitySet)
+                    {
+                        StarTruckMP.Log.LogWarning("315b ShopAtJobBoardBays: Weder Property noch Field 'm_amenityType' gefunden (Screen-Open bleibt evtl. Jobboard).");
+                    }
+
+                    // 315b (Aufgabe 3): bay.m_shopDescription ebenfalls setzen.
+                    try
+                    {
+                        var shopProp = bayType.GetProperty("m_shopDescription",
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (shopProp != null && shopProp.CanWrite)
+                        {
+                            shopProp.SetValue(bay, stationShop);
+                            StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_shopDescription (Property) -> stationShop gesetzt (bay={bay.gameObject?.name}).");
+                        }
+                    }
+                    catch (Exception exShopProp)
+                    {
+                        StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: m_shopDescription-Set fehlgeschlagen: {exShopProp.Message}");
                     }
                 }
                 catch (Exception exAmenity)
                 {
-                    StarTruckMP.Log.LogWarning($"315 ShopAtJobBoardBays: m_amenityType-Rewrite fehlgeschlagen: {exAmenity.Message}");
+                    StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: m_amenityType-Rewrite fehlgeschlagen: {exAmenity.Message}");
                 }
+
+                // 315b: Prefix-State fuer den Postfix merken.
+                lastShopDisplayName = __args.Length >= 2 ? (__args[1] as string) : null;
+                lastStationShop = stationShop;
+                lastAmenitySet = amenitySet;
 
                 rewriteCount++;
                 StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
@@ -378,6 +419,66 @@ namespace StarTruckMP.StarTruckClient
                 catch { return; }
                 if (amenityInt != (int)AmenityTypes.Shop) return; // nur umgeschriebene Docks
 
+                // 315b: Wenn das bay.m_amenityType-Rewrite griff, oeffnet der NATIVE
+                // Pfad selbst den ShopScreen (mit vollem Kontext) - wir feuern KEIN
+                // zweites LoadAndShow mehr (das verursachte das Jobboerse-Flackern
+                // in 344: natives JobBoardScreen + unser ShopScreen hintereinander).
+                if (lastAmenitySet)
+                {
+                    // Nur Kontext sicherstellen (Aufgabe 3): Der ShopScreen zieht
+                    // seine Daten aus TruckAmenityTerminal (instance.CurrentShop /
+                    // _currentShop, ilspycmd -t TruckAmenityTerminal Zeile ~337/562)
+                    // bzw. screenLogic.currentShopDescription (ShopScreenLogic,
+                    // GetIl2CppField "currentShopDescription"). Beide auf die
+                    // Station-ShopDescription setzen, bevor der Screen Start() laedt.
+                    try
+                    {
+                        var terminal = TruckAmenityTerminal.Get();
+                        if (terminal != null)
+                        {
+                            var termType = terminal.GetType();
+                            var curShopProp = termType.GetProperty("_currentShop",
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (curShopProp != null && curShopProp.CanWrite)
+                            {
+                                curShopProp.SetValue(terminal, lastStationShop);
+                            }
+                            var curAmenityProp = termType.GetProperty("_currentAmenity",
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (curAmenityProp != null && curAmenityProp.CanWrite)
+                            {
+                                curAmenityProp.SetValue(terminal, Enum.ToObject(curAmenityProp.PropertyType, AmenityTypes.Shop));
+                            }
+                            StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: TruckAmenityTerminal._currentShop/_currentAmenity auf Station-Shop gesetzt (Kontext-Injection).");
+                        }
+                        // 315b (Aufgabe 3, ergaenzt): Auch den live geladenen ShopScreen
+                        // selbst mit dem Kontext versorgen (Dekompilat: ShopScreen
+                        // .screenLogic ist public, ShopScreenLogic.currentShopDescription
+                        // Property, NativeFieldInfoPtr Zeile 474). Der Screen haengt
+                        // sonst an der evtl. leeren/alten ShopDescription.
+                        var screen = UnityEngine.Object.FindFirstObjectByType<ShopScreen>();
+                        if (screen != null && screen.screenLogic != null)
+                        {
+                            var logicProp = screen.screenLogic.GetType().GetProperty("currentShopDescription",
+                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                            if (logicProp != null && logicProp.CanWrite)
+                            {
+                                logicProp.SetValue(screen.screenLogic, lastStationShop);
+                                StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: ShopScreenLogic.currentShopDescription -> stationShop gesetzt.");
+                            }
+                        }
+                    }
+                    catch (Exception exCtx)
+                    {
+                        StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: Terminal-Kontext-Injection fehlgeschlagen: {exCtx.Message}");
+                    }
+                    StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: amenityType-Rewrite aktiv - nativer Screen-Open entscheidet (kein Extra-LoadAndShow, shopName='{lastShopDisplayName}').");
+                    return;
+                }
+
+                // Fallback (Rewrite fehlgeschlagen): nach dem nativen EnterAmenity
+                // den Shop-Screen via MenuState.LoadAndShow explizit oeffnen
+                // (gleicher Pfad wie JobBoardComputer.TryOpenGameJobBoard).
                 var ms = com.monsterandmonster.Menu.MenuState.Get();
                 if (ms == null)
                 {
@@ -514,8 +615,17 @@ namespace StarTruckMP.StarTruckClient
                         // -> PointOfInterestEntry.marker (PointOfInterestMarker) ->
                         // marker._name/_label (TMPro.TextMeshProUGUI) + setter displayName
                         // (Token 100665771). Den Live-Marker-Text direkt setzen.
+                        // 315b (Aufgabe 4a): shopDesc war an JobsBoard-Bays IMMER null
+                        // (User-Log 344: dispName=null -> Fallback 'Shop' ueberschrieb
+                        // den nativ bereits korrekten Label). Quelle wie im Prefix:
+                        // Station-ShopDescription via DockingBayGroup (FindStationShop-
+                        // Description-Muster); bay.ShopDescription ist nur an echten
+                        // Shop-Bays gesetzt.
                         var shopDesc = bay.ShopDescription ?? FindShopDescriptionViaGroup(bay);
                         var dispName = shopDesc?.shopDisplayName;
+                        // 315b (Aufgabe 4b): Heuristik - wenn der Label-Text bereits
+                        // einen Shopnamen traegt (nicht 'Auftragsboerse'/nicht leer),
+                        // NICHT ueberschreiben.
                         var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
                         if (textSet) rewritten++;
                     }
@@ -682,11 +792,64 @@ namespace StarTruckMP.StarTruckClient
 
                 if (marker == null && label == null)
                 {
-                    StarTruckMP.Log.LogWarning($"315 text: kein TMP/Marker gefunden (poi={poi.gameObject.name}, mode={matchMode}, entries-Match fehlgeschlagen).");
+                    StarTruckMP.Log.LogWarning($"315b text: kein TMP/Marker gefunden (poi={poi.gameObject.name}, mode={matchMode}, entries-Match fehlgeschlagen).");
                     return false;
                 }
 
+                // 315b (Aufgabe 4c): World-space 3D-Label am Dock ('Auftragsboerse')
+                // ist NICHT der HUD-Marker: natives Feld DockingBay.m_dockingBayTextLabel
+                // (TextMeshPro, ilspycmd -t DockingBay Zeile ~1225, Property auf dem
+                // Proxy). Text direkt setzen, wenn er die JobsBoard-Bezeichnung traegt.
+                // Diag-Log '315b text:' mit goPath fuer jede gefundene Instanz.
+                try
+                {
+                    var wsLabelProp = bay.GetType().GetProperty("m_dockingBayTextLabel",
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    object wsLabelObj = wsLabelProp?.GetValue(bay);
+                    var wsLabel = wsLabelObj as TMPro.TextMeshPro;
+                    if (wsLabel != null && wsLabel.gameObject != null)
+                    {
+                        string wsBefore = wsLabel.text;
+                        bool wsIsJobsBoard = !string.IsNullOrWhiteSpace(wsBefore)
+                            && (wsBefore.Contains("Auftragsb") || wsBefore.Contains("Job Board") || wsBefore.Contains("JobsBoard"));
+                        StarTruckMP.Log.LogInfo(
+                            $"315b text: world-label found, goPath={GetGoPath(wsLabel.gameObject)}, text='{wsBefore}', isJobsBoard={wsIsJobsBoard}");
+                        if (wsIsJobsBoard)
+                        {
+                            wsLabel.text = newText;
+                            wsLabel.ForceMeshUpdate(false, false);
+                            StarTruckMP.Log.LogInfo(
+                                $"315b text: world-label rewritten, goPath={GetGoPath(wsLabel.gameObject)}, text='{wsBefore}'->'{newText}'");
+                        }
+                    }
+                }
+                catch (Exception exWs)
+                {
+                    StarTruckMP.Log.LogWarning($"315b text: world-label-Set fehlgeschlagen: {exWs.Message}");
+                }
+
                 string before = label != null ? label.text : null;
+
+                // 315b (Aufgabe 4b): Heuristik - Label NICHT ueberschreiben, wenn es
+                // bereits einen echten (Shop-)Namen traegt. Nur schreiben, wenn leer
+                // oder identisch zur Auftragsboerse-/Fallback-Strings.
+                bool alreadyNamed = !string.IsNullOrWhiteSpace(before)
+                    && !before.Trim().Equals("Auftragsboerse", StringComparison.OrdinalIgnoreCase)
+                    && !before.Trim().Equals("Auftragsbörse", StringComparison.OrdinalIgnoreCase)
+                    && !before.Trim().Equals("Shop", StringComparison.OrdinalIgnoreCase)
+                    && !before.Trim().Equals("Job Board", StringComparison.OrdinalIgnoreCase)
+                    && !before.Trim().Equals("JobsBoard", StringComparison.OrdinalIgnoreCase);
+                if (alreadyNamed)
+                {
+                    // 315b text: Diag-Log mit goPath fuer ALLE gefundenen Label-Instanzen.
+                    StarTruckMP.Log.LogInfo(
+                        $"315b text: keep (label already named), mode={matchMode}, " +
+                        $"marker={marker?.gameObject?.name ?? "null"}, " +
+                        $"tmp={(label != null ? label.gameObject.name : "null")}, " +
+                        $"goPath={(marker != null && marker.gameObject != null ? GetGoPath(marker.gameObject) : (label != null ? GetGoPath(label.gameObject) : "?"))}, " +
+                        $"text='{before}' (unchanged)");
+                    return true;
+                }
 
                 if (label != null)
                 {
@@ -700,7 +863,7 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 StarTruckMP.Log.LogInfo(
-                    $"315 text: mode={matchMode}, marker={marker?.gameObject?.name ?? "null"}, " +
+                    $"315b text: mode={matchMode}, marker={marker?.gameObject?.name ?? "null"}, " +
                     $"tmp={(label != null ? label.gameObject.name : "null")}, " +
                     $"goPath={(marker != null && marker.gameObject != null ? GetGoPath(marker.gameObject) : "?")}, " +
                     $"text='{before}'->'{newText}'");
