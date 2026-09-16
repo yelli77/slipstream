@@ -209,6 +209,52 @@ namespace StarTruckMP.StarTruckClient
             var postfix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPostfix));
             harmony.Patch(mi, prefix: prefix, postfix: postfix);
             StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c + 315 Postfix).");
+
+            // 315c: Nativen JobBoard-Open unterdruecken - Prefix auf
+            // TruckAmenityTerminal.OnAmenityEnter (Dekompilat-Beweis im Kommentar
+            // bei OnAmenityEnterPrefix). Bei Ziel-Suche-Fehlschlag laeuft das native
+            // JobBoard-Open einfach unveraendert weiter (Flackern akzeptiert, kein
+            // Build-/Laufzeit-Risiko).
+            try
+            {
+                MethodInfo onEnter = null;
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    System.Type[] types;
+                    try { types = asm.GetTypes(); } catch { continue; }
+                    foreach (var t in types)
+                    {
+                        if (t == null || t.Name != "TruckAmenityTerminal") continue;
+                        foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        {
+                            if (m.Name != "OnAmenityEnter") continue;
+                            var ps = m.GetParameters();
+                            StarTruckMP.Log.LogInfo($"315c OnAmenityEnter-Kandidat: {t.FullName}.{m.Name}({string.Join(", ", Array.ConvertAll(ps, p => p.ParameterType.Name))})");
+                            if (ps.Length == 2 && ps[0].ParameterType.Name.Contains("Object") && ps[1].ParameterType.Name.Contains("EventArgs"))
+                            {
+                                onEnter = m;
+                                break;
+                            }
+                        }
+                        if (onEnter != null) break;
+                    }
+                    if (onEnter != null) break;
+                }
+                if (onEnter != null)
+                {
+                    var onEnterPrefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(OnAmenityEnterPrefix));
+                    harmony.Patch(onEnter, prefix: onEnterPrefix);
+                    StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays.Apply: Harmony-Prefix auf TruckAmenityTerminal.OnAmenityEnter registriert (nativer JobBoard-Open unterdrueckbar).");
+                }
+                else
+                {
+                    StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays.Apply: TruckAmenityTerminal.OnAmenityEnter nicht gefunden - natives JobBoard-Open bleibt aktiv (Flackern akzeptiert).");
+                }
+            }
+            catch (Exception exOnEnter)
+            {
+                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.Apply: OnAmenityEnter-Patch fehlgeschlagen (natives JobBoard-Open bleibt aktiv): {exOnEnter.Message}");
+            }
         }
 
         // ── Prefix: rewrite the JobsBoard dock amenity into a Shop amenity ──
@@ -221,16 +267,30 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         private static string lastShopDisplayName = null;
 
-        /// <summary>315b: ShopDescription der letzten Umleitung (fuer Kontext-Injection).</summary>
+        /// <summary>
+        /// 315b: ShopDescription der letzten Umleitung (fuer Kontext-Injection).
+        /// </summary>
         private static ShopDescription lastStationShop = null;
 
         /// <summary>
-        /// 315b: True, wenn das bay.m_amenityType-Rewrite im Prefix erfolgreich war.
-        /// Dann oeffnet der NATIVE Dock-Pfad selbst den ShopScreen (die
-        /// AmenitySetup-GameEvent-Bindung entscheidet am amenityType) - wir duerfen
-        /// dann NICHT zusaetzlich LoadAndShow("ShopScreen") feuern (kein Flackern).
+        /// 315c: True, wenn der Prefix DIESEN EnterAmenity-Aufruf tatsaechlich von
+        /// JobsBoard nach Shop umgeschrieben hat (echte Shop-Docks setzen das
+        /// nicht). Setzt lastShopDisplayName/lastStationShop und aktiviert die
+        /// native-Open-Unterdrueckung im Postfix.
         /// </summary>
-        private static bool lastAmenitySet = false;
+        private static bool lastWasRewrite = false;
+
+        /// <summary>
+        /// 315c: Unterdrueckt das NATIVE JobBoard-Screen-Open. Der Prefix auf
+        /// TruckAmenityTerminal.OnAmenityEnter (Token 100671950, Dekompilat:
+        /// 'public unsafe void OnAmenityEnter(Il2CppSystem.Object sender,
+        /// Il2CppSystem.EventArgs eventArgs)') skippt den nativen Rumpf, wenn
+        /// dieses Flag steht - dann oeffnet ausschliesslich unser ShopScreen-
+        /// LoadAndShow. Zeitfenster 15 s gegen verlorene Events (sonst wuerde
+        /// ein spaeteres echtes Amenity-Enter fälschlich geschluckt).
+        /// </summary>
+        private static bool suppressNativeOpen = false;
+        private static DateTime suppressNativeOpenAtUtc = DateTime.MinValue;
 
         /// <summary>
         /// Prefix vor DockingBaySharedAssets.EnterAmenity - DER Punkt, den die native
@@ -375,7 +435,16 @@ namespace StarTruckMP.StarTruckClient
                 // 315b: Prefix-State fuer den Postfix merken.
                 lastShopDisplayName = __args.Length >= 2 ? (__args[1] as string) : null;
                 lastStationShop = stationShop;
-                lastAmenitySet = amenitySet;
+                // 315c: Nur wenn die komplette Umleitung (args + Bay-Kontext) gegriffen
+                // hat, darf der Postfix das native JobBoard-Open schlucken und den
+                // ShopScreen selbst oeffnen. Echte Shop-Docks (kein Rewrite) laufen
+                // voellig unveraendert durch den nativen Pfad.
+                lastWasRewrite = amenitySet;
+                if (amenitySet)
+                {
+                    suppressNativeOpen = true;
+                    suppressNativeOpenAtUtc = DateTime.UtcNow;
+                }
 
                 rewriteCount++;
                 StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
@@ -419,98 +488,156 @@ namespace StarTruckMP.StarTruckClient
                 catch { return; }
                 if (amenityInt != (int)AmenityTypes.Shop) return; // nur umgeschriebene Docks
 
-                // 315b: Wenn das bay.m_amenityType-Rewrite griff, oeffnet der NATIVE
-                // Pfad selbst den ShopScreen (mit vollem Kontext) - wir feuern KEIN
-                // zweites LoadAndShow mehr (das verursachte das Jobboerse-Flackern
-                // in 344: natives JobBoardScreen + unser ShopScreen hintereinander).
-                if (lastAmenitySet)
+                // ── 315c: Shop-Open WIEDER AKTIV fuer ALLE umgeschriebenen Docks ──
+                // User-Log 345 (Zeilen 243-247) beweist: Mit der 315b-Flag-Logik
+                // ging NUR das native JobBoard auf, der Shop kam nie. Der native
+                // Pfad folgt der Asset-Bindung (openAmenityScreenEvent), nicht den
+                // EventArgs - deshalb feuern wir hier IMMER den bewiesenen Open-Pfad
+                // (custom-build-344: Screen ging definitiv auf) und unterdruecken
+                // das native JobBoard-Open separat via OnAmenityEnter-Prefix.
+                //
+                // 1) Kontext-Injection VOR dem Open: TruckAmenityTerminal.Get()
+                //    (static, Dekompilat Zeile ~667) -> _currentShop/_currentAmenity
+                //    (Zeilen ~337/~394) setzen, damit der ShopScreen beim Laden die
+                //    Station-ShopDescription (Items/Preise) vorfindet.
+                try
                 {
-                    // Nur Kontext sicherstellen (Aufgabe 3): Der ShopScreen zieht
-                    // seine Daten aus TruckAmenityTerminal (instance.CurrentShop /
-                    // _currentShop, ilspycmd -t TruckAmenityTerminal Zeile ~337/562)
-                    // bzw. screenLogic.currentShopDescription (ShopScreenLogic,
-                    // GetIl2CppField "currentShopDescription"). Beide auf die
-                    // Station-ShopDescription setzen, bevor der Screen Start() laedt.
-                    try
+                    var terminal = TruckAmenityTerminal.Get();
+                    if (terminal != null)
                     {
-                        var terminal = TruckAmenityTerminal.Get();
-                        if (terminal != null)
+                        var termType = terminal.GetType();
+                        var curShopProp = termType.GetProperty("_currentShop",
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (curShopProp != null && curShopProp.CanWrite)
                         {
-                            var termType = terminal.GetType();
-                            var curShopProp = termType.GetProperty("_currentShop",
-                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                            if (curShopProp != null && curShopProp.CanWrite)
-                            {
-                                curShopProp.SetValue(terminal, lastStationShop);
-                            }
-                            var curAmenityProp = termType.GetProperty("_currentAmenity",
-                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                            if (curAmenityProp != null && curAmenityProp.CanWrite)
-                            {
-                                curAmenityProp.SetValue(terminal, Enum.ToObject(curAmenityProp.PropertyType, AmenityTypes.Shop));
-                            }
-                            StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: TruckAmenityTerminal._currentShop/_currentAmenity auf Station-Shop gesetzt (Kontext-Injection).");
+                            curShopProp.SetValue(terminal, lastStationShop);
                         }
-                        // 315b (Aufgabe 3, ergaenzt): Auch den live geladenen ShopScreen
-                        // selbst mit dem Kontext versorgen (Dekompilat: ShopScreen
-                        // .screenLogic ist public, ShopScreenLogic.currentShopDescription
-                        // Property, NativeFieldInfoPtr Zeile 474). Der Screen haengt
-                        // sonst an der evtl. leeren/alten ShopDescription.
-                        var screen = UnityEngine.Object.FindFirstObjectByType<ShopScreen>();
-                        if (screen != null && screen.screenLogic != null)
+                        var curAmenityProp = termType.GetProperty("_currentAmenity",
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (curAmenityProp != null && curAmenityProp.CanWrite)
                         {
-                            var logicProp = screen.screenLogic.GetType().GetProperty("currentShopDescription",
-                                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                            if (logicProp != null && logicProp.CanWrite)
-                            {
-                                logicProp.SetValue(screen.screenLogic, lastStationShop);
-                                StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: ShopScreenLogic.currentShopDescription -> stationShop gesetzt.");
-                            }
+                            curAmenityProp.SetValue(terminal, Enum.ToObject(curAmenityProp.PropertyType, AmenityTypes.Shop));
                         }
-                        // 315b: Defensiv Populate nachziehen, damit der Screen die
-                        // injizierten Kontextdaten auch uebernimmt (loest 'leerer
-                        // Shop' ohne Timing-Abwarten). Dekompilat: ShopScreen.Populate()
-                        // public (Token, Zeile ~418). Try/catch: Niemals crashen.
-                        if (screen != null)
-                        {
-                            try
-                            {
-                                screen.Populate();
-                                StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: Populate nach Kontext-Injection nachgezogen.");
-                            }
-                            catch (Exception exPop)
-                            {
-                                StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: Populate nicht verfuegbar (uebersprungen): {exPop.Message}");
-                            }
-                        }
+                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: TruckAmenityTerminal._currentShop/_currentAmenity auf Station-Shop gesetzt (Kontext-Injection).");
                     }
-                    catch (Exception exCtx)
+                    else
                     {
-                        StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: Terminal-Kontext-Injection fehlgeschlagen: {exCtx.Message}");
+                        StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays: TruckAmenityTerminal.Get() null - Kontext-Injection uebersprungen.");
                     }
-                    StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: amenityType-Rewrite aktiv - nativer Screen-Open entscheidet (kein Extra-LoadAndShow, shopName='{lastShopDisplayName}').");
-                    return;
+                }
+                catch (Exception exCtx)
+                {
+                    StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: Terminal-Kontext-Injection fehlgeschlagen: {exCtx.Message}");
                 }
 
-                // Fallback (Rewrite fehlgeschlagen): nach dem nativen EnterAmenity
-                // den Shop-Screen via MenuState.LoadAndShow explizit oeffnen
-                // (gleicher Pfad wie JobBoardComputer.TryOpenGameJobBoard).
+                // 2) Bewiesener Open-Pfad: MenuState.LoadAndShow("ShopScreen")
+                //    (JobBoardComputer.TryOpenGameJobBoard nutzt denselben Pfad).
                 var ms = com.monsterandmonster.Menu.MenuState.Get();
                 if (ms == null)
                 {
-                    StarTruckMP.Log.LogWarning("315 ShopAtJobBoardBays: MenuState.Get() null - Shop-Screen-Fallback nicht moeglich.");
+                    StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays: MenuState.Get() null - ShopScreen-Open nicht moeglich.");
                     return;
                 }
-                var runnerGO = new GameObject("StarTruckMP_ShopScreenRunner315");
+                var runnerGO = new GameObject("StarTruckMP_ShopScreenRunner315c");
                 UnityEngine.Object.DontDestroyOnLoad(runnerGO);
                 var runner = runnerGO.AddComponent<JobBoardComputer.CoroutineRunnerHelper>();
                 runner.StartCoroutine(ms.LoadAndShow("ShopScreen", null, null));
-                StarTruckMP.Log.LogInfo($"315 ShopAtJobBoardBays: ShopScreen-Open-Fallback ausgefuehrt (shopName='{lastShopDisplayName}').");
+                StarTruckMP.Log.LogInfo($"315c ShopAtJobBoardBays: LoadAndShow(\"ShopScreen\") ausgefuehrt (shopName='{lastShopDisplayName}').");
+
+                // 3) Kontext + defensives Populate am geladenen ShopScreen nachziehen
+                //    (Dekompilat: ShopScreen.screenLogic public, ShopScreenLogic
+                //    .currentShopDescription Property Zeile ~363; ShopScreen.Populate()
+                //    public Zeile ~418). Try/catch: Niemals crashen.
+                try
+                {
+                    var screen = UnityEngine.Object.FindFirstObjectByType<ShopScreen>();
+                    if (screen == null)
+                    {
+                        // LoadAndShow ist eine Coroutine - der Screen kann noch nicht
+                        // instanziiert sein. Populate/Logic-Injection folgen dann in
+                        // der Screen-eigenen Initialisierung aus dem Terminal-Kontext
+                        // (Schritt 1); nichts weiter zu tun.
+                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: ShopScreen (noch) nicht in Szene - Populate nach LoadAndShow uebersprungen.");
+                        return;
+                    }
+                    if (screen.screenLogic != null)
+                    {
+                        var logicProp = screen.screenLogic.GetType().GetProperty("currentShopDescription",
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (logicProp != null && logicProp.CanWrite)
+                        {
+                            logicProp.SetValue(screen.screenLogic, lastStationShop);
+                            StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: ShopScreenLogic.currentShopDescription -> stationShop gesetzt.");
+                        }
+                    }
+                    try
+                    {
+                        screen.Populate();
+                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Populate nach Kontext-Injection nachgezogen.");
+                    }
+                    catch (Exception exPop)
+                    {
+                        StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: Populate nicht verfuegbar (uebersprungen): {exPop.Message}");
+                    }
+                }
+                catch (Exception exScr)
+                {
+                    StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: ShopScreen-Nachbearbeitung fehlgeschlagen: {exScr.Message}");
+                }
             }
             catch (Exception ex)
             {
                 // Niemals crashen - im Zweifel bleibt der native Screen-Stand.
-                StarTruckMP.Log.LogWarning($"315 ShopAtJobBoardBays.EnterAmenityPostfix Fehler: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.EnterAmenityPostfix Fehler: {ex.Message}");
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════
+        // 315c: NATIVES JobBoard-Open an umgeschriebenen Bays unterdruecken.
+        //
+        // Patch-Punkt (Dekompilat-Beweis, ilspycmd -t TruckAmenityTerminal,
+        // /bepinex/interop/Assembly-CSharp.dll, 2 Versuche, Versuch 2 erfolgreich):
+        //   - 'public unsafe void OnAmenityEnter(Il2CppSystem.Object sender,
+        //     Il2CppSystem.EventArgs eventArgs)' (Token 100671950,
+        //     NativeMethodInfoPtr_OnAmenityEnter_Private_Void_Object_EventArgs_0).
+        //   - TruckAmenityTerminal.AmenitySetup traegt die GameEvent-Felder
+        //     'openAmenityScreenEvent' / 'openDockedScreenEventIfNeeded'
+        //     (NativeFieldInfoPtr_openAmenityScreenEvent / ..._IfNeeded); OnAmenityEnter
+        //     ist der native Handler, der diese Events feuert und damit das
+        //     JobBoardScreen-Open ausloest.
+        // Da der Proxy-Body via NativeMethodInfoPtr in den nativen Code ruft, reicht
+        // ein Harmony-Prefix (skip via __result-freiem return false) - analog zum
+        // funktionierenden EnterAmenity-Patch. Zeitfenster-Logik: Der Prefix setzt
+        // das Flag im EnterAmenity-Postfix zeitgleich mit dem eigenen Open; nach
+        // 15 s verfaellt es, damit spaetere echte Amenity-Enters (andere Bays)
+        // niemals geschluckt werden.
+        // ════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// 315c: Prefix vor TruckAmenityTerminal.OnAmenityEnter. Liefert false
+        /// (skip nativer Rumpf -> kein JobBoard-Open), wenn dieses Enter von einer
+        /// umgeschriebenen JobsBoard-Bay kommt (Zeitfenster-Gate); sonst true.
+        /// </summary>
+        public static bool OnAmenityEnterPrefix()
+        {
+            try
+            {
+                if (!suppressNativeOpen) return true;
+                if ((DateTime.UtcNow - suppressNativeOpenAtUtc).TotalSeconds > 15)
+                {
+                    // Zeitfenster abgelaufen - Flag entsorgen, native Pfade bleiben intakt.
+                    suppressNativeOpen = false;
+                    StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Unterdrueckungs-Fenster abgelaufen - natives OnAmenityEnter wieder aktiv.");
+                    return true;
+                }
+                suppressNativeOpen = false;
+                StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: NATIVES OnAmenityEnter geschluckt (JobBoard-Open unterdrueckt, Shop-Open laeuft).");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.OnAmenityEnterPrefix Fehler: {ex.Message}");
+                return true; // niemals native Pfade per Exception-Nebenwirkung blockieren
             }
         }
 
