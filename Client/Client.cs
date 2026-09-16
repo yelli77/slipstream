@@ -102,6 +102,8 @@ namespace StarTruckMP.StarTruckClient
             client.Update();
             ReanchorRemotePlayersToFloatingOrigin();
             SmoothTrailerMovement();
+            // Build 346: Remote-Hitch-VFX der Trailer-Interpolation folgen lassen
+            RemoteHitchVFX.LateUpdate();
             SmoothTruckMovement();
             BillboardNameLabels();
             UpdateMapIndicators();
@@ -369,6 +371,8 @@ namespace StarTruckMP.StarTruckClient
                 if (player.Trailer != null) GameObject.Destroy(player.Trailer);
                 if (player.NameLabel != null) GameObject.Destroy(player.NameLabel);
             }
+            // Build 346: alle Remote-Hitch-VFX beim Disconnect aufräumen
+            RemoteHitchVFX.HideAll();
             ushort[] keys = playerList.Keys.ToArray<ushort>();
             foreach (var pId in keys) { playerList.Remove(pId); }
 
@@ -539,6 +543,7 @@ namespace StarTruckMP.StarTruckClient
                         newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                         newPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
                         newPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
+
                         newPlayer.sector = sector;
                         // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
                         if (pendingNames.TryGetValue(id, out string pendingJoinName) && !string.IsNullOrEmpty(pendingJoinName))
@@ -574,6 +579,7 @@ namespace StarTruckMP.StarTruckClient
                     newPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                     newPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
                     newPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
+
                     newPlayer.sector = string.IsNullOrEmpty(remoteSector) ? "none" : remoteSector;
                     // Bug 1: gepufferten (frueheren) SetPlayerName anwenden, falls er vor der Registrierung kam.
                     if (pendingNames.TryGetValue(id, out string pendingConnName) && !string.IsNullOrEmpty(pendingConnName))
@@ -638,6 +644,7 @@ namespace StarTruckMP.StarTruckClient
                         currentPlayer.trailerExtraTargets = new Dictionary<long, movementTrans>();
                         currentPlayer.trailerExtraDriftTimers = new Dictionary<long, float>();
                         currentPlayer.trailerExtraSmoothVels = new Dictionary<long, Vector3>();
+
                         currentPlayer.sector = currentSector;
                         // Bug 1: echten Namen aus pendingNames bevorzugen — der Placeholder
                         // 'Player_N' wurde sonst dauerhaft angezeigt, wenn das Name-Broadcast
@@ -892,6 +899,9 @@ namespace StarTruckMP.StarTruckClient
                                 }
                                 currentPlayer.Trailers[trackingId] = trailerObj;
                                 StarTruckMP.Log.LogInfo($"MultiTrailer: spawned trailer {trackingId} type='{containerType}' for player {playerId}");
+                                // Build 346: Remote-Hitch-VFX (rein visuell) beim Trailer-Spawn zeigen
+                                if (currentPlayer.Truck != null)
+                                    RemoteHitchVFX.Show(playerId, currentPlayer.Truck, trailerObj);
                             }
 
                             // Update position target for smoothing
@@ -922,6 +932,11 @@ namespace StarTruckMP.StarTruckClient
                             currentPlayer.Trailers.Remove(rid);
                             currentPlayer.trailerExtraTargets.Remove(rid);
                             StarTruckMP.Log.LogInfo($"MultiTrailer: destroyed trailer {rid} for player {playerId}");
+                        }
+                        if (toRemove.Count > 0 && currentPlayer.Trailers.Count == 0)
+                        {
+                            // Build 346: Unhitch — Remote-Hitch-VFX sauber despawnen
+                            RemoteHitchVFX.Hide(playerId);
                         }
 
                         currentPlayer.trailerHitched = trailerCount > 0;
@@ -954,10 +969,15 @@ namespace StarTruckMP.StarTruckClient
                                 currentPlayer.trailerSmoothVel = Vector3.zero;
                                 currentPlayer.trailerTargetPos = trailerPos;
                                 currentPlayer.trailerTargetRot = trailerRot;
+                                // Build 346: Remote-Hitch-VFX (rein visuell) beim Legacy-Trailer-Spawn
+                                if (currentPlayer.Truck != null)
+                                    RemoteHitchVFX.Show(playerId, currentPlayer.Truck, currentPlayer.Trailer);
                             }
                         }
                         else if (!hitched && currentPlayer.Trailer != null)
                         {
+                            // Build 346: Unhitch — Remote-Hitch-VFX sauber despawnen
+                            RemoteHitchVFX.Hide(playerId);
                             GameObject.Destroy(currentPlayer.Trailer);
                             currentPlayer.Trailer = null;
                         }
