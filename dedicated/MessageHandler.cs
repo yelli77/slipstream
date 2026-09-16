@@ -19,6 +19,8 @@ public class MessageHandler
     private readonly int _minClientBuild;
     private readonly Action<ushort> _onVersionVerified;
     private readonly Action<ushort, int> _onVersionRejected;
+    // custom-build-342: server-authoritative Job-Sync (Store lebt im Handler-Owner)
+    public JobBoardServer JobBoards;
 
     public MessageHandler(Dictionary<ushort, PlayerState> players, int minClientBuild, Action<ushort> onVersionVerified, Action<ushort, int> onVersionRejected)
     {
@@ -47,6 +49,9 @@ public class MessageHandler
             case MessageType.JobBoardSync: HandleJobBoardSync(e, server); break;
             case MessageType.CargoSync: HandleCargoSync(e, server); break;
             case MessageType.JobBoardIdents: HandleJobBoardIdents(e, server); break;
+            // custom-build-342: server-authoritative Job-Sync
+            case MessageType.JobBoardUpload: JobBoards?.HandleUpload(e, server); break;
+            case MessageType.JobTaken: JobBoards?.HandleJobTaken(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -208,6 +213,11 @@ public class MessageHandler
         var msg=Message.Create(MessageSendMode.Reliable,(ushort)MessageType.UpdateSector);
         msg.AddUShort(e.FromConnection.Id); msg.AddString(sector);
         server.SendToAll(msg);
+
+        // custom-build-342: server-authoritative Job-Sync — Store pflegen + aktuellen
+        // Pool des neuen Sektors an diesen Client senden (Join/Sektorwechsel).
+        try { JobBoards?.OnPlayerSector(e.FromConnection.Id, sector, server); }
+        catch (Exception jbEx) { Console.WriteLine($"[WARN] JobBoardServer.OnPlayerSector: {jbEx.Message}"); }
 
         // Notify Discord bridge about sector change (fire-and-forget)
         string sectorJson = JsonSerializer.Serialize(new { steamId = p.SteamId.ToString(), sector = sector, name = p.Name });

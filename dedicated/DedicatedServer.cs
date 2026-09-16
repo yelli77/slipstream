@@ -31,6 +31,8 @@ public class DedicatedServer
         _serverName = serverName;
         _minClientBuild = minClientBuild;
         _handler = new MessageHandler(_players, minClientBuild, OnClientVersionVerified, OnClientVersionRejected);
+        // custom-build-342: server-authoritative Job-Sync
+        _handler.JobBoards = new JobBoardServer(new JobBoardStore(m => Log(m)), Log);
         _server = new Riptide.Server();
         _server.ClientConnected += OnClientConnected;
         _server.ClientDisconnected += OnClientDisconnected;
@@ -162,6 +164,7 @@ public class DedicatedServer
         Log($"Client disconnected: {e.Client.Id} ({e.Reason})");
         _pendingVersionCheck.Remove(e.Client.Id);
         _versionVerified.Remove(e.Client.Id);
+        _handler.JobBoards?.OnPlayerDisconnected(e.Client.Id);
         if (_players.TryGetValue(e.Client.Id, out var disconnectedPlayer))
         {
             _handler.NotifyPlayerDisconnected(disconnectedPlayer.SteamId);

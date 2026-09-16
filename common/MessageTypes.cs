@@ -22,5 +22,10 @@ public enum MessageType : ushort
     // ACHTUNG: Client-seitig (Encoding/Utilities.cs messageType) liegen setDestinationGate=16
     // und multiTrailerMovementUpdate=17 dazwischen (Legacy-Eintraege, Server-ohne-Handler) -
     // jobBoardIdents ist dort 18. Server-ID MUSS 18 sein, nicht 16!
-    JobBoardIdents = 18
+    // Build-342: Server-authoritative Job-Sync. Alte Pfade (JobBoardSync-Blob = 14,
+    // JobBoardIdents = 18) werden deaktiviert, die NUMMERN bleiben reserviert, damit alte
+    // Clients nicht in fremde Handler rutschen. Neue Nummern ab 19:
+    jobBoardUpload = 19,     // Client -> Server: volle lokal generierte Job-Liste des Sektors
+    jobBoardDownload = 20,   // Server -> Client: vollstaendiger Gesamtpool des Sektors
+    jobTaken = 21            // beide Richtungen: AcceptJob-Event (questId)
 }
