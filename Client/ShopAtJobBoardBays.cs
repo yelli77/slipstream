@@ -939,36 +939,63 @@ namespace StarTruckMP.StarTruckClient
                     return false;
                 }
 
-                // 315b (Aufgabe 4c): World-space 3D-Label am Dock ('Auftragsboerse')
-                // ist NICHT der HUD-Marker: natives Feld DockingBay.m_dockingBayTextLabel
-                // (TextMeshPro, ilspycmd -t DockingBay Zeile ~1225, Property auf dem
-                // Proxy). Text direkt setzen, wenn er die JobsBoard-Bezeichnung traegt.
-                // Diag-Log '315b text:' mit goPath fuer jede gefundene Instanz.
+                // 315d: World-space 3D-Label am Dock ('Auftragsboerse').
+                // Dekompilat-Beweis (ilspycmd -t DockingBay / -t DockingBaySharedAssets
+                // / -t PointOfInterestSettings, Build-Container):
+                //   - DockingBay hat ALS TMP nur m_dockingBayTextLabel (= Docking_BayIdText,
+                //     User-Log 346: traegt 'JP-03') plus String-Feld m_amenityName.
+                //   - DockingBaySharedAssets enthaelt KEINEN TMP/Label-Member (nur
+                //     POI-Settings, Timelines, Materialien) - Kandidat (a) verworfen.
+                //   - PointOfInterestMarker hat nur TextMeshProUGUI (HUD, korrekt).
+                //   => Das 3D-Schild ist Plan (b): ein weiteres world-space
+                //      TMPro.TextMeshPro unter bay.gameObject selbst. Pflicht-Diag:
+                //      '315d scan:' mit goPath + text ALLER TMPs (inkl. inaktiver).
+                //      Umschreiben nur bei JobsBoard-artigem Text; die
+                //      'keep (label already named)'-Heuristik gilt hier NICHT
+                //      (sie darf nur TMPs schonen, die bereits einen Shopnamen tragen).
                 try
                 {
-                    var wsLabelProp = bay.GetType().GetProperty("m_dockingBayTextLabel",
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    object wsLabelObj = wsLabelProp?.GetValue(bay);
-                    var wsLabel = wsLabelObj as TMPro.TextMeshPro;
-                    if (wsLabel != null && wsLabel.gameObject != null)
+                    var bayTmps = bay.gameObject != null
+                        ? bay.gameObject.GetComponentsInChildren<TMPro.TextMeshPro>(true)
+                        : null;
+                    if (bayTmps != null && bayTmps.Length > 0)
                     {
-                        string wsBefore = wsLabel.text;
-                        bool wsIsJobsBoard = !string.IsNullOrWhiteSpace(wsBefore)
-                            && (wsBefore.Contains("Auftragsb") || wsBefore.Contains("Job Board") || wsBefore.Contains("JobsBoard"));
-                        StarTruckMP.Log.LogInfo(
-                            $"315b text: world-label found, goPath={GetGoPath(wsLabel.gameObject)}, text='{wsBefore}', isJobsBoard={wsIsJobsBoard}");
-                        if (wsIsJobsBoard)
+                        foreach (var bayTmp in bayTmps)
                         {
-                            wsLabel.text = newText;
-                            wsLabel.ForceMeshUpdate(false, false);
+                            if (bayTmp == null || bayTmp.gameObject == null) continue;
+                            string scanText = bayTmp.text;
+                            bool isWsIdText = false;
+                            try
+                            {
+                                var wsLabelProp2 = bay.GetType().GetProperty("m_dockingBayTextLabel",
+                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                                isWsIdText = ReferenceEquals(wsLabelProp2?.GetValue(bay) as UnityEngine.Object, bayTmp);
+                            }
+                            catch { }
                             StarTruckMP.Log.LogInfo(
-                                $"315b text: world-label rewritten, goPath={GetGoPath(wsLabel.gameObject)}, text='{wsBefore}'->'{newText}'");
+                                $"315d scan: goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}', isDockingBayIdText={isWsIdText}");
+                            if (isWsIdText) continue; // JP-xx-ID-Schild unangetastet lassen.
+
+                            bool isJobsBoardName = !string.IsNullOrWhiteSpace(scanText)
+                                && (scanText.IndexOf("Auftragsb", StringComparison.OrdinalIgnoreCase) >= 0
+                                    || scanText.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
+                                    || scanText.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
+                            if (!isJobsBoardName) continue; // echte Shopnamen NICHT anfassen.
+
+                            bayTmp.text = newText;
+                            try { bayTmp.ForceMeshUpdate(false, false); } catch { }
+                            StarTruckMP.Log.LogInfo(
+                                $"315d text: rewritten, goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}'->'{newText}'");
                         }
                     }
+                    else
+                    {
+                        StarTruckMP.Log.LogInfo("315d scan: keine TMPro.TextMeshPro unter bay.gameObject gefunden.");
+                    }
                 }
-                catch (Exception exWs)
+                catch (Exception exBayScan)
                 {
-                    StarTruckMP.Log.LogWarning($"315b text: world-label-Set fehlgeschlagen: {exWs.Message}");
+                    StarTruckMP.Log.LogWarning($"315d scan fehlgeschlagen: {exBayScan.Message}");
                 }
 
                 string before = label != null ? label.text : null;
