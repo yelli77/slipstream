@@ -260,6 +260,12 @@ namespace StarTruckMP.StarTruckClient
 
         // ── Prefix: rewrite the JobsBoard dock amenity into a Shop amenity ──
 
+        // 315f: Fester Label-Text fuer ALLE Shop-Bay-Marker (HUD + world-space).
+        // Die Bays zeigen 'Shop' statt des Shopnamens ('Cosmo's Cash 'n Carry').
+        // NICHT fuer die Kontext-Injection verwenden (m_shopDescription /
+        // TruckAmenityTerminal._currentShop brauchen den echten ShopDescription-Wert).
+        private const string ShopBayDisplayName = "Shop";
+
         private static int rewriteCount = 0;
 
         /// <summary>
@@ -777,23 +783,30 @@ namespace StarTruckMP.StarTruckClient
                         // Station-ShopDescription via DockingBayGroup (FindStationShop-
                         // Description-Muster); bay.ShopDescription ist nur an echten
                         // Shop-Bays gesetzt.
-                        var shopDesc = bay.ShopDescription ?? FindShopDescriptionViaGroup(bay);
-                        var dispName = shopDesc?.shopDisplayName;
-                        // 315b (Aufgabe 4b): Heuristik - wenn der Label-Text bereits
-                        // einen Shopnamen traegt (nicht 'Auftragsboerse'/nicht leer),
-                        // NICHT ueberschreiben.
+                        // 315f: Label-Text ist IMMER die Konstante ShopBayDisplayName
+                        // ('Shop') - NICHT der Shopname. shopDesc bleibt unberuehrt
+                        // (Kontext-Injection fuer Items braucht den echten Wert).
+                        var dispName = ShopBayDisplayName;
+                        // 315b (Aufgabe 4b) / 315f Heuristik: schreiben, wenn das Label
+                        // jobsboard-artig ist ODER bereits 'Shop' (Ist-Zustand) zeigt -
+                        // echte Shopnamen werden nicht mehr als Zieltext benoetigt,
+                        // deshalb darf jede andere Beschriftung auf 'Shop' normalisiert
+                        // werden. 'Shop' ist gueltiger Ziel- UND Ist-Zustand (kein
+                        // Flackern: already-named-'Shop' wird im Sweep weiter unten
+                        // trotzdem als Zieltext erneut gesetzt, ohne den Wert zu
+                        // veraendern).
                         var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
                         if (textSet) rewritten++;
 
-                        // 315e: Diese shopSettings-Instanz + Anzeigename fuer den
+                        // 315e: Diese shopSettings-Instanz fuer den
                         // Marker-Sweep registrieren (deckt ALLE Marker, die diese
                         // Settings referenzieren oder noch jobsboard-artig benannt sind).
+                        // 315f: pendingShopDisplayName wird nicht mehr benoetigt -
+                        // der Sweep verwendet ShopBayDisplayName direkt.
                         try
                         {
                             if (!rewrittenShopSettings.Any(s => s != null && s.Pointer == shopSettings.Pointer))
                                 rewrittenShopSettings.Add(shopSettings);
-                            if (!string.IsNullOrEmpty(dispName))
-                                pendingShopDisplayName = dispName;
                         }
                         catch (Exception exReg)
                         {
@@ -903,17 +916,15 @@ namespace StarTruckMP.StarTruckClient
                         if (!settingsMatch && !jobsBoardish) continue;
                         if (string.IsNullOrWhiteSpace(before)) continue;
 
-                        // 315b-Heuristik: bereits korrekt benannte Labels schoenen.
+                        // 315f-Heuristik: Zieltext ist immer 'Shop'. 'Shop' selbst ist
+                        // gueltiger Ist-Zustand (skip = idempotent, kein Flackern);
+                        // ALLE anderen Texte (Auftragsboerse, Job Board, echte
+                        // Shopnamen) werden auf 'Shop' normalisiert.
                         string trimmed = before.Trim();
-                        bool alreadyNamed = !trimmed.Equals("Auftragsboerse", StringComparison.OrdinalIgnoreCase)
-                            && !trimmed.Equals("Auftragsbörse", StringComparison.OrdinalIgnoreCase)
-                            && !trimmed.Equals("Shop", StringComparison.OrdinalIgnoreCase)
-                            && !trimmed.Equals("Job Board", StringComparison.OrdinalIgnoreCase)
-                            && !trimmed.Equals("JobsBoard", StringComparison.OrdinalIgnoreCase);
-                        if (alreadyNamed) continue;
+                        bool alreadyShop = trimmed.Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
+                        if (alreadyShop) continue;
 
-                        string newText = pendingShopDisplayName;
-                        if (string.IsNullOrEmpty(newText)) newText = "Shop";
+                        string newText = ShopBayDisplayName;
 
                         // 1) Nativer displayName-Setter (Token 100665771).
                         try { marker.displayName = newText; }
@@ -945,10 +956,10 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        // 315e: Referenzen der im letzten 311b-Runde gesetzten shopSettings-Instanzen
-        // + der Shop-Anzeigename fuer den Marker-Sweep.
+        // 315e: Referenzen der im letzten 311b-Runde gesetzten shopSettings-Instanzen.
+        // 315f: pendingShopDisplayName entfernt - der Sweep verwendet die Konstante
+        // ShopBayDisplayName direkt (Label zeigt immer 'Shop', nie den Shopnamen).
         private static readonly List<PointOfInterestSettings> rewrittenShopSettings = new List<PointOfInterestSettings>();
-        private static string pendingShopDisplayName = null;
 
         /// <summary>
         /// 314: Setzt den sichtbaren Label-Text des Live-Markers direkt auf den
@@ -964,7 +975,7 @@ namespace StarTruckMP.StarTruckClient
             try
             {
                 if (poi == null || poi.gameObject == null) return false;
-                if (string.IsNullOrEmpty(newText)) newText = "Shop";
+                if (string.IsNullOrEmpty(newText)) newText = ShopBayDisplayName;
 
                 // 315: 3-stufige Suche, weil 314b bewies, dass unter poi.gameObject
                 // ('Docking_BayPOI') weder PointOfInterestMarker noch TMP liegt
@@ -1109,9 +1120,11 @@ namespace StarTruckMP.StarTruckClient
                 //   => Das 3D-Schild ist Plan (b): ein weiteres world-space
                 //      TMPro.TextMeshPro unter bay.gameObject selbst. Pflicht-Diag:
                 //      '315d scan:' mit goPath + text ALLER TMPs (inkl. inaktiver).
-                //      Umschreiben nur bei JobsBoard-artigem Text; die
-                //      'keep (label already named)'-Heuristik gilt hier NICHT
-                //      (sie darf nur TMPs schonen, die bereits einen Shopnamen tragen).
+                //      Umschreiben nur bei JobsBoard-artigem Text ODER Text, der
+                //      dem zuletzt injizierten Shopnamen entspricht (315f: der
+                //      Shopname ist als Label-Text nicht mehr erlaubt; 'Shop'
+                //      selbst ist gueltiger Ist-Zustand und wird nicht erneut
+                //      geschrieben = kein Flackern).
                 try
                 {
                     var bayTmps = bay.gameObject != null
@@ -1139,12 +1152,21 @@ namespace StarTruckMP.StarTruckClient
                                 && (scanText.IndexOf("Auftragsb", StringComparison.OrdinalIgnoreCase) >= 0
                                     || scanText.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
                                     || scanText.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
-                            if (!isJobsBoardName) continue; // echte Shopnamen NICHT anfassen.
+                            // 315f: bereits korrekt ('Shop') = Ist-Zustand, nicht erneut
+                            // schreiben (idempotent, kein Flackern).
+                            bool isAlreadyShop = !string.IsNullOrWhiteSpace(scanText)
+                                && scanText.Trim().Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
+                            if (isAlreadyShop) continue;
+                            if (!isJobsBoardName && string.IsNullOrWhiteSpace(scanText) != true && scanText.Trim().Equals(lastShopDisplayName ?? "\0", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // ehemals injizierter Shopname -> normalisieren
+                            }
+                            else if (!isJobsBoardName) continue; // echte (fremde) Texte NICHT anfassen.
 
-                            bayTmp.text = newText;
+                            bayTmp.text = ShopBayDisplayName;
                             try { bayTmp.ForceMeshUpdate(false, false); } catch { }
                             StarTruckMP.Log.LogInfo(
-                                $"315d text: rewritten, goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}'->'{newText}'");
+                                $"315d text: rewritten, goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}'->'{ShopBayDisplayName}'");
                         }
                     }
                     else
@@ -1159,15 +1181,12 @@ namespace StarTruckMP.StarTruckClient
 
                 string before = label != null ? label.text : null;
 
-                // 315b (Aufgabe 4b): Heuristik - Label NICHT ueberschreiben, wenn es
-                // bereits einen echten (Shop-)Namen traegt. Nur schreiben, wenn leer
-                // oder identisch zur Auftragsboerse-/Fallback-Strings.
+                // 315b (Aufgabe 4b) / 315f Heuristik: 'Shop' ist gueltiger Ist-Zustand
+                // (skip = idempotent, kein Flackern). Jeder ANDERE Text (echte
+                // Shopnamen inklusive) wird auf 'Shop' normalisiert - der
+                // Shopname ist als Label-Text nicht mehr erlaubt.
                 bool alreadyNamed = !string.IsNullOrWhiteSpace(before)
-                    && !before.Trim().Equals("Auftragsboerse", StringComparison.OrdinalIgnoreCase)
-                    && !before.Trim().Equals("Auftragsbörse", StringComparison.OrdinalIgnoreCase)
-                    && !before.Trim().Equals("Shop", StringComparison.OrdinalIgnoreCase)
-                    && !before.Trim().Equals("Job Board", StringComparison.OrdinalIgnoreCase)
-                    && !before.Trim().Equals("JobsBoard", StringComparison.OrdinalIgnoreCase);
+                    && !before.Trim().Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
                 if (alreadyNamed)
                 {
                     // 315b text: Diag-Log mit goPath fuer ALLE gefundenen Label-Instanzen.
