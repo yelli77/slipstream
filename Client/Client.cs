@@ -369,7 +369,8 @@ namespace StarTruckMP.StarTruckClient
                 GameObject.Destroy(player.Player);
                 GameObject.Destroy(player.Truck);
                 if (player.Trailer != null) GameObject.Destroy(player.Trailer);
-                if (player.NameLabel != null) GameObject.Destroy(player.NameLabel);
+                // custom-build-348: Badge-Referenz freigeben (Badge stirbt als Kind mit dem Label).
+                if (player.NameLabel != null) { Encoding.PioneerBadge.DetachFor(player.NameLabel); GameObject.Destroy(player.NameLabel); }
             }
             // Build 346: alle Remote-Hitch-VFX beim Disconnect aufräumen
             RemoteHitchVFX.HideAll();
@@ -748,7 +749,8 @@ namespace StarTruckMP.StarTruckClient
                                 {
                                 currentPlayer.Truck = spawned.Truck;
                                 currentPlayer.Player = spawned.Player;
-                                currentPlayer.NameLabel = spawned.NameLabel;
+                                // custom-build-348: Badge an verzögert gespawntes Label haengen.
+                                currentPlayer.NameLabel = Encoding.PioneerBadge.AttachOrUpdate(spawned.NameLabel, playerId);
                                 currentPlayer.truckTargetPos = playerPos;
                                 currentPlayer.truckTargetRot = playerRot;
                                 currentPlayer.spawnTime = UnityEngine.Time.time;
@@ -1016,12 +1018,17 @@ namespace StarTruckMP.StarTruckClient
                         currentPlayer.Name = newName;
                         if (currentPlayer.NameLabel != null)
                         {
+                            // custom-build-348: Badge-Referenz mit aufraeumen.
+                            Encoding.PioneerBadge.DetachFor(currentPlayer.NameLabel);
                             GameObject.Destroy(currentPlayer.NameLabel);
                             currentPlayer.NameLabel = null;
                         }
                         if (currentPlayer.Truck != null && !string.IsNullOrEmpty(newName))
                         {
-                            currentPlayer.NameLabel = Encoding.Messages.CreateNameLabel(newName, namePlayerId);
+                            // custom-build-348: Badge am neuen Label wiederverknuepfen.
+                            Encoding.PioneerBadge.DetachFor(currentPlayer.NameLabel);
+                            currentPlayer.NameLabel = Encoding.PioneerBadge.AttachOrUpdate(
+                                Encoding.Messages.CreateNameLabel(newName, namePlayerId), namePlayerId);
                         }
                         playerList[namePlayerId] = currentPlayer;
                         StarTruckMP.Log.LogInfo($"Player {namePlayerId} name set to '{newName}'");
@@ -1129,6 +1136,8 @@ namespace StarTruckMP.StarTruckClient
                 {
                     ushort playerId = e.Message.GetUShort();
                     ulong steamId = e.Message.GetULong();
+                    // custom-build-348: SteamID der playerInfo zuordnen (Pioneer-Badge-Lookup).
+                    Encoding.PioneerBadge.AssociateSteamId(playerId, steamId);
                     if (playerList.TryGetValue(playerId, out var currentPlayer))
                     {
                         StarTruckMP.Log.LogInfo($"Player {playerId} SteamID: {steamId}");
@@ -1185,6 +1194,21 @@ namespace StarTruckMP.StarTruckClient
             if (e.MessageId == (ushort)messageType.jobTaken)
             {
                 JobBoardServerSync.HandleJobTaken(e);
+            }
+
+            // custom-build-348: Pioneer-Badge — Flag pro Spieler empfangen und merken.
+            if (e.MessageId == (ushort)messageType.pioneerFlag)
+            {
+                try
+                {
+                    ulong pSteamId = e.Message.GetULong();
+                    bool pIsPioneer = e.Message.GetBool();
+                    Encoding.PioneerBadge.HandlePioneerFlag(pSteamId, pIsPioneer);
+                }
+                catch (System.Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"pioneerFlag error: {ex.Message}");
+                }
             }
         }
 
@@ -1501,7 +1525,8 @@ namespace StarTruckMP.StarTruckClient
                         GameObject.Destroy(clientInfo.Truck);
                     GameObject.Destroy(clientInfo.Player);
                     if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
-                    if (clientInfo.NameLabel != null) { GameObject.Destroy(clientInfo.NameLabel); clientInfo.NameLabel = null; }
+                    // custom-build-348: Badge-Referenz mit aufraeumen.
+                    if (clientInfo.NameLabel != null) { Encoding.PioneerBadge.DetachFor(clientInfo.NameLabel); GameObject.Destroy(clientInfo.NameLabel); clientInfo.NameLabel = null; }
                     clientInfo.Truck = null;
                     clientInfo.Player = null;
                     clientInfo.Trailer = null;
@@ -1526,7 +1551,9 @@ namespace StarTruckMP.StarTruckClient
                 playerInfo player = Messages.createPlayer(clientId, playerList[clientId].truckTrans.Pos, playerList[clientId].truckTrans.Rot, currentSector, playerList[clientId].Name);
                 clientInfo.Truck = player.Truck;
                 clientInfo.Player = player.Player;
-                clientInfo.NameLabel = player.NameLabel;
+                // custom-build-348: Pioneer-Badge ans (frische) Namenslabel haengen.
+                clientInfo.NameLabel = Encoding.PioneerBadge.AttachOrUpdate(player.NameLabel, clientId);
+                clientInfo.pioneer = player.pioneer;
                 clientInfo.truckTargetPos = player.truckTargetPos;
                 clientInfo.truckTargetRot = player.truckTargetRot;
                 clientInfo.spawnTime = UnityEngine.Time.time;

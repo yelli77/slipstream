@@ -36,6 +36,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- custom-build-348: Pioneer-Badge-Textur embedded in die DLL (Texture2D.LoadImage zur Laufzeit). -->
+    <EmbeddedResource Include="pioneer_badge_256.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="0Harmony">
       <HintPath>/bepinex/core/0Harmony.dll</HintPath>
       <Private>False</Private>
@@ -102,6 +107,10 @@
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>/bepinex/interop/UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>/bepinex/interop/UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">

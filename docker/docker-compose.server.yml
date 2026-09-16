@@ -13,4 +13,10 @@ services:
       - SERVER_NAME=StarTruckMP Server
       - STARTTRUCKMP_BRIDGE_URL=http://discord-bridge-bot:4500
       - MIN_CLIENT_BUILD=152
+      # custom-build-348: Pioneer-Badge — Spielzeit-/Pionier-Daten IM Container-User-Home
+      # persistieren; auf dem VPS wird via Volume /app/data -> Host gemountet.
+      - STARTTRUCKMP_PLAYTIME_PATH=/app/data/playtime.json
+      - STARTTRUCKMP_PIONEERS_PATH=/app/data/pioneers.json
+    volumes:
+      - /opt/data/startruckmp-dedicated-data:/app/data
     restart: unless-stopped

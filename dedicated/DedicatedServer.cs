@@ -16,6 +16,7 @@ public class DedicatedServer
     private readonly int _minClientBuild;
     private readonly MessageHandler _handler;
     private DateTime _startTime;
+    private DateTime _lastPlaytimeFlush = DateTime.UtcNow; // custom-build-348
 
     // Versionscheck: jeder frisch verbundene Client hat ein paar Sekunden Zeit, seine
     // ClientVersion-Nachricht zu schicken. Wer das nicht tut (z.B. eine alte Mod-Version, die
@@ -33,6 +34,8 @@ public class DedicatedServer
         _handler = new MessageHandler(_players, minClientBuild, OnClientVersionVerified, OnClientVersionRejected);
         // custom-build-342: server-authoritative Job-Sync
         _handler.JobBoards = new JobBoardServer(new JobBoardStore(m => Log(m)), Log);
+        // custom-build-348: Pioneer-Badge — Spielzeit-Tracking (playtime.json/pioneers.json)
+        _handler.Playtime = new PlaytimeTracker();
         _server = new Riptide.Server();
         _server.ClientConnected += OnClientConnected;
         _server.ClientDisconnected += OnClientDisconnected;
@@ -97,6 +100,17 @@ public class DedicatedServer
             while (acc >= 1.0/60.0) { _server.Update(); acc -= 1.0/60.0; }
             _handler.JobBoards?.Maintenance();
             CheckVersionTimeouts();
+            // custom-build-348: periodische Spielzeit-Wartung (Flush + 10h-Promotion), alle 5 Min.
+            if ((DateTime.UtcNow - _lastPlaytimeFlush).TotalMinutes >= 5)
+            {
+                _lastPlaytimeFlush = DateTime.UtcNow;
+                try
+                {
+                    foreach (var (steamId, name) in _handler.Playtime.PeriodicMaintenance())
+                        MessageHandler.BroadcastPioneerFlag(_server, 0, steamId, true);
+                }
+                catch (Exception ex) { Log($"Playtime maintenance error: {ex.Message}"); }
+            }
             if ((DateTime.UtcNow - lastStatus).TotalSeconds >= 60)
             {
                 lastStatus = DateTime.UtcNow;
@@ -105,6 +119,13 @@ public class DedicatedServer
             }
             Thread.Sleep(1);
         }
+        // custom-build-348: Restliche Session-Deltas flushen, bevor der Server stoppt.
+        try
+        {
+            foreach (var kv in _players) _handler.Playtime?.OnDisconnect(kv.Key);
+            _handler.Playtime?.PeriodicMaintenance();
+        }
+        catch (Exception ex) { Log($"Playtime shutdown flush error: {ex.Message}"); }
         _server.Stop();
         Log("Server stopped.");
     }
@@ -113,6 +134,8 @@ public class DedicatedServer
     {
         Log($"Client connected: {e.Client.Id}");
         _pendingVersionCheck[e.Client.Id] = DateTime.UtcNow;
+        // custom-build-348: Session-Start fuer Spielzeit-Tracking merken (Name evtl. noch unbekannt).
+        _handler.Playtime?.OnConnect(e.Client.Id, "");
         var p = new PlayerState { Id = e.Client.Id, Sector = "none" };
         var joinMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.ClientJoin);
         joinMsg.AddUShorts(_players.Keys.ToArray());
@@ -169,6 +192,9 @@ public class DedicatedServer
         if (_players.TryGetValue(e.Client.Id, out var disconnectedPlayer))
         {
             _handler.NotifyPlayerDisconnected(disconnectedPlayer.SteamId);
+            // custom-build-348: Session-Delta akkumulieren + playtime.json persistieren.
+            try { _handler.Playtime?.OnDisconnect(e.Client.Id); }
+            catch (Exception ex) { Log($"Playtime disconnect error: {ex.Message}"); }
         }
         _players.Remove(e.Client.Id);
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.ClientDisconnect);

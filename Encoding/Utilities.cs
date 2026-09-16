@@ -29,7 +29,8 @@ namespace StarTruckMP.Utilities
         jobBoardIdents_deactivated_DO_NOT_USE = 18,
         jobBoardUpload,          // 19: Client -> Server: vollstaendige lokale Job-Liste (chunked)
         jobBoardDownload,        // 20: Server -> Client: Gesamtpool des Sektors (chunked)
-        jobTaken                 // 21: AcceptJob-Event (questId) — Client->Server + Broadcast
+        jobTaken,                // 21: AcceptJob-Event (questId) — Client->Server + Broadcast
+        pioneerFlag = 22         // 22: Server -> Client: (ulong steamId, bool pioneer) — Pioneer-Badge (custom-build-348)
     }
 
     public struct playerInfo
@@ -70,6 +71,10 @@ namespace StarTruckMP.Utilities
         // Zeitstempel (Time.realtimeSinceStartup) des letzten empfangenen Trailer-Targets,
         // für die Velocity-Extrapolation zwischen den 100ms-Updates.
         public float lastTrailerTargetTime;
+        // custom-build-348: Pioneer-Badge — SteamID (aus setPlayerSteamId zugeordnet) und
+        // Pioneer-Flag (aus pioneerFlag-Nachricht). Nur Namenslabel-Badge, kein Chat/Map.
+        public ulong steamId;
+        public bool pioneer;
     }
 
     public struct movementTrans

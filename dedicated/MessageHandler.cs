@@ -21,6 +21,8 @@ public class MessageHandler
     private readonly Action<ushort, int> _onVersionRejected;
     // custom-build-342: server-authoritative Job-Sync (Store lebt im Handler-Owner)
     public JobBoardServer JobBoards;
+    // custom-build-348: Pioneer-Badge — Spielzeit-Tracking + Pioneer-Liste (lebt beim Owner)
+    public PlaytimeTracker Playtime;
 
     public MessageHandler(Dictionary<ushort, PlayerState> players, int minClientBuild, Action<ushort> onVersionVerified, Action<ushort, int> onVersionRejected)
     {
@@ -28,6 +30,21 @@ public class MessageHandler
         _minClientBuild = minClientBuild;
         _onVersionVerified = onVersionVerified;
         _onVersionRejected = onVersionRejected;
+    }
+
+    /// <summary>
+    /// custom-build-348: Sendet den Pioneer-Status eines Spielers als separates
+    /// reliable 'pioneerFlag'-Message an alle ( playerId, steamId, pioneer ). Abwaertskompatibel:
+    /// alte Clients ignorieren die unbekannte MessageId, alte Server senden sie nie.
+    /// </summary>
+    public static void BroadcastPioneerFlag(Riptide.Server server, ushort playerId, ulong steamId, bool pioneer)
+    {
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.pioneerFlag);
+        msg.AddUShort(playerId);
+        msg.AddULong(steamId);
+        msg.AddBool(pioneer);
+        server.SendToAll(msg);
+        Console.WriteLine($"[INFO] Pioneer flag broadcast: player {playerId} (steamId {steamId}) pioneer={pioneer}");
     }
 
     public void Handle(MessageReceivedEventArgs e, Riptide.Server server)
@@ -297,6 +314,13 @@ public class MessageHandler
         p.SteamId = steamId;
         _players[e.FromConnection.Id] = p;
         Console.WriteLine($"[INFO] Player {e.FromConnection.Id} SteamID set to {steamId}");
+
+        // custom-build-348: Pioneer-Status ermitteln und an alle broadcasten.
+        Playtime?.OnSteamIdKnown(e.FromConnection.Id, steamId, p.Name);
+        Playtime?.UpdateName(steamId, p.Name);
+        bool isPioneer = Playtime?.IsPioneer(steamId) ?? false;
+        p.Pioneer = isPioneer;
+        BroadcastPioneerFlag(server, e.FromConnection.Id, steamId, isPioneer);
 
         // Register presence with the Discord bridge immediately on connect —
         // do not wait for a sector change, some players may sit in one sector

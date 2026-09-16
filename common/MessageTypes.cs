@@ -28,5 +28,10 @@ public enum MessageType : ushort
     JobBoardIdents_Deactivated_DO_NOT_USE = 18,
     jobBoardUpload = 19,     // Client -> Server: volle lokal generierte Job-Liste des Sektors
     jobBoardDownload = 20,   // Server -> Client: vollstaendiger Gesamtpool des Sektors
-    jobTaken = 21            // beide Richtungen: AcceptJob-Event (questId)
+    jobTaken = 21,           // beide Richtungen: AcceptJob-Event (questId)
+    // custom-build-348: Pioneer-Badge. Separates reliable Server->Client-Message NACH dem
+    // Join (nicht am playerConnected-Layout angehaengt) — alte Clients kennen die ID nicht
+    // und ignorieren sie (unbekannte MessageIds werden von Riptide verworfen); neue Clients
+    // mit altem Server erhalten die Nachricht schlicht nie => kein Badge. Abwaertskompatibel.
+    pioneerFlag = 22         // Server -> Client: (ushort playerId, ulong steamId, bool pioneer)
 }

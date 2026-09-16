@@ -25,4 +25,6 @@ public class PlayerState
     public ulong SteamId { get; set; }
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
     public string DestinationGateId { get; set; } = "";
+    // custom-build-348: Pioneer-Badge (vom Server via pioneerFlag-Nachricht verteilt)
+    public bool Pioneer { get; set; }
 }
