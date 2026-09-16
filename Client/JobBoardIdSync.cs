@@ -55,6 +55,15 @@ namespace StarTruckMP.StarTruckClient
     {
         private const float IDENT_BROADCAST_INTERVAL = 2f;
 
+        // Build-341 Diagnose: meldet (gedrosselt), wenn komplette Kennungs-Serien mit
+        // FREMDEM Sektor-Tag ankommen. Genau das Muster ('stale, Sektor X' + match 0/N)
+        // entsteht, wenn zwei Clients jeweils glauben, Authority "ihres" Sektor-Tags zu
+        // sein (Split-Brain: currentSector eines Clients ist stale oder die Sektor-
+        // Beliefs der playerList laufen auseinander). Das Log zeigt dann BEIDE Tags.
+        private static float nextForeignSeriesWarn = 0f;
+        private static string lastForeignTag = null;
+        private static int foreignSeriesCount = 0;
+
         // Empfangene Kennungen je Sektor (vom Autoritaets-Client).
         private static readonly HashSet<string> receivedIdents = new HashSet<string>();
         private static string receivedIdentsSector = null;
@@ -225,6 +234,16 @@ namespace StarTruckMP.StarTruckClient
                 return;
             }
 
+            // Build-341: KEIN Broadcast mit leerem/'none'-Sektor-Tag. Ein solcher Tag war
+            // im l3/l5-Muster die Ursache fuer 'stale, Sektor X' + match 0/N auf den
+            // Empfaengern - die Serie war mit dem falschen Sektor markiert und wurde
+            // dort (zu Recht) verworfen.
+            if (string.IsNullOrEmpty(sector) || sector == "none")
+            {
+                StarTruckMP.Log.LogWarning($"JobBoardIdSync: Senden abgebrochen ({trigger}): currentSector='{sector}' - kein Broadcast mit ungueltigem Sektor-Tag");
+                return;
+            }
+
             if (idents == null || idents.Count == 0)
             {
                 StarTruckMP.Log.LogInfo($"JobBoardIdSync: Senden abgebrochen ({trigger}): 0 Kennungen");
@@ -361,6 +380,25 @@ namespace StarTruckMP.StarTruckClient
                 int chunkIndex = e.Message.GetInt();
                 int totalIdents = e.Message.GetInt();
                 byte[] payload = e.Message.GetBytes();
+
+                // Build-341 (Kernfix): Sektor-Guard. Empfangene Serien mit einem ANDEREN
+                // Sektor-Tag als unserem aktuellen Sektor werden VOR dem Sammeln komplett
+                // verworfen. Vorher landeten fremd-getaggte Serien im Sammel-Puffer, wurden
+                // dort komplett, ueberschrieben dann receivedIdents (mit receivedIdentsSector
+                // = fremder Sektor) und produzierten exakt das l3/l5-Muster 'stale, Sektor X'
+                // + match 0/N: jeder Client behielt seine eigene lokale Liste.
+                string mySector = StarTruckClient.currentSector;
+                if (!string.Equals(sector, mySector, System.StringComparison.Ordinal))
+                {
+                    foreignSeriesCount++;
+                    if (Time.unscaledTime >= nextForeignSeriesWarn)
+                    {
+                        StarTruckMP.Log.LogWarning($"JobBoardIdSync: Serie mit fremdem Sektor-Tag verworfen (empfangen='{sector}', eigener Sektor='{mySector}', totalIdents={totalIdents}, verworfene Serien seit Start={foreignSeriesCount}) - NICHT angewendet");
+                        nextForeignSeriesWarn = Time.unscaledTime + 10f;
+                        lastForeignTag = sector;
+                    }
+                    return;
+                }
 
                 string key = AssemblyKey(sector, totalChunks, totalIdents);
                 if (!chunkAssemblies.TryGetValue(key, out var asm))

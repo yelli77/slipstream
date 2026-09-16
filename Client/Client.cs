@@ -2,6 +2,7 @@ using Riptide;
 using System.Reflection;
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using StarTruckMP.Utilities;
 using StarTruckMP.Encoding;
 using StarTruckMP.MainMenu;
@@ -1406,6 +1407,23 @@ namespace StarTruckMP.StarTruckClient
             {
                 var sectorScene = GameObject.Find("[Sector]");
                 currentSector = (sectorScene != null) ? sectorScene.scene.name : "none";
+                // Build-341: Fallback, wenn [Sector] fehlt - aktive Szene direkt nehmen.
+                // Ohne diesen Fallback blieb currentSection='none'/stale, der Broadcast
+                // trug einen falschen Sektor-Tag und die Gegenstelle markierte das Set
+                // als 'stale' (match 0/N).
+                if (currentSector == "none" && SceneManager.sceneCount > 0)
+                {
+                    for (int i = 0; i < SceneManager.sceneCount; i++)
+                    {
+                        var sc = SceneManager.GetSceneAt(i);
+                        if (sc.IsValid() && sc.isLoaded && sc.name.Contains("Sector_"))
+                        {
+                            currentSector = sc.name;
+                            StarTruckMP.Log.LogWarning($"OnArrivedAtSector: [Sector]-GO nicht gefunden - currentSector aus aktiver Szene uebernommen: '{currentSector}'");
+                            break;
+                        }
+                    }
+                }
                 // If the sector scene isn't resolvable yet (early connect), don't send a
                 // bogus 'none' — schedule a retry so other clients don't permanently
                 // see us in sector 'none' and RemoveFromSector despawns us on arrival.
