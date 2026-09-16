@@ -109,6 +109,8 @@ namespace StarTruckMP.StarTruckClient
             JobBoardSync.TryApplyPending();
             JobBoardIdSync.Update();
             JobBoardIdSync.FixedUpdate();
+            // custom-build-342: server-authoritativer Job-Sync (Neuerarbeitung)
+            JobBoardServerSync.Update();
             // Build-330: Roundtrip-Trigger = Env-Var ODER Config-Datei. Die Env-Var erreicht den
             // Spiel-Prozess nicht zuverlaessig (Start via steam:// - Steam ist der Elternprozess,
             // unsere Variablen kommen dort nicht an). Die Datei <BepInEx>/config/
@@ -345,6 +347,8 @@ namespace StarTruckMP.StarTruckClient
             StarTruckMP.Log.LogInfo($"Disconnected from Server: {e.Reason.ToString()}");
             isConnecting = false;
             ArmReconnectCooldown();
+            // custom-build-342: Server-Sync-Zustaende zuruecksetzen (Pool/Uploads).
+            try { JobBoardServerSync.OnDisconnect(); } catch { }
 
             if (e.Reason == DisconnectReason.Kicked)
             {
@@ -1042,8 +1046,9 @@ namespace StarTruckMP.StarTruckClient
                     if (clientInfo.sector == currentSector && JobBoardSync.IsAuthorityForCurrentSector())
                     {
                         try { CargoSync.OnLocalCargoSpawned(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"CargoSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
-                        try { JobBoardSync.OnLocalJobsGenerated(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"JobBoardSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
-                        try { JobBoardIdSync.OnLocalJobsGenerated(); } catch (Exception ex) { StarTruckMP.Log.LogWarning($"JobBoardIdSync Re-Broadcast bei Spielerankunft fehlgeschlagen: {ex.Message}"); }
+                        // custom-build-342: alter Doppel-Broadcast (JobBoardSync/JobBoardIdSync)
+                        // entfernt — Server-authoritativer Sync braucht KEINE Client-Re-Broadcasts
+                        // mehr (Server haelt den Pool und verteilt selbst bei Join/Sektorwechsel).
                     }
                 }
             }
@@ -1136,7 +1141,8 @@ namespace StarTruckMP.StarTruckClient
 
             if (e.MessageId == (ushort)messageType.jobBoardSync)
             {
-                JobBoardSync.HandleIncoming(e);
+                // custom-build-342: alter FlatSharp-Blob-Pfad DEAKTIVIERT (kein Handler mehr).
+                // Nachrichten alter Clients (<342) werden still verworfen.
             }
 
             if (e.MessageId == (ushort)messageType.cargoSync)
@@ -1146,7 +1152,19 @@ namespace StarTruckMP.StarTruckClient
 
             if (e.MessageId == (ushort)messageType.jobBoardIdents)
             {
-                JobBoardIdSync.HandleIncoming(e);
+                // custom-build-342: Kennungs-Broadcast DEAKTIVIERT (ersetzt durch
+                // server-authoritativen Gesamtpool). Alte Serien werden still verworfen.
+            }
+
+            // custom-build-342: server-authoritative Job-Sync-Nachrichten
+            if (e.MessageId == (ushort)messageType.jobBoardDownload)
+            {
+                JobBoardServerSync.HandlePoolIncoming(e);
+            }
+
+            if (e.MessageId == (ushort)messageType.jobTaken)
+            {
+                JobBoardServerSync.HandleJobTaken(e);
             }
         }
 

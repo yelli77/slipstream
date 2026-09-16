@@ -179,7 +179,8 @@ private static void SetVisible(bool v)
                 {
                     string sector = StarTruckClient.currentSector;
                     var jobsNow = global::ProceduralJobGenerator.GetAvailableJobs();
-                    StarTruckMP.Log.LogInfo($"JobBoardComputer: {JobBoardIdSync.BuildDiagLine(sector, jobsNow)}");
+                // custom-build-342: ServerSync-Diag (Pool) statt Kennungs-Diag.
+                    StarTruckMP.Log.LogInfo($"JobBoardComputer: {JobBoardServerSync.BuildDiagLine(sector, jobsNow)}");
                 }
                 catch (Exception diagEx) { StarTruckMP.Log.LogWarning($"JobBoardComputer: Diag-Zeile fehlgeschlagen: {diagEx.Message}"); }
                 // 338 IDEMPOTENZ + FOKUS-RE-ACQUIRE: Board schon offen (nativ am PC geoeffnet
@@ -718,9 +719,8 @@ private static void SetVisible(bool v)
             sb.AppendLine("Sektor: " + sector + " - " + count + " Auftraege");
             sb.AppendLine();
 
-            // Build-333 (PLAN B Same-Seed lite): Kennungs-Filter - wenn frische Kennungen
-            // vom Autoritaets-Client vorliegen, zeigen wir nur die Treffer an.
-            var filterIdx = JobBoardIdSync.FilterIndices(sector, jobs);
+            // custom-build-342: server-authoritativer Pool ersetzt den Kennungs-Filter.
+            var filterIdx = JobBoardServerSync.FilterIndices(sector, jobs);
             int filterCount = (filterIdx != null) ? filterIdx.Count : count;
 
             int shown = 0;
@@ -759,8 +759,8 @@ private static void SetVisible(bool v)
             sb.AppendLine("... und " + Math.Max(0, filterCount - shown) + " weitere (am Dock andocken)");
             sb.AppendLine();
             sb.AppendLine("[J] Schliessen");
-            // DIAGNOSE (Build-333, Michael-Test): Kennungs-Listen + Matchquote direkt im Board.
-            sb.AppendLine(JobBoardIdSync.BuildDiagLine(sector, jobs));
+            // custom-build-342: ServerSync-Diagnose (Pool + match) statt Kennungs-Diag.
+            sb.AppendLine(JobBoardServerSync.BuildDiagLine(sector, jobs));
             return sb.ToString();
         }
 

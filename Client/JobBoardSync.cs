@@ -754,9 +754,28 @@ namespace StarTruckMP.StarTruckClient
         {
             try { JobBoardSync.OnLocalJobsGenerated(); }
             catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix Fehler: {ex.Message}"); }
+            // custom-build-342: server-authoritativer Upload (alle Clients, Gesamtpool-Prinzip).
+            try { JobBoardServerSync.OnLocalJobsGenerated(); }
+            catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix (ServerSync) Fehler: {ex.Message}"); }
             // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast - unabhaengig vom Blob-Sync.
-            try { JobBoardIdSync.OnLocalJobsGenerated(); }
-            catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix (IdSync) Fehler: {ex.Message}"); }
+            // custom-build-342: DEAKTIVIERT (ersetzt durch server-authoritativen Pool).
+            // try { JobBoardIdSync.OnLocalJobsGenerated(); }
+            // catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix (IdSync) Fehler: {ex.Message}"); }
+        }
+    }
+
+    // custom-build-342: AcceptJob-Hook — wenn ein Client einen Job annimmt, melden wir das
+    // an den Server (jobTaken); der Server entfernt den Job aus dem Pool und broadcastet
+    // das Event, sodass der Job bei ALLEN Clients aus dem Board verschwindet.
+    [HarmonyPatch]
+    public class JobAcceptPatches
+    {
+        [HarmonyPatch(typeof(global::ProceduralJobGenerator), nameof(global::ProceduralJobGenerator.AcceptJob))]
+        [HarmonyPostfix]
+        public static void AcceptJob_Postfix(global::QuestInstance job)
+        {
+            try { JobBoardServerSync.NotifyLocalJobAccepted(job); }
+            catch (Exception ex) { StarTruckMP.Log.LogWarning($"AcceptJob_Postfix Fehler: {ex.Message}"); }
         }
     }
 }
