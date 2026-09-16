@@ -206,13 +206,20 @@ namespace StarTruckMP.StarTruckClient
             }
 
             var prefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPrefix));
-            harmony.Patch(mi, prefix: prefix);
-            StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c).");
+            var postfix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPostfix));
+            harmony.Patch(mi, prefix: prefix, postfix: postfix);
+            StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c + 315 Postfix).");
         }
 
         // ── Prefix: rewrite the JobsBoard dock amenity into a Shop amenity ──
 
         private static int rewriteCount = 0;
+
+        /// <summary>
+        /// 315: Cached Shop-Displayname fuer den Namen-Fix (Aufgabe 2): wird im
+        /// EnterAmenityPrefix gesetzt und im Postfix gelesen (guiShow-Callback).
+        /// </summary>
+        private static string lastShopDisplayName = null;
 
         /// <summary>
         /// Prefix vor DockingBaySharedAssets.EnterAmenity - DER Punkt, den die native
@@ -272,6 +279,63 @@ namespace StarTruckMP.StarTruckClient
                 __args[0] = (StationAmenity)AmenityTypes.Shop;
                 __args[2] = stationShop;
 
+                // 315 Fix (Aufgabe 2): nameStringId. Dekompilat-Beweis:
+                //   TruckAmenityTerminal.AmenitySetup hat das Feld 'promptStringId'
+                //   (GetIl2CppField(AmenitySetup, "promptStringId")) und
+                //   TruckAmenityTerminal.get_shopDisplayName (Token 100671943)
+                //   liefert den Text, den der Dock-Prompt anzeigt. Die Screens
+                //   steuern NUR via bay.m_amenityType (siehe Patch unten) - aber
+                //   der Prompt/Screen-Titel baut auf der String-ID auf. Der
+                //   Jobboard-Wert (__args[1], native ID 'Auftragsboerse') muss
+                //   deshalb auf den Shop-Displaynamen umgeschrieben werden.
+                //shopDesc.shopDisplayName ist der native Anzeigename der Shop-Gruppe
+                //(ShopDescription.shopDisplayName, ilspycmd -t ShopDescription).
+                if (__args.Length >= 2)
+                {
+                    var displayName = stationShop.shopDisplayName;
+                    if (string.IsNullOrEmpty(displayName)) displayName = "Shop";
+                    __args[1] = displayName;
+                    lastShopDisplayName = displayName;
+                }
+
+                // 315 Fix (Aufgabe 1, Kandidat a): m_amenityType der BAY vorschalten.
+                //
+                // Dekompilat-Beweis, warum die umgeschriebenen EnterAmenity-EventArgs
+                // allein NICHT genuegen (User-Log: Jobboerse-UI oeffnet sich weiter):
+                //   DockingBay.<DockingCoroutine>d__82.MoveNext (Token 100671310)
+                //   liest am Anfang `this.<>4__this.m_amenityType` (DockingBay.
+                //   m_amenityType, Feld-Token via GetIl2CppField("m_amenityType")) und
+                //   steuert DAMIT den Screen-Open. Das Shop-UI haengt an
+                //   bay.m_amenityType == StationAmenity.Shop - nicht an den EventArgs.
+                //   Ein Subscriber-Filter (Kandidat c) ist ausgeschlossen:
+                //   TruckAmenityTerminal.OnAmenityEnter (Token 100671950) nimmt
+                //   sender+EventArgs generisch entgegen und filtert nicht nach Bay.
+                // Rewrite muss VOR dem Coroutine-Read greifen -> direkt hier im
+                // EnterAmenityPrefix (der feuert, bevor die Coroutine die EventArgs
+                // weiterverarbeitet und bevor der Screen-Open-Zweig liest).
+                // Enum.ToObject-Regel (game-and-server-ops.md, Interop-Falle): das
+                // Feld hat den nativen Enum-Typ StationAmenity.
+                try
+                {
+                    var bayType = bay.GetType();
+                    var amenityField = bayType.GetField("m_amenityType",
+                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (amenityField != null)
+                    {
+                        var enumObj = Enum.ToObject(amenityField.FieldType, AmenityTypes.Shop);
+                        amenityField.SetValue(bay, enumObj);
+                        StarTruckMP.Log.LogInfo($"315 ShopAtJobBoardBays: bay.m_amenityType -> Shop gesetzt (bay={bay.gameObject?.name}, field={amenityField.FieldType.Name}).");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogWarning("315 ShopAtJobBoardBays: DockingBay.m_amenityType-Feld nicht gefunden (Screen-Open bleibt evtl. Jobboard).");
+                    }
+                }
+                catch (Exception exAmenity)
+                {
+                    StarTruckMP.Log.LogWarning($"315 ShopAtJobBoardBays: m_amenityType-Rewrite fehlgeschlagen: {exAmenity.Message}");
+                }
+
                 rewriteCount++;
                 StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
             }
@@ -279,6 +343,57 @@ namespace StarTruckMP.StarTruckClient
             {
                 // Niemals crashen - im Zweifel laeuft der native Ablauf unveraendert.
                 StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.EnterAmenityPrefix Fehler: {ex}");
+            }
+        }
+
+        // ── Postfix: screen-open fallback (315 Fix, Kandidat a) ──
+
+        /// <summary>
+        /// 315: Postfix nach DockingBaySharedAssets.EnterAmenity. Beweis im
+        /// Dekompilat, warum das notwendig ist: Die Screens (JobBoardScreen /
+        /// ShopScreen : ScreenController_Pauser) werden nativ ueber
+        /// TruckAmenityTerminal.AmenitySetup.openAmenityScreenEvent /
+        /// openDockedScreenEventIfNeeded (GameEvent-Felder,
+        /// GetIl2CppField(AmenitySetup, "openAmenityScreenEvent") /
+        /// "openDockedScreenEventIfNeeded") geoeffnet. Das ist ein Asset-Bindung
+        /// an der BAY - die EventArgs-Parameter (amenityType/shopDesc) steuern
+        /// dieses Open NICHT. Falls das m_amenityType-Vorschalten im Prefix nicht
+        /// greift, oeffnet der native Pfad weiterhin die Jobboerse.
+        ///
+        /// Fallback (nur wenn der Prefix umgeschrieben hat): nach dem nativen
+        /// EnterAmenity den Shop-Screen via MenuState.LoadAndShow explizit
+        /// oeffnen (gleicher Pfad wie JobBoardComputer.TryOpenGameJobBoard,
+        /// nur mit "ShopScreen").
+        /// </summary>
+        public static void EnterAmenityPostfix(object[] __args)
+        {
+            try
+            {
+                if (!ShouldRewrite()) return;
+                if (__args == null || __args.Length < 5) return;
+                if (string.IsNullOrEmpty(lastShopDisplayName)) return; // Prefix hat nicht umgeschrieben
+
+                int amenityInt;
+                try { amenityInt = Convert.ToInt32(__args[0]); }
+                catch { return; }
+                if (amenityInt != (int)AmenityTypes.Shop) return; // nur umgeschriebene Docks
+
+                var ms = com.monsterandmonster.Menu.MenuState.Get();
+                if (ms == null)
+                {
+                    StarTruckMP.Log.LogWarning("315 ShopAtJobBoardBays: MenuState.Get() null - Shop-Screen-Fallback nicht moeglich.");
+                    return;
+                }
+                var runnerGO = new GameObject("StarTruckMP_ShopScreenRunner315");
+                UnityEngine.Object.DontDestroyOnLoad(runnerGO);
+                var runner = runnerGO.AddComponent<JobBoardComputer.CoroutineRunnerHelper>();
+                runner.StartCoroutine(ms.LoadAndShow("ShopScreen", null, null));
+                StarTruckMP.Log.LogInfo($"315 ShopAtJobBoardBays: ShopScreen-Open-Fallback ausgefuehrt (shopName='{lastShopDisplayName}').");
+            }
+            catch (Exception ex)
+            {
+                // Niemals crashen - im Zweifel bleibt der native Screen-Stand.
+                StarTruckMP.Log.LogWarning($"315 ShopAtJobBoardBays.EnterAmenityPostfix Fehler: {ex.Message}");
             }
         }
 
@@ -401,7 +516,7 @@ namespace StarTruckMP.StarTruckClient
                         // (Token 100665771). Den Live-Marker-Text direkt setzen.
                         var shopDesc = bay.ShopDescription ?? FindShopDescriptionViaGroup(bay);
                         var dispName = shopDesc?.shopDisplayName;
-                        var textSet = SetLiveMarkerText(poi, bay, dispName);
+                        var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
                         if (textSet) rewritten++;
                     }
                     catch (Exception ex)
@@ -432,24 +547,142 @@ namespace StarTruckMP.StarTruckClient
         ///   PointOfInterestMarker.set_displayName (public setter, Token 100665771).
         /// Diag-Log '314b text:' zeigt Marker + TMP + Text vorher/nachher.
         /// </summary>
-        private static bool SetLiveMarkerText(RegisterPointOfInterest poi, DockingBay bay, string newText)
+        private static bool SetLiveMarkerText(RegisterPointOfInterest poi, DockingBay bay, string newText, PointOfInterestSettings shopSettings)
         {
             try
             {
                 if (poi == null || poi.gameObject == null) return false;
                 if (string.IsNullOrEmpty(newText)) newText = "Shop";
 
-                // 314: Direct search over poi.gameObject hierarchy, skip
-                // PointsOfInterest.entries-Pointer-Match (scheitert bei vielen
-                // interlaced entries).
+                // 315: 3-stufige Suche, weil 314b bewies, dass unter poi.gameObject
+                // ('Docking_BayPOI') weder PointOfInterestMarker noch TMP liegt
+                // (User-Log: '314b text: kein TMP/Marker an poi.GameObject').
+                //
+                // Statisch verifiziert (ilspycmd -t PointOfInterestMarker /
+                // -t PointsOfInterest): Der native Renderer haengt den sichtbaren
+                // Marker NICHT an das POI-GameObject - er spawnt ihn aus
+                // PointOfInterestSettings.markerPrefab unter PointsOfInterest.
+                // onScreenPOIParent. Der echte Handle ist daher
+                // PointsOfInterest.entries -> PointOfInterestEntry.marker.
+                //
+                // Stufe 1: Kinder+Parents von poi.gameObject (inkl. world-space
+                //          TMPro.TextMeshPro - NOTES_WORLDSPACE_UI.md).
+                // Stufe 2: PointsOfInterest.entries-Match ueber entry.settings
+                //          (Referenzvergleich mit der gerade gesetzten
+                //          shopSettings-Instanz - robust, weil wir sie in Schritt
+                //          2 von ApplyShopPoiToJobsBoardBays selbst via
+                //          poi.SetSettings(shopSettings) gesetzt haben).
+                // Stufe 3: Positions-Naehe zur Bay als Fallback-Match.
+
+                PointOfInterestMarker marker = null;
+                TMPro.TMP_Text label = null;
+
+                // Stufe 1a: Kinder von poi.gameObject
                 var markers = poi.gameObject.GetComponentsInChildren<PointOfInterestMarker>(true);
-                var marker = markers != null && markers.Length > 0 ? markers[0] : null;
+                if (markers != null && markers.Length > 0) marker = markers[0];
                 var tmps = poi.gameObject.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-                var label = tmps != null && tmps.Length > 0 ? tmps[0] : null;
+                if (tmps != null && tmps.Length > 0) label = tmps[0];
+                // Stufe 1b: world-space TextMeshPro (NICHT nur UGUI) in Kindern
+                if (label == null)
+                {
+                    var wsTmps = poi.gameObject.GetComponentsInChildren<TMPro.TextMeshPro>(true);
+                    if (wsTmps != null && wsTmps.Length > 0) label = wsTmps[0];
+                }
+                // Stufe 1c: Parents (Marker kann am Parent-Prefab haengen)
+                if (marker == null)
+                {
+                    var parentMarkers = poi.gameObject.GetComponentsInParent<PointOfInterestMarker>(true);
+                    if (parentMarkers != null && parentMarkers.Length > 0) marker = parentMarkers[0];
+                }
+                if (label == null)
+                {
+                    var parentTmps = poi.gameObject.GetComponentsInParent<TMPro.TextMeshProUGUI>(true);
+                    if (parentTmps != null && parentTmps.Length > 0) label = parentTmps[0];
+                }
+
+                string matchMode = "poi-go";
+
+                // Stufe 2+3: PointsOfInterest.entries (statistisch verifizierter
+                // nativer Handle: entry.marker ist der gespawnte Marker,
+                // entry.settings die aktive Settings-Instanz).
+                if (marker == null)
+                {
+                    try
+                    {
+                        var poiManager = PointsOfInterest.Get();
+                        var entries = poiManager?.entries;
+                        if (entries != null)
+                        {
+                            float bestDist = float.MaxValue;
+                            Vector3 bayPos = bay.transform.position;
+                            foreach (var entry in entries)
+                            {
+                                if (entry == null) continue;
+                                // Stufe 2: Referenz-Match ueber die Settings, die wir
+                                // gerade via poi.SetSettings(shopSettings) gesetzt
+                                // haben (robust gegen interlaced entry-Listen, wo der
+                                // reine Pointer-Vergleich am GO scheiterte).
+                                bool settingsMatch = false;
+                                if (shopSettings != null)
+                                {
+                                    try { settingsMatch = entry.settings != null && entry.settings.Pointer == shopSettings.Pointer; }
+                                    catch { settingsMatch = false; }
+                                }
+                                // Stufe 3: Positions-Naehe zur Bay (< 30 m) als
+                                // Fallback-Match (POI-GO selbst ist das Docking_BayPOI).
+                                bool posMatch = false;
+                                try
+                                {
+                                    var entryGo = entry.gameObject;
+                                    if (entryGo != null)
+                                    {
+                                        float d = Vector3.Distance(entryGo.transform.position, bayPos);
+                                        if (d < 30f) posMatch = true;
+                                    }
+                                }
+                                catch { }
+
+                                if (!settingsMatch && !posMatch) continue;
+
+                                var m = entry.marker;
+                                if (m == null) continue;
+                                float score = settingsMatch ? 0f : 10f;
+                                try
+                                {
+                                    var mGo = m.gameObject;
+                                    if (mGo != null) score += Vector3.Distance(mGo.transform.position, bayPos);
+                                }
+                                catch { }
+                                if (score < bestDist)
+                                {
+                                    bestDist = score;
+                                    marker = m;
+                                    matchMode = settingsMatch ? "poi-entries(settings)" : "poi-entries(pos)";
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception exEntries)
+                    {
+                        StarTruckMP.Log.LogWarning($"315 text: PointsOfInterest.entries-Suche fehlgeschlagen: {exEntries.Message}");
+                    }
+                }
+
+                // TMP am gefundenen Marker nachziehen (Stufe 2/3 => label neu holen)
+                if (marker != null && label == null)
+                {
+                    var mTmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
+                    if (mTmps != null && mTmps.Length > 0) label = mTmps[0];
+                    if (label == null)
+                    {
+                        var mWs = marker.GetComponentsInChildren<TMPro.TextMeshPro>(true);
+                        if (mWs != null && mWs.Length > 0) label = mWs[0];
+                    }
+                }
 
                 if (marker == null && label == null)
                 {
-                    StarTruckMP.Log.LogWarning($"314b text: kein TMP/Marker an poi.GameObject ({poi.gameObject.name}) gefunden.");
+                    StarTruckMP.Log.LogWarning($"315 text: kein TMP/Marker gefunden (poi={poi.gameObject.name}, mode={matchMode}, entries-Match fehlgeschlagen).");
                     return false;
                 }
 
@@ -467,8 +700,9 @@ namespace StarTruckMP.StarTruckClient
                 }
 
                 StarTruckMP.Log.LogInfo(
-                    $"314b text: marker={marker?.gameObject?.name ?? "null"}, " +
-                    $"tmp={label?.gameObject?.name ?? "null"}, " +
+                    $"315 text: mode={matchMode}, marker={marker?.gameObject?.name ?? "null"}, " +
+                    $"tmp={(label != null ? label.gameObject.name : "null")}, " +
+                    $"goPath={(marker != null && marker.gameObject != null ? GetGoPath(marker.gameObject) : "?")}, " +
                     $"text='{before}'->'{newText}'");
                 return true;
             }
@@ -477,6 +711,24 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"314b SetLiveMarkerText fehlgeschlagen: {ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>315: GameObject-Pfad fuer Diag-Logs (beweist den Marker-Pfad).</summary>
+        private static string GetGoPath(GameObject go)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                var t = go.transform;
+                while (t != null)
+                {
+                    if (sb.Length > 0) sb.Insert(0, "/");
+                    sb.Insert(0, t.name);
+                    t = t.parent;
+                }
+                return sb.ToString();
+            }
+            catch { return go?.name ?? "?"; }
         }
 
         /// <summary>
