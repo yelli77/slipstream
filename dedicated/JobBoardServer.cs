@@ -70,9 +70,11 @@ public class JobBoardServer
             _log($"[WARN] JobBoardServer: Upload von {senderId} mit ungueltigem Sektor '{sector}' verworfen");
             return;
         }
-        if (totalChunks > 64)
+        // 343: 512 Chunks à 900 B = ~460 KB — deckt auch 500-Job-Sektoren.
+        const int MAX_UPLOAD_CHUNKS = 512;
+        if (totalChunks > MAX_UPLOAD_CHUNKS)
         {
-            _log($"[WARN] JobBoardServer: Upload von {senderId} mit {totalChunks} Chunks zu gross - verworfen");
+            _log($"[WARN] JobBoardServer: Upload von {senderId} mit {totalChunks} Chunks zu gross (Limit {MAX_UPLOAD_CHUNKS} = ~{MAX_UPLOAD_CHUNKS * MAX_CHUNK_PAYLOAD / 1024} KB) - verworfen");
             return;
         }
 
@@ -153,6 +155,9 @@ public class JobBoardServer
 
         int totalChunks = Math.Max(1, (payload.Length + MAX_CHUNK_PAYLOAD - 1) / MAX_CHUNK_PAYLOAD);
         byte transferId = (byte)(Now() * 37 % 251); // pro Broadcast eindeutig genug
+        // 343: Chunks nur in kleinen Bursts senden — Riptide-Reliable-Bursts verlieren
+        // sonst den letzten Chunk (Lesson 335). 15 Chunks pro Burst, 2 ms Pause dazwischen.
+        const int SEND_PACING = 15;
         for (int ci = 0; ci < totalChunks; ci++)
         {
             int len = Math.Min(MAX_CHUNK_PAYLOAD, payload.Length - ci * MAX_CHUNK_PAYLOAD);
@@ -170,6 +175,8 @@ public class JobBoardServer
                 var conn = GetConn(server, memberId);
                 if (conn != null) server.Send(msg, conn);
             }
+            if ((ci + 1) % SEND_PACING == 0 && ci + 1 < totalChunks)
+                System.Threading.Thread.Sleep(2);
         }
         _log($"[INFO] JobBoardServer: Pool-Download '{sector}' an {members.Count} Clients: {jobs.Length} Jobs, {payload.Length} bytes, {totalChunks} Chunks (v{version})");
     }

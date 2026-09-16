@@ -95,6 +95,7 @@ public class DedicatedServer
             sw.Restart();
             acc += elapsed;
             while (acc >= 1.0/60.0) { _server.Update(); acc -= 1.0/60.0; }
+            _handler.JobBoards?.Maintenance();
             CheckVersionTimeouts();
             if ((DateTime.UtcNow - lastStatus).TotalSeconds >= 60)
             {

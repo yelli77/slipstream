@@ -115,8 +115,12 @@ namespace StarTruckMP.StarTruckClient
         }
 
         // Explizite Binaer-Serialisierung NUR der Board-relevanten Felder.
-        // QuestTaskParameterSaveData-Union wird NICHT uebertragen — stattdessen die
-        // flachen Primitive (name, kind, value-als-String) der generierten Parameter.
+        // QuestTaskParameterSaveData-Union wird NICHT uebertragen.
+        // 343: Parameter-Tripel NICHT mehr mitschicken (paramCount=0) — BuildBody/Pool-Filter
+        // lesen nur questId/displayName/displayDescription, Accept matcht lokal per questId
+        // gegen die eigene QuestInstance. Params waren 85% der Upload-Groesse (169 Jobs:
+        // 114 KB -> ~20 KB). Format bleibt kompatibel (paramCount je Job dynamisch gelesen,
+        // alte 342-Clients mit Params decodieren weiterhin korrekt).
         private static byte[] SerializeJobs(Il2CppSystem.Collections.Generic.List<global::QuestInstance> jobs)
         {
             using var ms = new MemoryStream();
@@ -133,40 +137,7 @@ namespace StarTruckMP.StarTruckClient
                 w.Write(questId);
                 w.Write(displayName);
                 w.Write(displayDescription);
-
-                int paramCount = 0;
-                global::QuestTaskParameter[] pars = null;
-                try
-                {
-                    var paramList = job?.questParameters; // QuestParameters (ScriptableObject)
-                    var pParams = paramList?.parameters;  // Il2Cpp List<QuestTaskParameter>
-                    if (pParams != null)
-                    {
-                        pars = new global::QuestTaskParameter[pParams.Count];
-                        for (int pi = 0; pi < pParams.Count; pi++) pars[pi] = pParams[pi];
-                    }
-                    paramCount = pars?.Length ?? 0;
-                }
-                catch { }
-                w.Write(paramCount);
-                for (int p = 0; p < paramCount; p++)
-                {
-                    string name = "", text = "";
-                    byte kind = 0;
-                    try
-                    {
-                        var par = pars[p];
-                        try { name = par?.name ?? ""; } catch { }
-                        try { kind = (byte)par.type; } catch { }
-                        // Display-Text des generierten Werts (kanonisch, sprachneutral genug
-                        // fuer Board-Anzeige; Accept matcht ohnehin per questId lokal).
-                        try { text = par?.displayText ?? ""; } catch { }
-                    }
-                    catch { }
-                    w.Write(name);
-                    w.Write(kind);
-                    w.Write(text);
-                }
+                w.Write(0); // paramCount=0: Parameter werden vom Board/Accept nicht gelesen
             }
             return ms.ToArray();
         }
