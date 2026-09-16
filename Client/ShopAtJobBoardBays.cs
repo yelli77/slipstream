@@ -2,6 +2,7 @@ using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
@@ -700,7 +701,19 @@ namespace StarTruckMP.StarTruckClient
                 // Pfad alle 5 s (Log-Spam) und setzte zudem Text-Updates regelmaessig neu.
                 var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
                 if (string.IsNullOrEmpty(sector) || sector == "none") return;
-                if (sector == lastPoiSector) return;
+                if (sector == lastPoiSector)
+                {
+                    // 315e (Timing-Entscheidung): Marker-Spawn-Nachlauf als Poll im
+                    // bestehenden 5-s-Takt (Plugin.Update-Throttle) statt
+                    // Harmony-Postfix: Der Spawn der HUD-Marker (HUD_Marker_*_Standard
+                    // (Clone) aus PointOfInterestSettings.markerPrefab unter
+                    // PointsOfInterest.onScreenPOIParent) hat keine eindeutig
+                    // patchbare Methode, und der Poll deckt beide Marker - auch den,
+                    // der NACH unserem Rewrite gespawnt wird. Der Sweep ist billig
+                    // (Iterieren der vorhandenen entries-Liste) und idempotent.
+                    SweepPoiMarkerLabels();
+                    return;
+                }
                 lastPoiSector = sector;
 
                 var allBays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
@@ -771,6 +784,24 @@ namespace StarTruckMP.StarTruckClient
                         // NICHT ueberschreiben.
                         var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
                         if (textSet) rewritten++;
+
+                        // 315e: Diese shopSettings-Instanz + Anzeigename fuer den
+                        // Marker-Sweep registrieren (deckt ALLE Marker, die diese
+                        // Settings referenzieren oder noch jobsboard-artig benannt sind).
+                        try
+                        {
+                            if (!rewrittenShopSettings.Any(s => s != null && s.Pointer == shopSettings.Pointer))
+                                rewrittenShopSettings.Add(shopSettings);
+                            if (!string.IsNullOrEmpty(dispName))
+                                pendingShopDisplayName = dispName;
+                        }
+                        catch (Exception exReg)
+                        {
+                            StarTruckMP.Log.LogWarning($"315e Registrierung fehlgeschlagen: {exReg.Message}");
+                        }
+                        // 315e: Sofort-Sweep nach dem Rewrite derselben Runde (deckt
+                        // bereits gespawnte Marker; spaeter gespawnte deckt der Poll).
+                        SweepPoiMarkerLabels();
                     }
                     catch (Exception ex)
                     {
@@ -790,6 +821,134 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"311b ApplyShopPoiToJobsBoardBays Fehler: {ex}");
             }
         }
+
+        /// <summary>
+        /// 315e: Abdeckung ALLER HUD-Marker, deren Label noch jobsboard-artig ist
+        /// ('Auftragsboerse' etc.). Iteriert PointsOfInterest.Get().entries und
+        /// verarbeitet ALLE entries, deren
+        ///   a) settings-Pointer == eine der umgeschriebenen shopSettings-Instanzen
+        ///      (Referenzliste der 311b-Runde), ODER
+        ///   b) aktueller Label-Text jobsboard-artig ist (case-insensitive).
+        /// Deckt damit auch den zweiten Marker, dessen Label-TMP NICHT durch den
+        /// SetLiveMarkerText-Einzel-Pfad lief (User-Screenshot 348: rechter Marker
+        /// zeigte weiter 'Auftragsboerse').
+        ///
+        /// Native Anker (Dekompilat-Beweis, ilspycmd -t PointOfInterestMarker,
+        /// interop Assembly-CSharp.dll, 2026-09-16):
+        ///   public string displayName { get; set; } - Setter via Token 100665771
+        ///     (GetIl2CppMethodByToken(…, 100665771) in der interop-Wrapper-Klasse).
+        ///   public TextMeshProUGUI _label { get; set; } (native Field _label).
+        /// Setzt displayName (native Quelle) UND _label.text (+ SetVerticesDirty)
+        /// als Belt-and-Suspenders, jeweils in try/catch.
+        /// Idempotent und billig - laeuft im bestehenden 5-s-Takt nach (siehe
+        /// Timing-Entscheidung in ApplyShopPoiToJobsBoardBays).
+        /// </summary>
+        private static void SweepPoiMarkerLabels()
+        {
+            try
+            {
+                if (rewrittenShopSettings == null || rewrittenShopSettings.Count == 0) return;
+                var poiManager = PointsOfInterest.Get();
+                var entries = poiManager?.entries;
+                if (entries == null) return;
+
+                foreach (var entry in entries)
+                {
+                    try
+                    {
+                        if (entry == null) continue;
+                        var marker = entry.marker;
+                        if (marker == null) continue;
+
+                        // Match (a): settings-Pointer == eine unserer shopSettings-Instanzen.
+                        bool settingsMatch = false;
+                        try
+                        {
+                            if (entry.settings != null)
+                            {
+                                var p = entry.settings.Pointer;
+                                foreach (var s in rewrittenShopSettings)
+                                {
+                                    if (s != null && s.Pointer == p) { settingsMatch = true; break; }
+                                }
+                            }
+                        }
+                        catch { settingsMatch = false; }
+
+                        // Label-Text fuer before/after-Diagnose + Match (b) beschaffen:
+                        // bevorzugt _label, Fallback beliebiger TMP am Marker.
+                        TMPro.TMP_Text label = null;
+                        try { label = marker._label; } catch { label = null; }
+                        if (label == null)
+                        {
+                            var tmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
+                            if (tmps != null && tmps.Length > 0) label = tmps[0];
+                        }
+                        if (label == null)
+                        {
+                            var ws = marker.GetComponentsInChildren<TMPro.TextMeshPro>(true);
+                            if (ws != null && ws.Length > 0) label = ws[0];
+                        }
+                        string before = null;
+                        try { before = label?.text; } catch { before = null; }
+
+                        // Match (b): Label-Text jobsboard-artig ('Auftragsb*', 'Job
+                        // Board', 'JobsBoard' - case-insensitive). Deckt Marker, deren
+                        // settings-Pointer nicht (mehr) matcht.
+                        bool jobsBoardish = !string.IsNullOrWhiteSpace(before)
+                            && (before.IndexOf("Auftragsb", StringComparison.OrdinalIgnoreCase) >= 0
+                                || before.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
+                                || before.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                        if (!settingsMatch && !jobsBoardish) continue;
+                        if (string.IsNullOrWhiteSpace(before)) continue;
+
+                        // 315b-Heuristik: bereits korrekt benannte Labels schoenen.
+                        string trimmed = before.Trim();
+                        bool alreadyNamed = !trimmed.Equals("Auftragsboerse", StringComparison.OrdinalIgnoreCase)
+                            && !trimmed.Equals("Auftragsbörse", StringComparison.OrdinalIgnoreCase)
+                            && !trimmed.Equals("Shop", StringComparison.OrdinalIgnoreCase)
+                            && !trimmed.Equals("Job Board", StringComparison.OrdinalIgnoreCase)
+                            && !trimmed.Equals("JobsBoard", StringComparison.OrdinalIgnoreCase);
+                        if (alreadyNamed) continue;
+
+                        string newText = pendingShopDisplayName;
+                        if (string.IsNullOrEmpty(newText)) newText = "Shop";
+
+                        // 1) Nativer displayName-Setter (Token 100665771).
+                        try { marker.displayName = newText; }
+                        catch (Exception exDn)
+                        {
+                            StarTruckMP.Log.LogWarning($"315e marker: set_displayName fehlgeschlagen: {exDn.Message}");
+                        }
+
+                        // 2) _label-Text direkt setzen + Dirty (Belt-and-Suspenders).
+                        if (label != null)
+                        {
+                            label.text = newText;
+                            try { label.SetVerticesDirty(); } catch { }
+                            try { label.ForceMeshUpdate(false, false); } catch { }
+                        }
+
+                        StarTruckMP.Log.LogInfo(
+                            $"315e marker: goPath={GetGoPath(marker.gameObject)}, before='{before}', after='{newText}'");
+                    }
+                    catch (Exception exEntry)
+                    {
+                        StarTruckMP.Log.LogWarning($"315e marker: Entry-Verarbeitung fehlgeschlagen: {exEntry.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"315e SweepPoiMarkerLabels Fehler: {ex.Message}");
+            }
+        }
+
+        // 315e: Referenzen der im letzten 311b-Runde gesetzten shopSettings-Instanzen
+        // + der Shop-Anzeigename fuer den Marker-Sweep.
+        private static readonly List<PointOfInterestSettings> rewrittenShopSettings = new List<PointOfInterestSettings>();
+        private static string pendingShopDisplayName = null;
 
         /// <summary>
         /// 314: Setzt den sichtbaren Label-Text des Live-Markers direkt auf den
