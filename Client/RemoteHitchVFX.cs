@@ -236,7 +236,7 @@ namespace StarTruckMP
                 try
                 {
                     // Local truck -> MaglockConnector -> hitchVFX
-                    GameObject localTruck = Client.myTruck;
+                    GameObject localTruck = StarTruckClient.StarTruckClient.myTruck;
                     if (localTruck == null) localTruck = GameObject.Find("StarTruck(Clone)");
                     if (localTruck != null)
                     {
