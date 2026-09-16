@@ -467,6 +467,22 @@ namespace StarTruckMP.StarTruckClient
                                 StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: ShopScreenLogic.currentShopDescription -> stationShop gesetzt.");
                             }
                         }
+                        // 315b: Defensiv Populate nachziehen, damit der Screen die
+                        // injizierten Kontextdaten auch uebernimmt (loest 'leerer
+                        // Shop' ohne Timing-Abwarten). Dekompilat: ShopScreen.Populate()
+                        // public (Token, Zeile ~418). Try/catch: Niemals crashen.
+                        if (screen != null)
+                        {
+                            try
+                            {
+                                screen.Populate();
+                                StarTruckMP.Log.LogInfo("315b ShopAtJobBoardBays: Populate nach Kontext-Injection nachgezogen.");
+                            }
+                            catch (Exception exPop)
+                            {
+                                StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: Populate nicht verfuegbar (uebersprungen): {exPop.Message}");
+                            }
+                        }
                     }
                     catch (Exception exCtx)
                     {
