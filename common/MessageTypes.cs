@@ -25,6 +25,7 @@ public enum MessageType : ushort
     // Build-342: Server-authoritative Job-Sync. Alte Pfade (JobBoardSync-Blob = 14,
     // JobBoardIdents = 18) werden deaktiviert, die NUMMERN bleiben reserviert, damit alte
     // Clients nicht in fremde Handler rutschen. Neue Nummern ab 19:
+    JobBoardIdents_Deactivated_DO_NOT_USE = 18,
     jobBoardUpload = 19,     // Client -> Server: volle lokal generierte Job-Liste des Sektors
     jobBoardDownload = 20,   // Server -> Client: vollstaendiger Gesamtpool des Sektors
     jobTaken = 21            // beide Richtungen: AcceptJob-Event (questId)

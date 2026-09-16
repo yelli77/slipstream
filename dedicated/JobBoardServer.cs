@@ -124,6 +124,16 @@ public class JobBoardServer
         }
     }
 
+    private static Riptide.Connection GetConn(Riptide.Server server, ushort playerId)
+    {
+        // Riptide 2.2: kein GetConnection(id) — Clients-Array linear scannen reicht bei
+        // (<10) Spielern locker.
+        var clients = server.Clients;
+        foreach (var c in clients)
+            if (c != null && c.Id == playerId) return c;
+        return null;
+    }
+
     /// <summary>Broadcastet den vollen Pool eines Sektors an alle Mitglieder (chunked, reliable).</summary>
     public void BroadcastPool(Riptide.Server server, string sector)
     {
@@ -148,7 +158,7 @@ public class JobBoardServer
             int len = Math.Min(MAX_CHUNK_PAYLOAD, payload.Length - ci * MAX_CHUNK_PAYLOAD);
             var chunk = new byte[len];
             Buffer.BlockCopy(payload, ci * MAX_CHUNK_PAYLOAD, chunk, 0, len);
-            var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardDownload);
+            var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.jobBoardDownload);
             msg.AddString(sector);
             msg.AddUShort(0); // senderId-Platzhalter (Server-Broadcast)
             msg.AddByte(transferId);
@@ -157,7 +167,7 @@ public class JobBoardServer
             msg.AddBytes(chunk);
             foreach (var memberId in members)
             {
-                var conn = server.GetConnection(memberId);
+                var conn = GetConn(server, memberId);
                 if (conn != null) server.Send(msg, conn);
             }
         }
@@ -178,12 +188,12 @@ public class JobBoardServer
         // Event an alle im Sektor (inkl. Absender — Absender nutzt es als Bestaetigung,
         // doppeltes Entfernen ist idempotent).
         var members = _store.GetMembers(sector);
-        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobTaken);
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.jobTaken);
         msg.AddString(sector);
         msg.AddString(questId);
         foreach (var memberId in members)
         {
-            var conn = server.GetConnection(memberId);
+            var conn = GetConn(server, memberId);
             if (conn != null) server.Send(msg, conn);
         }
     }
@@ -193,7 +203,7 @@ public class JobBoardServer
     {
         _store.SetPlayerSector(playerId, sector);
         if (!_store.HasPool(sector)) return;
-        var conn = server.GetConnection(playerId);
+        var conn = GetConn(server, playerId);
         if (conn == null) return;
         var jobs = _store.GetJobs(sector);
         int version = _store.GetVersion(sector);
@@ -211,7 +221,7 @@ public class JobBoardServer
             int len = Math.Min(MAX_CHUNK_PAYLOAD, payload.Length - ci * MAX_CHUNK_PAYLOAD);
             var chunk = new byte[len];
             Buffer.BlockCopy(payload, ci * MAX_CHUNK_PAYLOAD, chunk, 0, len);
-            var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardDownload);
+            var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.jobBoardDownload);
             msg.AddString(sector);
             msg.AddUShort(0);
             msg.AddByte(transferId);

@@ -350,7 +350,7 @@ namespace StarTruckMP.StarTruckClient
                     return;
                 }
                 pendingSends.Dequeue();
-                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents);
+                var msg = Message.Create(MessageSendMode.Reliable, (ushort)messageType.jobBoardIdents_deactivated_DO_NOT_USE);
                 msg.AddString(pc.Sector);
                 msg.AddInt(pc.TotalChunks);
                 msg.AddInt(pc.ChunkIndex);

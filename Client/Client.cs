@@ -1150,7 +1150,7 @@ namespace StarTruckMP.StarTruckClient
                 CargoSync.HandleIncoming(e);
             }
 
-            if (e.MessageId == (ushort)messageType.jobBoardIdents)
+            if (e.MessageId == (ushort)messageType.jobBoardIdents_deactivated_DO_NOT_USE)
             {
                 // custom-build-342: Kennungs-Broadcast DEAKTIVIERT (ersetzt durch
                 // server-authoritativen Gesamtpool). Alte Serien werden still verworfen.

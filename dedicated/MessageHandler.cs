@@ -48,10 +48,10 @@ public class MessageHandler
             case MessageType.ClientVersion: HandleClientVersion(e, server); break;
             case MessageType.JobBoardSync: HandleJobBoardSync(e, server); break;
             case MessageType.CargoSync: HandleCargoSync(e, server); break;
-            case MessageType.JobBoardIdents: HandleJobBoardIdents(e, server); break;
+            case MessageType.JobBoardIdents_Deactivated_DO_NOT_USE: HandleJobBoardIdents(e, server); break;
             // custom-build-342: server-authoritative Job-Sync
-            case MessageType.JobBoardUpload: JobBoards?.HandleUpload(e, server); break;
-            case MessageType.JobTaken: JobBoards?.HandleJobTaken(e, server); break;
+            case MessageType.jobBoardUpload: JobBoards?.HandleUpload(e, server); break;
+            case MessageType.jobTaken: JobBoards?.HandleJobTaken(e, server); break;
         }
         }
         catch (System.Exception ex)
@@ -157,7 +157,7 @@ public class MessageHandler
         int chunkIndex = e.Message.GetInt();
         int totalIdents = e.Message.GetInt();
         byte[] payload = e.Message.GetBytes();
-        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardIdents);
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.JobBoardIdents_Deactivated_DO_NOT_USE);
         msg.AddString(sector);
         msg.AddInt(totalChunks);
         msg.AddInt(chunkIndex);

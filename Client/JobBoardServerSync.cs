@@ -135,8 +135,19 @@ namespace StarTruckMP.StarTruckClient
                 w.Write(displayDescription);
 
                 int paramCount = 0;
-                Il2CppSystem.Collections.Generic.List<global::QuestTaskParameter> pars = null;
-                try { pars = job?.questParameters; paramCount = pars?.Count ?? 0; } catch { }
+                global::QuestTaskParameter[] pars = null;
+                try
+                {
+                    var paramList = job?.questParameters; // QuestParameters (ScriptableObject)
+                    var pParams = paramList?.parameters;  // Il2Cpp List<QuestTaskParameter>
+                    if (pParams != null)
+                    {
+                        pars = new global::QuestTaskParameter[pParams.Count];
+                        for (int pi = 0; pi < pParams.Count; pi++) pars[pi] = pParams[pi];
+                    }
+                    paramCount = pars?.Length ?? 0;
+                }
+                catch { }
                 w.Write(paramCount);
                 for (int p = 0; p < paramCount; p++)
                 {
@@ -270,7 +281,7 @@ namespace StarTruckMP.StarTruckClient
         {
             int len = BitConverter.ToInt32(b, off); off += 4;
             if (len <= 0 || off + len > b.Length) return "";
-            var s = Encoding.UTF8.GetString(b, off, len);
+            var s = System.Text.Encoding.UTF8.GetString(b, off, len);
             off += len;
             return s;
         }

@@ -24,7 +24,9 @@ namespace StarTruckMP.Utilities
         setDestinationGate,
         multiTrailerMovementUpdate,
         // Build-333 (PLAN B Same-Seed lite): Kennungs-Broadcast (questId|displayName Strings).
-        // build-341 hat dort jobBoardIdents; NEU ab 342 (Server-authoritative Job-Sync):
+        // build-341 hat dort jobBoardIdents; ab 342 bleibt die Zahl 18 reserviert (alter Pfad
+        // deaktiviert), NEU ab 342 (Server-authoritative Job-Sync):
+        jobBoardIdents_deactivated_DO_NOT_USE = 18,
         jobBoardUpload,          // 19: Client -> Server: vollstaendige lokale Job-Liste (chunked)
         jobBoardDownload,        // 20: Server -> Client: Gesamtpool des Sektors (chunked)
         jobTaken                 // 21: AcceptJob-Event (questId) — Client->Server + Broadcast
