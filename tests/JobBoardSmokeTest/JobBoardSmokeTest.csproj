@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>StarTruckMP.Tests</RootNamespace>
+    <AssemblyName>JobBoardSmokeTest</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="RiptideNetworking.Riptide" Version="2.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\common\StarTruckMP.Common.csproj" />
+    <ProjectReference Include="..\..\dedicated\StarTruckMP.Dedicated.csproj" />
+  </ItemGroup>
+</Project>

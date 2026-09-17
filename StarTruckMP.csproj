@@ -29,6 +29,7 @@
          - bewusst als einzelne Datei zurueckgeholt statt das komplette common/**-Remove oben
          aufzuweichen. -->
     <Compile Include="common/LaunchMarker.cs" />
+    <Compile Include="common/ChunkedSend.cs" />
   </ItemGroup>
 
   <ItemGroup>

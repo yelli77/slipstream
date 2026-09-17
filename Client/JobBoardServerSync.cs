@@ -215,32 +215,14 @@ namespace StarTruckMP.StarTruckClient
         private static int SendChunked(ushort messageTypeId, string sector, byte[] payload)
         {
             var client = StarTruckClient.client;
-            const int MAX_CHUNK = 900;
-            // Build-364: Client-seitiges Burst-Pacing wie im Server-BroadcastPool (SEND_PACING,
-            // Lesson 335) — Riptide-Reliable-Bursts verlieren sonst den letzten Chunk und der
-            // Server assembliert nie komplett ('stuck Upload verworfen'). 36 Chunks x 2 ms
-            // Thread.Sleep = ~70 ms einmalig pro Upload: im Update-Kontext akzeptabler
-            // Einzel-Hitch, lohnender als ein frame-verteiltes State-Machine-Redesign.
-            const int SEND_PACING = 15;
-            int totalChunks = Math.Max(1, (payload.Length + MAX_CHUNK - 1) / MAX_CHUNK);
+            // Build-365: Sende-/Pacing-Logik in common/ChunkedSend extrahiert (headless
+            // testbar, tests/JobBoardSmokeTest); Konstanten + Wireformat + Pacing sind
+            // dort EINZIGE Quelle — Verhalten identisch zum Stand 364 (gleiche Chunk-
+            // Groesse, gleiches Pacing, gleiche Message-Reihenfolge => gleiche Wire-Bytes).
+            var stats = new StarTruckMP.Common.ChunkedSend.Stats();
             byte transferId = (byte)(UnityEngine.Random.Range(1, 250));
-            for (int ci = 0; ci < totalChunks; ci++)
-            {
-                int len = Math.Min(MAX_CHUNK, payload.Length - ci * MAX_CHUNK);
-                var chunk = new byte[len];
-                Buffer.BlockCopy(payload, ci * MAX_CHUNK, chunk, 0, len);
-                var msg = Message.Create(MessageSendMode.Reliable, messageTypeId);
-                msg.AddString(sector);
-                msg.AddUShort(client.Id); // Placeholder, Server ersetzt durch FromConnection
-                msg.AddByte(transferId);
-                msg.AddUShort((ushort)ci);
-                msg.AddUShort((ushort)totalChunks);
-                msg.AddBytes(chunk);
-                client.Send(msg);
-                if ((ci + 1) % SEND_PACING == 0 && ci + 1 < totalChunks)
-                    System.Threading.Thread.Sleep(2);
-            }
-            return totalChunks;
+            return StarTruckMP.Common.ChunkedSend.SendChunked(
+                messageTypeId, sector, client.Id, transferId, payload, client.Send, null, stats);
         }
 
         // ------------------------------------------------------------------
