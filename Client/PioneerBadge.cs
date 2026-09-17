@@ -50,15 +50,20 @@ namespace StarTruckMP.Encoding
             foreach (var kv in StarTruckClient.StarTruckClient.playerList)
             {
                 var p = kv.Value;
-                if (p.NameLabel != null && IsPioneer(p)) UpdateLabel(p, kv.Key);
+                if (p.NameLabel != null && IsPioneer(p, kv.Key)) UpdateLabel(p, kv.Key);
             }
         }
 
-        /// <summary>Ist der Spieler mit dieser playerInfo ein Pionier?</summary>
-        private static bool IsPioneer(playerInfo p)
+        /// <summary>
+        /// Ist der Spieler mit dieser playerInfo ein Pionier?
+        /// custom-build-356: Fallback ueber die SteamIdByPlayer-Map, falls p.steamId noch
+        /// nicht gefuellt ist (Label-Entstehung kommt oft VOR dem setPlayerSteamId-Broadcast).
+        /// </summary>
+        private static bool IsPioneer(playerInfo p, ushort playerId)
         {
-            ulong sid = p.steamId;
-            return sid != 0 && PioneerBySteamId.TryGetValue(sid, out bool flag) && flag;
+            if (p.steamId != 0) return PioneerBySteamId.TryGetValue(p.steamId, out bool f) && f;
+            return SteamIdByPlayer.TryGetValue(playerId, out ulong sid)
+                   && PioneerBySteamId.TryGetValue(sid, out bool flag) && flag;
         }
 
         /// <summary>SteamID einer playerInfo zuordnen (vom setPlayerSteamId-Handler gerufen).</summary>
@@ -70,6 +75,9 @@ namespace StarTruckMP.Encoding
             {
                 p.steamId = steamId;
                 StarTruckClient.StarTruckClient.playerList[playerId] = p;
+                // custom-build-356 (FIX A): Zuordnung kann NACH dem Spawn eintreffen —
+                // falls das Label bereits existiert, Badge sofort nachtraeglich anhaengen/aktualisieren.
+                if (p.NameLabel != null) AttachOrUpdate(p.NameLabel, playerId);
             }
         }
 
@@ -83,7 +91,7 @@ namespace StarTruckMP.Encoding
             {
                 if (nameLabel == null) { DetachFor(nameLabel); return null; }
                 if (!StarTruckClient.StarTruckClient.playerList.TryGetValue(playerId, out var p)) return nameLabel;
-                if (!IsPioneer(p)) { DetachFor(nameLabel); return nameLabel; }
+                if (!IsPioneer(p, playerId)) { DetachFor(nameLabel); return nameLabel; }
 
                 // Vorhandenes Badge nicht doppelt anlegen.
                 int key = nameLabel.GetInstanceID();

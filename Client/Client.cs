@@ -449,6 +449,10 @@ namespace StarTruckMP.StarTruckClient
 
                     client.Send(Messages.createPlayerSteamIdMessage(client.Id, mySteamId));
                     StarTruckMP.Log.LogInfo($"Sent SteamID: {mySteamId}");
+                    // custom-build-356 (FIX C): Defensive — eigenen Slot direkt assoziieren,
+                    // unabhaengig davon, ob der Server das Broadcast zurueck an den Sender schickt.
+                    try { Encoding.PioneerBadge.AssociateSteamId(client.Id, mySteamId); }
+                    catch (Exception assoEx) { StarTruckMP.Log.LogWarning($"Self-Associate SteamID failed: {assoEx.Message}"); }
 
                     if (mySteamId != 0)
                     {
