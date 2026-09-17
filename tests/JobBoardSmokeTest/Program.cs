@@ -152,7 +152,7 @@ public static class Program
         _server = new Riptide.Server();
         _server.ClientConnected += (s, e) => { Console.WriteLine($"[server] Client connected: {e.Client.Id}"); _players[e.Client.Id] = new PlayerState { Id = e.Client.Id, Sector = "none" }; };
         _server.ClientDisconnected += (s, e) => _players.Remove(e.Client.Id);
-        _server.MessageReceived += (s, e) => _handler.Handle(e, _server);
+        _server.MessageReceived += (s, e) => { Console.WriteLine($"[srv-msg] id={e.MessageId} from={e.FromConnection.Id} bytes={e.Message.GetBytes(0).Length}"); _handler.Handle(e, _server); };
         _server.Start(ServerPort, 8);
         _store = new JobBoardStore(LogServer);
         _handler = new MessageHandler(_players, 1, _ => { }, (_, _) => { });
