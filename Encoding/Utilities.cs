@@ -19,7 +19,10 @@ namespace StarTruckMP.Utilities
         requestLinkStatus,
         linkStatus,
         clientVersion,
-        jobBoardSync,
+        // Build-362: Zahl 14 reserviert, alter Blob-Sync-Pfad (FlatSharp Message 14) stillgelegt —
+        // ersetzt durch den server-authoritativen Pool (jobBoardUpload 19). Bewusst NUR umbenannt,
+        // damit der Compiler jede noch-aktive Call-Site findet (Muster wie bei 18).
+        jobBoardSync_deactivated_DO_NOT_USE = 14,
         cargoSync,
         setDestinationGate,
         multiTrailerMovementUpdate,

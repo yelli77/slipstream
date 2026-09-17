@@ -44,6 +44,18 @@ namespace StarTruckMP.StarTruckClient
         private static float nextUploadAllowedTime = 0f;
         private const float MIN_UPLOAD_INTERVAL = 1.5f;
 
+        // Build-362 (Upload-Retry): OnLocalJobsGenerated() lief EINMALIG pro Generierung
+        // (Harmony-Postfix auf GenerateJobsForAllSectors). War der Client zum Generierungs-
+        // Zeitpunkt noch nicht verbunden (Jobs entstehen beim World-Load VOR dem Connect),
+        // early-returnte alles still und es gab KEINEN zweiten Versuch — der Server-Pool
+        // blieb leer. Update() pollt daher alle RETRY_INTERVAL-Sekunden erneut; die Guards
+        // unten (Hash-Gate, Pace) machen den Poll idempotent und billig.
+        private const float RETRY_INTERVAL = 3f;
+        private static float nextRetryPollTime = 0f;
+        // Skip-Grund nur EINMALIG pro (Grund) loggen — Aenderung des Grundes loggt erneut,
+        // erfolgreicher Upload setzt das Log-Fenster zurueck.
+        private static string lastLoggedSkip = null;
+
         // Empfangs-Seite: Chunk-Assemblierung pro Absender-Transfer.
         private class IncomingPool
         {
@@ -75,26 +87,46 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
+                string skip = null;
+
                 var client = StarTruckClient.client;
-                if (client == null || !client.IsConnected) return;
+                if (client == null || !client.IsConnected) skip = "client null / nicht verbunden";
+                else
+                {
+                    string sector = StarTruckClient.currentSector;
+                    if (string.IsNullOrEmpty(sector) || sector == "none") skip = "Sektor 'none'";
+                    else
+                    {
+                        var liveJobs = global::ProceduralJobGenerator.GetAvailableJobs();
+                        if (liveJobs == null || liveJobs.Count == 0) skip = $"Sektor '{sector}': keine Jobs";
+                        else
+                        {
+                            // Nur senden, wenn sich der Inhalt seit dem letzten Upload geaendert hat
+                            // (Post-Success-Dauerzustand des 3s-Polls — bewusst OHNE Log).
+                            string hash = ComputeJobHash(liveJobs);
+                            if (sector == lastUploadedSector && hash == lastUploadedHash) return;
+                            if (Time.unscaledTime < nextUploadAllowedTime) skip = $"Sektor '{sector}': Pace-Gate (1 Upload/{MIN_UPLOAD_INTERVAL}s)"; // Pace: 1 Upload/1.5s
+                            else
+                            {
+                                nextUploadAllowedTime = Time.unscaledTime + MIN_UPLOAD_INTERVAL;
 
-                string sector = StarTruckClient.currentSector;
-                if (string.IsNullOrEmpty(sector) || sector == "none") return;
+                                byte[] payload = SerializeJobs(liveJobs);
+                                SendChunked((ushort)messageType.jobBoardUpload, sector, payload);
+                                lastUploadedSector = sector;
+                                lastUploadedHash = hash;
+                                lastLoggedSkip = null;
+                                StarTruckMP.Log.LogInfo($"JobBoardServerSync: {liveJobs.Count} Jobs fuer Sektor '{sector}' hochgeladen ({payload.Length} bytes).");
+                                return;
+                            }
+                        }
+                    }
+                }
 
-                var liveJobs = global::ProceduralJobGenerator.GetAvailableJobs();
-                if (liveJobs == null || liveJobs.Count == 0) return;
-
-                // Nur senden, wenn sich der Inhalt seit dem letzten Upload geaendert hat.
-                string hash = ComputeJobHash(liveJobs);
-                if (sector == lastUploadedSector && hash == lastUploadedHash) return;
-                if (Time.unscaledTime < nextUploadAllowedTime) return; // Pace: 1 Upload/1.5s
-                nextUploadAllowedTime = Time.unscaledTime + MIN_UPLOAD_INTERVAL;
-
-                byte[] payload = SerializeJobs(liveJobs);
-                SendChunked((ushort)messageType.jobBoardUpload, sector, payload);
-                lastUploadedSector = sector;
-                lastUploadedHash = hash;
-                StarTruckMP.Log.LogInfo($"JobBoardServerSync: {liveJobs.Count} Jobs fuer Sektor '{sector}' hochgeladen ({payload.Length} bytes).");
+                if (skip != null && skip != lastLoggedSkip)
+                {
+                    lastLoggedSkip = skip;
+                    StarTruckMP.Log.LogInfo($"JobBoardServerSync: Upload-Retry skip: {skip}");
+                }
             }
             catch (Exception ex)
             {
@@ -390,6 +422,26 @@ namespace StarTruckMP.StarTruckClient
                     pooledQuests.Clear();
                     pooledSector = null;
                     pooledVersion = -1;
+                }
+                // Build-362: Sektorwechsel setzt auch die Upload-Gates zurueck — ohne Reset
+                // wuerde ein frisch betretener Sektor die letzte (Sektor, Hash)-Kombination
+                // der Sende-Seite nicht tangieren, lastUploadedSector bleibt aber alt und
+                // blockiert den ersten Upload im neuen Sektor nur zufaellig nie. Explizit:
+                string curSector = StarTruckClient.currentSector;
+                if (lastUploadedSector != null && lastUploadedSector != curSector)
+                {
+                    lastUploadedSector = null;
+                    lastUploadedHash = null;
+                    lastLoggedSkip = null;
+                }
+                // Build-362: Upload-Retry-Poll — der Einmal-Postfix auf
+                // GenerateJobsForAllSectors verpasst das connected-Fenster, wenn die Jobs
+                // bereits beim World-Load generiert wurden (VOR dem Client-Connect). Alle
+                // RETRY_INTERVAL-Sekunden erneut versuchen; Guards machen es idempotent.
+                if (Time.unscaledTime >= nextRetryPollTime)
+                {
+                    nextRetryPollTime = Time.unscaledTime + RETRY_INTERVAL;
+                    OnLocalJobsGenerated();
                 }
             }
             catch (Exception ex)

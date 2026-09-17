@@ -125,6 +125,8 @@ namespace StarTruckMP.StarTruckClient
         // damit Spaetankoemmlinge die Kennungen noch bekommen - zusaetzlich zum
         // Re-Broadcast-Trigger bei Spielerankunft in Client.cs).
         private static float nextPeriodicSend = 0f;
+        // Build-362: einmaliges Deaktivierungs-Log (statt 2s-Broadcast-Beweis).
+        private static bool periodicDeactivatedLogged = false;
         private static bool broadcastActiveLogged = false;
 
         // custom-build-339: questId-only (sprachunabhaengig). Der displayName ist
@@ -575,7 +577,16 @@ namespace StarTruckMP.StarTruckClient
                 }
                 if (Time.unscaledTime < nextPeriodicSend) return;
                 nextPeriodicSend = Time.unscaledTime + IDENT_BROADCAST_INTERVAL;
-                SendCurrentIdents("periodic-2s");
+                // Build-362: periodischer Kennungs-Broadcast DEAKTIVIERT — ersetzt durch den
+                // server-authoritativen Pool (JobBoardServerSync, Message 19). Der Ticker lief
+                // bisher auch nach der 342er-Deaktivierung weiter (eigener 2s-Ticker) und hat
+                // konkurrierende jobBoardIdents-Sets im Umlauf gehalten. Nummer 18 reserviert.
+                if (!periodicDeactivatedLogged)
+                {
+                    periodicDeactivatedLogged = true;
+                    StarTruckMP.Log.LogInfo("JobBoardIdSync: periodic idents broadcast deaktiviert (Build-362, server-authoritativer Pool).");
+                }
+                // SendCurrentIdents("periodic-2s");
             }
             catch (Exception ex)
             {

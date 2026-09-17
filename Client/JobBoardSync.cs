@@ -133,9 +133,13 @@ namespace StarTruckMP.StarTruckClient
                 if (sanitizedOut > 0)
                     StarTruckMP.Log.LogInfo($"JobBoardSync: {sanitizedOut} defekte Jobs entfernt, {jobCount} gesunde Jobs fuer Sektor '{StarTruckClient.currentSector}' im Blob.");
 
-                ChunkedBlobTransfer.Send("job", (ushort)messageType.jobBoardSync, StarTruckClient.currentSector, blob);
+            // Build-362: Send-Call deaktiviert — der Blob-Sync (FlatSharp Message 14) ist durch
+            // den server-authoritativen Pool (JobBoardServerSync, Message 19) ersetzt und soll
+            // nicht mehr konkurrierend laufen. Receive-Seite (enum 14) bleibt zur Diagnose bestehen,
+            // Nummer reserviert.
+            // ChunkedBlobTransfer.Send("job", (ushort)messageType.jobBoardSync_deactivated_DO_NOT_USE, StarTruckClient.currentSector, blob);
 
-                StarTruckMP.Log.LogInfo($"JobBoardSync: {jobCount} Jobs fuer Sektor '{StarTruckClient.currentSector}' gesendet ({blob.Length} bytes, native FlatSharp v2).");
+                StarTruckMP.Log.LogInfo($"JobBoardSync: Blob fuer Sektor '{StarTruckClient.currentSector}' gebaut ({jobCount} Jobs, {blob.Length} bytes), Senden seit Build-362 deaktiviert (server-authoritativer Pool).");
             }
             catch (Exception ex)
             {
@@ -752,8 +756,10 @@ namespace StarTruckMP.StarTruckClient
         [HarmonyPostfix]
         public static void GenerateJobsForAllSectors_Postfix()
         {
-            try { JobBoardSync.OnLocalJobsGenerated(); }
-            catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix Fehler: {ex.Message}"); }
+            // Build-362: alter Blob-Sync-Pfad (FlatSharp Message 14) DEAKTIVIERT — Send-Call
+            // unten auskommentiert, Nummer reserviert (jobBoardSync_deactivated_DO_NOT_USE).
+            // try { JobBoardSync.OnLocalJobsGenerated(); }
+            // catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix Fehler: {ex.Message}"); }
             // custom-build-342: server-authoritativer Upload (alle Clients, Gesamtpool-Prinzip).
             try { JobBoardServerSync.OnLocalJobsGenerated(); }
             catch (Exception ex) { StarTruckMP.Log.LogWarning($"GenerateJobsForAllSectors_Postfix (ServerSync) Fehler: {ex.Message}"); }

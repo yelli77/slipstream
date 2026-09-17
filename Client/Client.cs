@@ -1181,7 +1181,7 @@ namespace StarTruckMP.StarTruckClient
                 }
             }
 
-            if (e.MessageId == (ushort)messageType.jobBoardSync)
+            if (e.MessageId == (ushort)messageType.jobBoardSync_deactivated_DO_NOT_USE)
             {
                 // custom-build-342: alter FlatSharp-Blob-Pfad DEAKTIVIERT (kein Handler mehr).
                 // Nachrichten alter Clients (<342) werden still verworfen.
