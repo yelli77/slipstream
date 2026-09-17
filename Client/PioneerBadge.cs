@@ -141,8 +141,8 @@ namespace StarTruckMP.Encoding
             StarTruckMP.Log.LogInfo($"PioneerBadge: labelH={labelH:F3}w (src={labelHsrc})");
             float py = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.y);
             float px = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.x);
-            float worldSize = Mathf.Max(0.3f, labelH * 1.05f);
-            float worldY = labelH * 0.75f;
+            float worldSize = Mathf.Max(0.3f, labelH * 2.1f); // 2x von 1.05 — verdoppelt
+            float worldY = labelH * 2.25f; // 3x von 0.75 — Badge haengt 3x hoeher ueber der Text-Mitte
 
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "PioneerBadge_" + nameLabel.name;
