@@ -43,6 +43,7 @@ public static class Program
     private static readonly object _logLock = new();
 
     private static Riptide.Server _server;
+    private static readonly Dictionary<ushort, PlayerState> _players = new();
     private static Riptide.Client _clientA;
     private static Riptide.Client _clientB;
     private static JobBoardStore _store;
@@ -149,11 +150,12 @@ public static class Program
     private static void StartServer()
     {
         _server = new Riptide.Server();
-        _server.ClientConnected += (s, e) => Console.WriteLine($"[server] Client connected: {e.Client.Id}");
+        _server.ClientConnected += (s, e) => { Console.WriteLine($"[server] Client connected: {e.Client.Id}"); _players[e.Client.Id] = new PlayerState { Id = e.Client.Id, Sector = "none" }; };
+        _server.ClientDisconnected += (s, e) => _players.Remove(e.Client.Id);
         _server.MessageReceived += (s, e) => _handler.Handle(e, _server);
         _server.Start(ServerPort, 8);
         _store = new JobBoardStore(LogServer);
-        _handler = new MessageHandler(new Dictionary<ushort, PlayerState>(), 1, _ => { }, (_, _) => { });
+        _handler = new MessageHandler(_players, 1, _ => { }, (_, _) => { });
         _handler.JobBoards = new JobBoardServer(_store, LogServer);
         Console.WriteLine($"[server] Riptide-Server gestartet auf Port {ServerPort}");
     }
