@@ -1147,6 +1147,8 @@ namespace StarTruckMP.StarTruckClient
                 {
                     ushort playerId = e.Message.GetUShort();
                     ulong steamId = e.Message.GetULong();
+                    // custom-build-356 (FIX E): Empfang jetzt sichtbar loggen.
+                    StarTruckMP.Log.LogInfo($"setPlayerSteamId recv: player {playerId} steamId {steamId}");
                     // custom-build-348: SteamID der playerInfo zuordnen (Pioneer-Badge-Lookup).
                     Encoding.PioneerBadge.AssociateSteamId(playerId, steamId);
                     if (playerList.TryGetValue(playerId, out var currentPlayer))

@@ -318,6 +318,9 @@ public class MessageHandler
         // custom-build-348: Pioneer-Status ermitteln und an alle broadcasten.
         Playtime?.OnSteamIdKnown(e.FromConnection.Id, steamId, p.Name);
         Playtime?.UpdateName(steamId, p.Name);
+        // custom-build-356 (FIX D): Broadcast an ALLE — der Client-Handler (setPlayerSteamId)
+        // assoziiert die SteamID auch fuer Fremde; vorher erreichte diese Nachricht niemanden.
+        server.SendToAll(ServerMessages.CreatePlayerSteamIdBcast(e.FromConnection.Id, steamId));
         bool isPioneer = Playtime?.IsPioneer(steamId) ?? false;
         p.Pioneer = isPioneer;
         BroadcastPioneerFlag(server, e.FromConnection.Id, steamId, isPioneer);

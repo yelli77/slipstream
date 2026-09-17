@@ -14,6 +14,15 @@ public static class ServerMessages
         return msg;
     }
 
+    // custom-build-356 (FIX D): Server->Clients-Broadcast der SteamID-Zuordnung.
+    // Ohne dieses Broadcast bleibt SteamIdByPlayer auf fremden Clients leer.
+    public static Message CreatePlayerSteamIdBcast(ushort playerId, ulong steamId)
+    {
+        var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.SetPlayerSteamId);
+        msg.AddUShort(playerId); msg.AddULong(steamId);
+        return msg;
+    }
+
     public static Message CreateLinkStatus(bool linked)
     {
         var msg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.LinkStatus);
