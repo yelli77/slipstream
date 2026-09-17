@@ -169,8 +169,8 @@ public static class Program
         _clientB = new Riptide.Client();
         _clientA.MessageReceived += (s, e) => OnClientMessage(e, _stateA, _incomingA);
         _clientB.MessageReceived += (s, e) => OnClientMessage(e, _stateB, _incomingB);
-        _clientA.Connect("127.0.0.1", ServerPort);
-        _clientB.Connect("127.0.0.1", ServerPort);
+        _clientA.Connect($"127.0.0.1:{ServerPort}"); // Riptide 2.x: Port gehoert in die Host-Adresse
+        _clientB.Connect($"127.0.0.1:{ServerPort}");
         WaitUntil(() => _clientA.IsConnected && _clientB.IsConnected, TimeSpan.FromSeconds(10));
         if (!_clientA.IsConnected || !_clientB.IsConnected)
             throw new Exception($"Clients nicht verbunden (A={_clientA.IsConnected}, B={_clientB.IsConnected})");
