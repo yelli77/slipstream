@@ -176,6 +176,24 @@ public class DedicatedServer
             _server.Send(nameMsg, e.Client);
             Log($"Sent name '{kv.Value.Name}' for player {kv.Key} to new client {e.Client.Id}");
         }
+        // custom-build-357 (FIX F): Join-Catch-up — SteamID+PioneerFlag aller Bestandsspieler.
+        // Die Broadcasts (HandleSetSteamId) feuern nur im Moment, in dem ein Spieler seine
+        // SteamID setzt. Wer SPAETER joint, erhielt Zuordnung+Pioneer-Flag der Bestandsspieler
+        // nie -> Badge fehlte bei Sicht auf den anderen. Hier gezielt an den NEUEN Client.
+        foreach (var kv in _players)
+        {
+            if (kv.Key == e.Client.Id || kv.Value.SteamId == 0) continue;
+            _server.Send(ServerMessages.CreatePlayerSteamIdBcast(kv.Key, kv.Value.SteamId), e.Client);
+            bool isPioneer = false;
+            try { isPioneer = _handler.Playtime?.IsPioneer(kv.Value.SteamId) ?? false; }
+            catch (Exception ex) { Log($"Pioneer catch-up error for {kv.Value.SteamId}: {ex.Message}"); }
+            var flagMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.pioneerFlag);
+            flagMsg.AddUShort(kv.Key);
+            flagMsg.AddULong(kv.Value.SteamId);
+            flagMsg.AddBool(isPioneer);
+            _server.Send(flagMsg, e.Client);
+            Log($"Sent steamId {kv.Value.SteamId} (pioneer={isPioneer}) for player {kv.Key} to new client {e.Client.Id}");
+        }
         var bc = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.PlayerConnected);
         bc.AddUShort(e.Client.Id);
         bc.AddString(p.Name ?? "");
