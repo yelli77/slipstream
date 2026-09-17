@@ -5,4 +5,7 @@
     <AssemblyName>StarTruckMP.Common</AssemblyName>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="RiptideNetworking.Riptide" Version="2.2.0" />
+  </ItemGroup>
 </Project>
