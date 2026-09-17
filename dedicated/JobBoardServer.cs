@@ -84,6 +84,7 @@ public class JobBoardServer
             _uploads[senderId] = up;
         }
 
+        Console.WriteLine($"[DBG] upload chunk from {senderId} sector={sector} ci={chunkIndex}/{totalChunks} received={up.Received}");
         if (chunkIndex >= up.Chunks.Length)
         {
             _log($"[WARN] JobBoardServer: Chunk-Index {chunkIndex}/{totalChunks} von {senderId} ausserhalb - verworfen");
