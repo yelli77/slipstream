@@ -222,7 +222,7 @@ namespace StarTruckMP.StarTruckClient
             var stats = new global::StarTruckMP.Common.ChunkedSend.Stats();
             byte transferId = (byte)(UnityEngine.Random.Range(1, 250));
             return global::StarTruckMP.Common.ChunkedSend.SendChunked(
-                messageTypeId, sector, client.Id, transferId, payload, client.Send, null, stats);
+                messageTypeId, sector, client.Id, transferId, payload, m => client.Send(m), null, stats);
         }
 
         // ------------------------------------------------------------------
