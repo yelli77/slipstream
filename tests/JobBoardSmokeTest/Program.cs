@@ -152,6 +152,7 @@ public static class Program
         _server.ClientConnected += (s, e) => Console.WriteLine($"[server] Client connected: {e.Client.Id}");
         _server.MessageReceived += (s, e) => _handler.Handle(e, _server);
         _server.Start(ServerPort, 8);
+        _store = new JobBoardStore(LogServer);
         _handler = new MessageHandler(new Dictionary<ushort, PlayerState>(), 1, _ => { }, (_, _) => { });
         _handler.JobBoards = new JobBoardServer(_store, LogServer);
         Console.WriteLine($"[server] Riptide-Server gestartet auf Port {ServerPort}");
