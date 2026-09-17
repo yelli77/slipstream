@@ -14,8 +14,8 @@ namespace StarTruckMP.Encoding
     ///
     /// Implementierung: kleines Textured-Quad als CHILD des Namenslabels (erbt dessen
     /// Billboard-Rotation + Position aus BillboardNameLabels). TMP hat keine Inline-Image-
-    /// Faehigkeit ohne PackageManager — daher separates Quad. Groesse ~0.35x Label-Hoehe,
-    /// links vom Text-Anfang. Sichtbar nur wenn pioneer==true. Saubere Zerstoerung mit dem
+    /// Faehigkeit ohne PackageManager — daher separates Quad. Groesse ~1.05x Label-Hoehe,
+    /// mittig ueber dem Text. Sichtbar nur wenn pioneer==true. Saubere Zerstoerung mit dem
     /// Label (Kind-Objekt wird mit dem Parent zerstoert; gespeicherte Referenz wird trotzdem
     /// beim Label-Abbau mit aufgeraeumt).
     ///
@@ -136,7 +136,7 @@ namespace StarTruckMP.Encoding
             // Wir orientieren uns an der effektiven Welthoehe des Labels:
             var bounds = ComputeWorldBounds(nameLabel);
             float labelH = bounds.HasValue ? bounds.Value.size.y : 5f;
-            float size = Mathf.Max(0.6f, labelH * 0.35f);
+            float size = Mathf.Max(1.5f, labelH * 1.05f);
 
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "PioneerBadge_" + nameLabel.name;
@@ -180,15 +180,15 @@ namespace StarTruckMP.Encoding
             mr.reflectionProbeUsage = ReflectionProbeUsage.Off;
 
             quad.transform.SetParent(nameLabel.transform, false);
-            // Links vom Text-Anfang: Labelbreite/2 + halbe Badge-Groesse + kleiner Abstand.
-            float halfW = bounds.HasValue ? bounds.Value.size.x * 0.5f : 6f;
-            quad.transform.localPosition = new Vector3(-(halfW + size * 0.5f + size * 0.15f), 0f, 0.05f);
+            // Mittig ueber dem Text: horizontale Zentrierung (x=0), ueber dem Label (y nach
+            // oben), leicht nach vorn (z) gegen Z-Fighting.
+            quad.transform.localPosition = new Vector3(0f, labelH * 0.75f, 0.05f);
             quad.transform.localScale = new Vector3(size, size, 1f);
             // Das Label selbst ist ein Billboard (LookRotation zur Kamera) — als Kind erbt das
             // Quad Rotation+Position. Quad-Mesh schaut +Z; LookRotation richtet +Z zur Kamera,
             // passt also direkt.
             quad.SetActive(true);
-            StarTruckMP.Log.LogInfo($"PioneerBadge: Badge an '{nameLabel.name}' gehaengt (size={size:F2}, halfW={halfW:F2}).");
+            StarTruckMP.Log.LogInfo($"PioneerBadge: Badge an '{nameLabel.name}' gehaengt (size={size:F2}).");
             return quad;
         }
 
