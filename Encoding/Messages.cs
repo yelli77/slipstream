@@ -607,6 +607,12 @@ namespace StarTruckMP.Encoding
         /// Creates a world-space name label using TextGenerator + Mesh.
         /// Includes dark background quad for contrast.
         /// </summary>
+
+        // custom-build-354 (Bug B): Template-Cache — sobald ein Label existiert, wird es
+        // als Klonquelle genutzt. Vorher wurde allTMP[0] geklont: beliebiges TMP in der
+        // Szene, inkl. alter Leftover-NameLabels mit Platzhaltertext 'Player_N'.
+        private static GameObject cachedNameLabelTemplate = null;
+
         public static GameObject CreateNameLabel(string name, ushort playerId)
         {
             try
@@ -614,24 +620,34 @@ namespace StarTruckMP.Encoding
                 var sectorGO = GameObject.Find("[Sector]");
                 if (sectorGO == null) return null;
 
-                // Diagnostic: find all text components in scene
-                var allTMP = GameObject.FindObjectsOfType<TMPro.TextMeshPro>();
-                if (allTMP != null && allTMP.Length > 0)
+                var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
+
+                // custom-build-354 (Bug B): bevorzugt den gecachten Template-Klon nutzen;
+                // Cache verwerfen, falls das Objekt inzwischen zerstoert wurde.
+                if (cachedNameLabelTemplate == null)
                 {
-                    for (int t = 0; t < Mathf.Min(allTMP.Length, 5); t++)
+                    // Fallback-Quelle: ein TMP namens 'NameLabel_*', das als eigenstaendiges
+                    // Root-Objekt (kein Kind eines Trucks) existiert — NIEMALS allTMP[0] blind.
+                    var allTMP = GameObject.FindObjectsOfType<TMPro.TextMeshPro>();
+                    if (allTMP != null)
                     {
-                        if (allTMP[t] != null)
-                            StarTruckMP.Log.LogInfo($"  TMP3D[{t}]: '{allTMP[t].text}' name='{allTMP[t].gameObject.name}'");
+                        foreach (var t in allTMP)
+                        {
+                            if (t == null) continue;
+                            var go = t.gameObject;
+                            if (go.name != null && go.name.StartsWith("NameLabel_"))
+                            {
+                                cachedNameLabelTemplate = go;
+                                break;
+                            }
+                        }
                     }
                 }
 
-                var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
-
-                // If we find a 3D TextMeshPro, clone it
-                if (allTMP != null && allTMP.Length > 0)
+                if (cachedNameLabelTemplate != null)
                 {
-                    var source = allTMP[0];
-                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloning 3D TMP '{source.text}' from '{source.gameObject.name}'");
+                    var source = cachedNameLabelTemplate;
+                    StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: cloning cached template '{source.name}'");
                     GameObject clone = GameObject.Instantiate(source.gameObject);
                     clone.name = "NameLabel_" + playerId;
                     SceneManager.MoveGameObjectToScene(clone, sectorGO.scene);
@@ -640,6 +656,8 @@ namespace StarTruckMP.Encoding
                     var tmp = clone.GetComponent<TMPro.TextMeshPro>();
                     if (tmp != null)
                     {
+                        // custom-build-354: Text IMMER explizit auf den uebergebenen Namen —
+                        // niemals Text vom Klon-Template uebernehmen.
                         tmp.text = name;
                         tmp.fontSize = 36f;
                         tmp.alignment = TMPro.TextAlignmentOptions.Center;
