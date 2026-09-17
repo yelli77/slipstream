@@ -55,7 +55,7 @@ public static class ChunkedSend
         int burst = 0;
         for (int ci = 0; ci < totalChunks; ci++)
         {
-            if (dropChunks != null && dropChunks.Contains(ci)) continue;
+            if (dropChunks != null && System.Linq.Enumerable.Contains(dropChunks, ci)) continue;
 
             int len = Math.Min(MAX_CHUNK, payload.Length - ci * MAX_CHUNK);
             var chunk = new byte[len];
