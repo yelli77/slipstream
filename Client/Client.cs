@@ -561,10 +561,17 @@ namespace StarTruckMP.StarTruckClient
                         newPlayer.destinationGateId = remoteDestGate;
                         JumpgateOption1.ForceRefresh();
                         forceStateResend = true;
-                        newPlayer.truckTrans.Pos = pPos;
-                        newPlayer.truckTrans.Rot = pRot;
-                        newPlayer.playerTrans.Pos = pPos;
-                        newPlayer.playerTrans.Rot = pRot;
+                        // Nameplate/Login-Position-Bug (custom-build-363): Join-Metadaten
+                        // (pPos/pRot) sind NICHT verlaesslich — sie beschreiben oft die
+                        // alte Spawn-/Login-Position des Remote-Spielers. Hier NIE spawnen:
+                        // truckTrans.Pos auf (0,0,0) lassen, damit RemoveFromSector den
+                        // Spawn deferred und die erste echte movementUpdate-Position den
+                        // exakten Spawn uebernimmt (Zero-Guard in RemoveFromSector).
+                        newPlayer.truckTrans.Pos = Vector3.zero;
+                        newPlayer.truckTrans.Rot = Vector3.zero;
+                        newPlayer.playerTrans.Pos = Vector3.zero;
+                        newPlayer.playerTrans.Rot = Vector3.zero;
+                        StarTruckMP.Log.LogInfo($"clientJoin: player {id} registered — join-metadata position ignored ({pPos}), spawn deferred to first real movementUpdate");
                         playerList.Add(id, newPlayer);
                         RemoveFromSector(id, playerList[id]);
                     }
@@ -785,6 +792,7 @@ namespace StarTruckMP.StarTruckClient
                                     spawnedRb.angularVelocity = playerAngVel;
                                 }
                                 SnapRemotePlayerToLocal(playerId, currentPlayer);
+                                PositionNameLabelImmediately(playerId, currentPlayer);
                                 } // end else (Truck != null)
                                 } // end zero/NaN position guard
                                 } // end else (cooldown)
@@ -1586,6 +1594,7 @@ namespace StarTruckMP.StarTruckClient
                     if (helper != null) helper.Init(clientId);
                 }
                 SnapRemotePlayerToLocal(clientId, clientInfo);
+                PositionNameLabelImmediately(clientId, clientInfo);
                 StarTruckMP.Log.LogInfo($"Spawn result for player {clientId}: truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}");
             }
         }
@@ -1632,6 +1641,18 @@ namespace StarTruckMP.StarTruckClient
             p.truckTargetRot = p.truckTrans.Rot;
             playerList[id] = p;
             StarTruckMP.Log.LogInfo($"SnapRemotePlayerToLocal[{id}]: abs={p.truckTrans.Pos}, origin={floatingOrigin.m_currentOrigin}, local={p.truckTrans.Pos - floatingOrigin.m_currentOrigin}");
+        }
+
+        // custom-build-363: nach JEDEM Spawn das Name/Badge SOFORT exakt ueber dem Truck
+        // positionieren und sichtbar schalten — nicht erst auf den naechsten Billboard-
+        // Tick warten (Frame-Gap) und nie an der geerbten Template-Position rendern.
+        private static void PositionNameLabelImmediately(ushort id, playerInfo p)
+        {
+            if (p.NameLabel == null || p.Truck == null) return;
+            p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 35f, 0);
+            var r = p.NameLabel.GetComponentInChildren<MeshRenderer>();
+            if (r != null) r.enabled = true;
+            StarTruckMP.Log.LogInfo($"PositionNameLabelImmediately[{id}]: label at truck+35 (local={p.Truck.transform.position})");
         }
 
 
@@ -1958,6 +1979,11 @@ namespace StarTruckMP.StarTruckClient
                 if (p.NameLabel != null && p.NameLabel.activeInHierarchy && p.Truck != null)
                 {
                     p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 35f, 0);
+                    // custom-build-363: Label wird von CreateNameLabel unsichtbar geparkt
+                    // (erbt sonst die LicensePlate-Position des EIGENEN Trucks). Erst hier,
+                    // an der korrekten Position, wieder sichtbar schalten.
+                    var lr = p.NameLabel.GetComponentInChildren<MeshRenderer>();
+                    if (lr != null) lr.enabled = true;
                     Vector3 dir = p.NameLabel.transform.position - cam.transform.position;
                     if (dir.sqrMagnitude > 0.001f)
                         p.NameLabel.transform.rotation = Quaternion.LookRotation(dir);

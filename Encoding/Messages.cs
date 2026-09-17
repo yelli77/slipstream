@@ -688,7 +688,14 @@ namespace StarTruckMP.Encoding
                     }
                     // Ensure renderer is enabled
                     var renderer = clone.GetComponent<MeshRenderer>();
-                    if (renderer != null) renderer.enabled = true;
+                    // Nameplate/Login-Position-Bug (custom-build-363): der Klon erbt die
+                    // Welt-Position des Templates — die LicensePlate hängt am EIGENEN
+                    // Truck, d.h. das fremde Name/Badge erscheint sofort an der eigenen
+                    // Login-/Spawn-Position. Bis der erste Billboard-Tick das Label auf
+                    // die echte (Floating-Origin-korrigierte) Truck-Position setzt,
+                    // unsichtbar weit unter der Szene parken.
+                    clone.transform.position = new Vector3(0f, -100000f, 0f);
+                    if (renderer != null) renderer.enabled = false;
                     // Scale up the clone
                     clone.transform.localScale = new Vector3(5f, 5f, 5f);
                     return clone;
@@ -804,6 +811,11 @@ namespace StarTruckMP.Encoding
                 mr.receiveShadows = false;
                 mr.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
                 mr.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+
+                // Nameplate/Login-Position-Bug (custom-build-363): Label bis zum ersten
+                // Billboard-Tick unsichtbar parken (siehe Klon-Pfad oben).
+                labelObj.transform.position = new Vector3(0f, -100000f, 0f);
+                mr.enabled = false;
 
                 StarTruckMP.Log.LogInfo($"CreateNameLabel[{playerId}]: created '{name}' ({uiVerts.Length} verts, scale={textScale:F4})");
                 return labelObj;
