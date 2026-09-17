@@ -1023,9 +1023,16 @@ namespace StarTruckMP.StarTruckClient
                             GameObject.Destroy(currentPlayer.NameLabel);
                             currentPlayer.NameLabel = null;
                         }
-                        if (currentPlayer.Truck != null && !string.IsNullOrEmpty(newName))
+                        // custom-build-354 (Bug A): Rebuild NICHT mehr vom Truck abhaengig.
+                        // CreateNameLabel braucht keinen Truck — Position wird spaeter im
+                        // BillboardNameLabels-Tick synchronisiert, sobald der Truck existiert.
+                        // Vorher: Truck == null => Label zerstoert und NIE neu erzeugt
+                        // (deferred-Spawn-Retries setzten kein neues Label mehr auf).
+                        if (!string.IsNullOrEmpty(newName))
                         {
-                            // custom-build-348: Badge am neuen Label wiederverknuepfen.
+                            // custom-build-354 (Bug B): alte Leftover-Labels derselben Id vorher zerstoeren (Duplicate-Schutz).
+                            var leftover = GameObject.Find("NameLabel_" + namePlayerId);
+                            if (leftover != null) GameObject.Destroy(leftover);
                             Encoding.PioneerBadge.DetachFor(currentPlayer.NameLabel);
                             currentPlayer.NameLabel = Encoding.PioneerBadge.AttachOrUpdate(
                                 Encoding.Messages.CreateNameLabel(newName, namePlayerId), namePlayerId);
@@ -1919,13 +1926,29 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        // custom-build-354 (Bug A): Lazy-Re-Create — falls ein Label fehlt (z.B. nach
+        // setPlayerName ohne Truck), es hier idempotent 1x/Sekunde neu erzeugen.
+        private static float nextNameLabelRecheckTime = 0f;
+
         public static void BillboardNameLabels()
         {
             Camera cam = Camera.main;
             if (cam == null) return;
+            bool doRecheck = UnityEngine.Time.time >= nextNameLabelRecheckTime;
+            if (doRecheck) nextNameLabelRecheckTime = UnityEngine.Time.time + 1.0f;
             foreach (var kv in playerList)
             {
                 var p = kv.Value;
+                if (doRecheck && p.NameLabel == null && p.Truck != null &&
+                    !string.IsNullOrEmpty(p.Name))
+                {
+                    // Label fehlt, aber Truck + Name existieren — lazy neu erzeugen.
+                    var leftover = GameObject.Find("NameLabel_" + kv.Key);
+                    if (leftover != null) GameObject.Destroy(leftover);
+                    p.NameLabel = Encoding.PioneerBadge.AttachOrUpdate(
+                        Encoding.Messages.CreateNameLabel(p.Name, kv.Key), kv.Key);
+                    StarTruckMP.Log.LogInfo($"BillboardNameLabels: lazy re-created NameLabel for player {kv.Key} ('{p.Name}')");
+                }
                 if (p.NameLabel != null && p.NameLabel.activeInHierarchy && p.Truck != null)
                 {
                     p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 35f, 0);
