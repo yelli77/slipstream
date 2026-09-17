@@ -622,24 +622,33 @@ namespace StarTruckMP.Encoding
 
                 var allTMPUGUI = GameObject.FindObjectsOfType<TMPro.TextMeshProUGUI>();
 
-                // custom-build-354 (Bug B): bevorzugt den gecachten Template-Klon nutzen;
-                // Cache verwerfen, falls das Objekt inzwischen zerstoert wurde.
+                // custom-build-355 (Bug C): Cache die QUELLE (License-Plate-Label), NICHT
+                // einen bereits geklonten NameLabel — Klon-von-Klon kann Font/Material
+                // verlieren (zerhackte Glyphen). Bevorzugt 'TMP_LicensePlate_Label', sonst
+                // der erste 3D-TMP mit intaktem Font/Material (nie ein NameLabel_*-Klon).
                 if (cachedNameLabelTemplate == null)
                 {
-                    // Fallback-Quelle: ein TMP namens 'NameLabel_*', das als eigenstaendiges
-                    // Root-Objekt (kein Kind eines Trucks) existiert — NIEMALS allTMP[0] blind.
                     var allTMP = GameObject.FindObjectsOfType<TMPro.TextMeshPro>();
                     if (allTMP != null)
                     {
+                        GameObject fallback = null;
                         foreach (var t in allTMP)
                         {
                             if (t == null) continue;
                             var go = t.gameObject;
-                            if (go.name != null && go.name.StartsWith("NameLabel_"))
+                            if (go.name != null && go.name.StartsWith("NameLabel_")) continue;
+                            if (t.font == null || t.fontSharedMaterial == null) continue;
+                            if (go.name != null && go.name.Contains("LicensePlate"))
                             {
                                 cachedNameLabelTemplate = go;
                                 break;
                             }
+                            if (fallback == null) fallback = go;
+                        }
+                        if (cachedNameLabelTemplate == null && fallback != null)
+                        {
+                            cachedNameLabelTemplate = fallback;
+                            StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: no LicensePlate TMP found, using fallback template '{fallback.name}'");
                         }
                     }
                 }
@@ -656,6 +665,17 @@ namespace StarTruckMP.Encoding
                     var tmp = clone.GetComponent<TMPro.TextMeshPro>();
                     if (tmp != null)
                     {
+                        // custom-build-355 (Bug C): falls der Klon Font/Material verloren
+                        // hat (Klon-von-Klon-Regression), explizit von der gecachten
+                        // Quelle zurueckkopieren.
+                        var srcTmp = source.GetComponent<TMPro.TextMeshPro>();
+                        if (srcTmp != null && (tmp.font == null || tmp.fontSharedMaterial == null))
+                        {
+                            tmp.font = srcTmp.font;
+                            tmp.fontSharedMaterial = srcTmp.fontSharedMaterial;
+                            StarTruckMP.Log.LogWarning($"CreateNameLabel[{playerId}]: clone lost font/material — copied from '{source.name}' (font={(tmp.font != null)}, mat={(tmp.fontSharedMaterial != null)})");
+                        }
+
                         // custom-build-354: Text IMMER explizit auf den uebergebenen Namen —
                         // niemals Text vom Klon-Template uebernehmen.
                         tmp.text = name;
