@@ -44,6 +44,16 @@ namespace StarTruckMP.StarTruckClient
         private static float nextUploadAllowedTime = 0f;
         private const float MIN_UPLOAD_INTERVAL = 1.5f;
 
+        // Build-364 (Re-Send-Netz): war der letzte Upload zwar verschickt, ist aber seitdem
+        // KEIN Pool-Download vom Server angekommen (letzter Pool-Empfang liegt VOR dem
+        // Upload und > NO_POOL_RESEND_AFTER Sekunden zurueck), gehen wir von verlorenen
+        // Chunks aus (Riptide-Reliable-Burst, Lesson 335) und erlauben EIN Re-Send mit
+        // neuem transferId — max. 1x pro 15 s, kein endloses Spammen.
+        private const float NO_POOL_RESEND_AFTER = 15f;
+        private const float RESEND_MIN_INTERVAL = 15f;
+        private static float lastUploadTime = -999f;
+        private static float nextResendTime = 0f;
+
         // Build-362 (Upload-Retry): OnLocalJobsGenerated() lief EINMALIG pro Generierung
         // (Harmony-Postfix auf GenerateJobsForAllSectors). War der Client zum Generierungs-
         // Zeitpunkt noch nicht verbunden (Jobs entstehen beim World-Load VOR dem Connect),
@@ -104,18 +114,44 @@ namespace StarTruckMP.StarTruckClient
                             // Nur senden, wenn sich der Inhalt seit dem letzten Upload geaendert hat
                             // (Post-Success-Dauerzustand des 3s-Polls — bewusst OHNE Log).
                             string hash = ComputeJobHash(liveJobs);
-                            if (sector == lastUploadedSector && hash == lastUploadedHash) return;
+                            if (sector == lastUploadedSector && hash == lastUploadedHash)
+                            {
+                                // Build-364 (Re-Send-Netz): Hash-Gate normal skippen — AUSSER der
+                                // Upload davor ist >15s her und seitdem kam kein Pool-Download
+                                // an (letzter Pool-Empfang liegt vor dem Upload). Dann gehen wir
+                                // von verlorenen Chunks aus und erlauben EIN Re-Send mit neuem
+                                // transferId (max. 1x pro 15 s, kein Endlos-Spammen).
+                                if (lastPoolReceiveTime < lastUploadTime
+                                    && (Time.unscaledTime - lastUploadTime) > NO_POOL_RESEND_AFTER
+                                    && Time.unscaledTime >= nextResendTime)
+                                {
+                                    nextResendTime = Time.unscaledTime + RESEND_MIN_INTERVAL;
+                                    nextUploadAllowedTime = Time.unscaledTime + MIN_UPLOAD_INTERVAL;
+
+                                    byte[] payload = SerializeJobs(liveJobs);
+                                    int totalChunks = SendChunked((ushort)messageType.jobBoardUpload, sector, payload);
+                                    lastUploadedSector = sector;
+                                    lastUploadedHash = hash;
+                                    lastUploadTime = Time.unscaledTime;
+                                    lastLoggedSkip = null;
+                                    StarTruckMP.Log.LogInfo($"JobBoardServerSync: Upload-Retry: kein Pool-Download nach Upload, Re-Send: {liveJobs.Count} Jobs fuer Sektor '{sector}' ({payload.Length} bytes, {totalChunks} Chunks).");
+                                    return;
+                                }
+                                return;
+                            }
                             if (Time.unscaledTime < nextUploadAllowedTime) skip = $"Sektor '{sector}': Pace-Gate (1 Upload/{MIN_UPLOAD_INTERVAL}s)"; // Pace: 1 Upload/1.5s
                             else
                             {
                                 nextUploadAllowedTime = Time.unscaledTime + MIN_UPLOAD_INTERVAL;
 
                                 byte[] payload = SerializeJobs(liveJobs);
-                                SendChunked((ushort)messageType.jobBoardUpload, sector, payload);
+                                int chunksSent = SendChunked((ushort)messageType.jobBoardUpload, sector, payload);
                                 lastUploadedSector = sector;
                                 lastUploadedHash = hash;
+                                lastUploadTime = Time.unscaledTime;
+                                nextResendTime = Time.unscaledTime + RESEND_MIN_INTERVAL; // erst 15s nach dem Upload darf ein Re-Send pruefen
                                 lastLoggedSkip = null;
-                                StarTruckMP.Log.LogInfo($"JobBoardServerSync: {liveJobs.Count} Jobs fuer Sektor '{sector}' hochgeladen ({payload.Length} bytes).");
+                                StarTruckMP.Log.LogInfo($"JobBoardServerSync: {liveJobs.Count} Jobs fuer Sektor '{sector}' hochgeladen ({payload.Length} bytes, {chunksSent}/{chunksSent} Chunks).");
                                 return;
                             }
                         }
@@ -176,10 +212,16 @@ namespace StarTruckMP.StarTruckClient
 
         // Gemeinsamer Chunk-Sender (Upload). Format identisch zum ChunkedBlobTransfer-Relay:
         // [sector][senderId-Placeholder][transferId][chunkIndex][totalChunks][bytes]
-        private static void SendChunked(ushort messageTypeId, string sector, byte[] payload)
+        private static int SendChunked(ushort messageTypeId, string sector, byte[] payload)
         {
             var client = StarTruckClient.client;
             const int MAX_CHUNK = 900;
+            // Build-364: Client-seitiges Burst-Pacing wie im Server-BroadcastPool (SEND_PACING,
+            // Lesson 335) — Riptide-Reliable-Bursts verlieren sonst den letzten Chunk und der
+            // Server assembliert nie komplett ('stuck Upload verworfen'). 36 Chunks x 2 ms
+            // Thread.Sleep = ~70 ms einmalig pro Upload: im Update-Kontext akzeptabler
+            // Einzel-Hitch, lohnender als ein frame-verteiltes State-Machine-Redesign.
+            const int SEND_PACING = 15;
             int totalChunks = Math.Max(1, (payload.Length + MAX_CHUNK - 1) / MAX_CHUNK);
             byte transferId = (byte)(UnityEngine.Random.Range(1, 250));
             for (int ci = 0; ci < totalChunks; ci++)
@@ -195,7 +237,10 @@ namespace StarTruckMP.StarTruckClient
                 msg.AddUShort((ushort)totalChunks);
                 msg.AddBytes(chunk);
                 client.Send(msg);
+                if ((ci + 1) % SEND_PACING == 0 && ci + 1 < totalChunks)
+                    System.Threading.Thread.Sleep(2);
             }
+            return totalChunks;
         }
 
         // ------------------------------------------------------------------
@@ -459,6 +504,8 @@ namespace StarTruckMP.StarTruckClient
             lastPoolReceiveTime = -999f;
             lastUploadedSector = null;
             lastUploadedHash = null;
+            lastUploadTime = -999f;
+            nextResendTime = 0f;
         }
     }
 }
