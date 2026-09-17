@@ -268,20 +268,28 @@ public static class Program
         return msg;
     }
 
-    // Identisches Job-Layout zu Client/JobBoardServerSync (questId/displayName/displayDescription,
-    // paramCount=0 nach Build-343).
+    // Identisches Job-Layout zum Client (questId/displayName/displayDescription,
+    // paramCount=0 nach Build-343). Strings wie im JobBoardCodec: [int32 len][utf8]
+    // — NICHT BinaryWriter/7-bit-Varint, sonst decodiert der echte Codec nicht.
     private static byte[] SerializeJobs(int count, string prefix, int descLen = 120)
     {
         using var ms = new MemoryStream();
-        using var w = new BinaryWriter(ms);
-        w.Write(count);
+        using var bw = new BinaryWriter(ms);
+        Action<string> ws = s =>
+        {
+            var b = Encoding.UTF8.GetBytes(s ?? "");
+            bw.Write(b.Length);
+            bw.Write(b);
+        };
+        bw.Write(count);
         for (int i = 1; i <= count; i++)
         {
-            w.Write($"{prefix}-{i:D4}");
-            w.Write($"{prefix} Job {i}");
-            w.Write(new string('x', descLen) + $" #{i}");
-            w.Write(0); // paramCount = 0
+            ws($"{prefix}-{i:D4}");
+            ws($"{prefix} Job {i}");
+            ws(new string('x', descLen) + $" #{i}");
+            bw.Write(0); // paramCount = 0
         }
+        bw.Flush();
         return ms.ToArray();
     }
 
