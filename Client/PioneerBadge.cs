@@ -136,9 +136,32 @@ namespace StarTruckMP.Encoding
             quad.layer = nameLabel.layer;
 
             var mr = quad.GetComponent<MeshRenderer>();
-            var shader = Shader.Find(ShaderName);
+            // custom-build-355 (Bug D): Shader-Fallback-Kette — in IL2CPP koennen
+            // UI/Default und Sprites/Default gestript sein; wir loggen, was gefunden
+            // wurde, und fallen bis zum Namenslabel-Shader zurueck (der existiert
+            // garantiert). Wenn ALLES null ist: Badge gar nicht anlegen (statt
+            // unsichtbarem Quad).
+            var shader = Shader.Find("UI/Default");
             if (shader == null) shader = Shader.Find("Sprites/Default");
-            var mat = new Material(shader);
+            if (shader == null) shader = Shader.Find("TextMeshPro/Mobile/Forward");
+            if (shader == null)
+            {
+                try
+                {
+                    var labelMr = nameLabel.GetComponentInChildren<MeshRenderer>();
+                    if (labelMr != null && labelMr.sharedMaterial != null)
+                        shader = labelMr.sharedMaterial.shader;
+                }
+                catch { }
+            }
+            StarTruckMP.Log.LogInfo($"PioneerBadge: shader found = '{(shader != null ? shader.name : "NULL")}'");
+            if (shader == null)
+            {
+                StarTruckMP.Log.LogWarning("PioneerBadge: kein Shader verfuegbar (alle Fallbacks null) — Badge wird NICHT angelegt.");
+                UnityEngine.Object.Destroy(quad);
+                return null;
+            }
+            var mat = new Material(shader); // Material instanziieren — niemals sharedMaterial manipulieren
             mat.mainTexture = tex;
             mat.color = Color.white;
             if (mat.HasProperty("_Cull")) mat.SetInt("_Cull", 0); // beidseitig — Billboard dreht sich eh
