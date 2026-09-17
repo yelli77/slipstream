@@ -1199,15 +1199,17 @@ namespace StarTruckMP.StarTruckClient
             // custom-build-348: Pioneer-Badge — Flag pro Spieler empfangen und merken.
             if (e.MessageId == (ushort)messageType.pioneerFlag)
             {
+                ushort pPlayerId = 0;
                 try
                 {
+                    pPlayerId = e.Message.GetUShort();
                     ulong pSteamId = e.Message.GetULong();
                     bool pIsPioneer = e.Message.GetBool();
                     Encoding.PioneerBadge.HandlePioneerFlag(pSteamId, pIsPioneer);
                 }
                 catch (System.Exception ex)
                 {
-                    StarTruckMP.Log.LogWarning($"pioneerFlag error: {ex.Message}");
+                    StarTruckMP.Log.LogWarning($"pioneerFlag error (playerId={pPlayerId}): {ex.Message}");
                 }
             }
         }
