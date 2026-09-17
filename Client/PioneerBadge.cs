@@ -136,8 +136,9 @@ namespace StarTruckMP.Encoding
             // das Quad haengt aber als Kind daran — seine localScale/localPosition
             // muessen daher world→local umgerechnet werden (Division durch
             // parent-lossyScale), sonst wirken Werte 5x zu gross/falsch platziert.
-            var bounds = ComputeWorldBounds(nameLabel);
+            var bounds = ComputeWorldBounds(nameLabel, out string labelHsrc);
             float labelH = bounds.HasValue ? bounds.Value.size.y : 5f;
+            StarTruckMP.Log.LogInfo($"PioneerBadge: labelH={labelH:F3}w (src={labelHsrc})");
             float py = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.y);
             float px = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.x);
             float worldSize = Mathf.Max(0.3f, labelH * 1.05f);
@@ -197,12 +198,49 @@ namespace StarTruckMP.Encoding
             return quad;
         }
 
-        private static Bounds? ComputeWorldBounds(GameObject go)
+        private static Bounds? ComputeWorldBounds(GameObject go, out string src)
         {
+            src = "fallback";
             try
             {
+                // custom-build-360: MeshRenderer.bounds ist beim frisch geklonten TMP-Label
+                // noch 0 (Mesh nicht aktualisiert) — bevorzugt TMP preferredHeight messen
+                // (lokal → world via lossyScale), renderer.bounds nur wenn plausibel (>0.5).
+                var tmp = go.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+                if (tmp != null)
+                {
+                    float worldH = tmp.preferredHeight * tmp.transform.lossyScale.y;
+                    if (worldH > 0.05f)
+                    {
+                        var tb = tmp.textBounds; // lokal
+                        if (tb.size.y > 0.01f)
+                        {
+                            float sx = Mathf.Max(0.0001f, tmp.transform.lossyScale.x);
+                            src = "tmp";
+                            return new Bounds(tmp.transform.position,
+                                new Vector3(tb.size.x * sx, worldH, 0.1f));
+                        }
+                        src = "tmp";
+                        return new Bounds(tmp.transform.position, new Vector3(1f, worldH, 0.1f));
+                    }
+                }
                 var r = go.GetComponentInChildren<MeshRenderer>();
-                if (r != null) return r.bounds;
+                if (r != null && r.bounds.size.y > 0.5f)
+                {
+                    src = "bounds";
+                    return r.bounds;
+                }
+                // TMP-Pfad lieferte nichts Messbares und renderer.bounds ist ~0:
+                // height über preferredHeight dennoch versuchen (ohne textBounds).
+                if (tmp != null)
+                {
+                    float wh = tmp.preferredHeight * tmp.transform.lossyScale.y;
+                    if (wh > 0.05f)
+                    {
+                        src = "tmp";
+                        return new Bounds(tmp.transform.position, new Vector3(1f, wh, 0.1f));
+                    }
+                }
                 return null;
             }
             catch { return null; }
