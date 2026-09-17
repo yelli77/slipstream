@@ -40,6 +40,16 @@ if [[ "$PLUGIN_BUILD" != "$JSON_BUILD" ]]; then
 fi
 
 echo "[check-build-number] OK: '$PLUGIN_BUILD' stimmt in Plugin.cs und version.json ueberein."
+
+# Job-Board-Sync-Gate (custom-build-365): headless Smoke-Test der kompletten
+# Upload -> Pool-Merge -> Broadcast -> jobTaken-Kette (2 echte Riptide-Clients,
+# in-process Dedicated-Schicht). MUSS vor dem .gz-Pack gruen sein.
+if [[ "${SKIP_JOBBOARD_GATE:-0}" == "1" ]]; then
+  echo "[check-build-number] SKIP_JOBBOARD_GATE=1 — Sync-Gate uebersprungen (nur fuer Notfaelle)." >&2
+else
+  bash "$ROOT/scripts/check-jobboard-sync.sh"
+fi
+
 exit 0
 
 # Nginx-Feed (version.json + .dll.gz in Container) synchronisieren
