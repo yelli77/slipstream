@@ -131,12 +131,17 @@ namespace StarTruckMP.Encoding
                 return null;
             }
 
-            // Groesse: ~0.35x Label-Hoehe. Label ist TMP-Klon mit localScale 5x5x5 (FontSize 36
-            // => Welt-Hoehe grob 5 Einheiten) oder Fallback-TextGenerator-Label (targetW 12).
-            // Wir orientieren uns an der effektiven Welthoehe des Labels:
+            // Groesse: Badge ≈ Label-Hoehe. size/labelH sind WORLD units
+            // (bounds.size.y). Das Label ist ein TMP-Klon mit localScale (5,5,5),
+            // das Quad haengt aber als Kind daran — seine localScale/localPosition
+            // muessen daher world→local umgerechnet werden (Division durch
+            // parent-lossyScale), sonst wirken Werte 5x zu gross/falsch platziert.
             var bounds = ComputeWorldBounds(nameLabel);
             float labelH = bounds.HasValue ? bounds.Value.size.y : 5f;
-            float size = Mathf.Max(1.5f, labelH * 1.05f);
+            float py = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.y);
+            float px = Mathf.Max(0.0001f, nameLabel.transform.lossyScale.x);
+            float worldSize = Mathf.Max(0.3f, labelH * 1.05f);
+            float worldY = labelH * 0.75f;
 
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             quad.name = "PioneerBadge_" + nameLabel.name;
@@ -180,15 +185,15 @@ namespace StarTruckMP.Encoding
             mr.reflectionProbeUsage = ReflectionProbeUsage.Off;
 
             quad.transform.SetParent(nameLabel.transform, false);
-            // Mittig ueber dem Text: horizontale Zentrierung (x=0), ueber dem Label (y nach
-            // oben), leicht nach vorn (z) gegen Z-Fighting.
-            quad.transform.localPosition = new Vector3(0f, labelH * 0.75f, 0.05f);
-            quad.transform.localScale = new Vector3(size, size, 1f);
+            // WORLD-Offsets/-Groesse → LOCAL umrechnen (parent lossyScale, TMP-Klon = 5x):
+            // y = halbe Badge-Hoehe ueber Label-Top + Luft, z leicht nach vorn gegen Z-Fighting.
+            quad.transform.localPosition = new Vector3(0f, worldY / py, 0.05f);
+            quad.transform.localScale = new Vector3(worldSize / px, worldSize / py, 1f);
             // Das Label selbst ist ein Billboard (LookRotation zur Kamera) — als Kind erbt das
             // Quad Rotation+Position. Quad-Mesh schaut +Z; LookRotation richtet +Z zur Kamera,
             // passt also direkt.
             quad.SetActive(true);
-            StarTruckMP.Log.LogInfo($"PioneerBadge: Badge an '{nameLabel.name}' gehaengt (size={size:F2}).");
+            StarTruckMP.Log.LogInfo($"PioneerBadge: Badge an '{nameLabel.name}' gehaengt (size={worldSize:F2}w off={worldY:F2}w scale={py:F1}).");
             return quad;
         }
 
