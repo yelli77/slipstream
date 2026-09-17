@@ -219,9 +219,9 @@ namespace StarTruckMP.StarTruckClient
             // testbar, tests/JobBoardSmokeTest); Konstanten + Wireformat + Pacing sind
             // dort EINZIGE Quelle — Verhalten identisch zum Stand 364 (gleiche Chunk-
             // Groesse, gleiches Pacing, gleiche Message-Reihenfolge => gleiche Wire-Bytes).
-            var stats = new StarTruckMP.Common.ChunkedSend.Stats();
+            var stats = new global::StarTruckMP.Common.ChunkedSend.Stats();
             byte transferId = (byte)(UnityEngine.Random.Range(1, 250));
-            return StarTruckMP.Common.ChunkedSend.SendChunked(
+            return global::StarTruckMP.Common.ChunkedSend.SendChunked(
                 messageTypeId, sector, client.Id, transferId, payload, client.Send, null, stats);
         }
 
