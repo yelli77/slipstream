@@ -34,7 +34,10 @@ public class JobBoardServer
         public float LastChunkTime;
 
         public IncomingUpload(int totalChunks)
-            => Chunks = new byte[Math.Max(totalChunks, 1)][];
+        {
+            Chunks = new byte[Math.Max(totalChunks, 1)][];
+            TotalChunks = totalChunks; // Fix: nie zugewiesen (CS0649) => Upload galt bei JEDEM Chunk als neu, Merge nie komplett
+        }
     }
 
     private readonly Dictionary<ushort, IncomingUpload> _uploads = new();
