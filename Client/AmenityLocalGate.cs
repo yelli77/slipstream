@@ -59,6 +59,16 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public static float AmenityGateMaxMeters = 750f;
 
+        /// <summary>
+        /// 369 (Fix B): Die Prioritaet dieses Gates. MUSS HOEHER sein als die des
+        /// 311 ShopAtJobBoardBays-Prefixes (explizit 400, siehe dort): Harmony sortiert
+        /// Prefixes absteigend nach Priority — laeuft das Gate zuerst und liefert false
+        /// (Suppress), werden NIEDRIGER-priorisierte Prefixes (inkl. 311-Rewrite) und der
+        /// Native-Body uebersprungen; liefert es true, laeuft die 311-Kette unangetastet.
+        /// </summary>
+        public const int GatePriority = 800;
+
+
         private static Harmony harmonyInstance;
         private static bool applied = false;
 
@@ -91,7 +101,7 @@ namespace StarTruckMP.StarTruckClient
                 harmonyInstance = new Harmony("StarTruckMP.AmenityLocalGate");
 
                 var gatePrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(AmenityGatePrefix));
-                gatePrefix.priority = 800; // HarmonyMethod-Feld (Property-Schreibweise kompiliert hier nicht)
+                gatePrefix.priority = GatePriority; // HarmonyMethod-Feld (Property-Schreibweise kompiliert hier nicht)
 
                 var canEnterType = AccessTools.TypeByName("DockingBaySharedAssets");
                 if (canEnterType != null)
@@ -121,6 +131,66 @@ namespace StarTruckMP.StarTruckClient
                 else
                 {
                     StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: Typ DockingBaySharedAssets nicht gefunden - Feature inaktiv.");
+                }
+
+                // ── 369 (Fix B): die TATSAECHLICH wirksamen Restpfade ──
+                //
+                // Beweis 368: Das DockingBaySharedAssets-Gate feuert (Suppress-Log auf
+                // beiden Clients), aber ALLE Spieler landen trotzdem in der Werkstatt —
+                // der Amenity-Eintritt laeuft auf einem Pfad, der CanEnterAmenity/
+                // EnterAmenity NIE beruehrt: AmenityTriggerZone (api-dump: OnTriggerStay,
+                // m_truckInTrigger/m_truckFullyInTrigger, onAmenityEnter) ist eine eigene
+                // Physik-Triggerzone im Stationsinneren. Der Ghost-Truck (RemoteTruck,
+                // aktiv auf Player-Truck-Layern, steht physisch IM Dock/Bay) loest
+                // OnTriggerStay aus -> onAmenityEnter -> TruckAmenityTerminal.OnAmenityEnter
+                // -> Werkstatt-/Amenity-Zustand. Das DockingBay-Gate sieht davon nichts.
+                //
+                // Zwei weitere Choke-Points:
+                //  1. AmenityTriggerZone.OnTriggerStay: Ghost-Trigger an der Quelle
+                //     abschneiden (der lokale Truck selbst laeuft nativ weiter).
+                //  2. TruckAmenityTerminal.OnAmenityEnter: LETZTE Sperre — jeder
+                //     Amenity-Eintritt, der nicht vom lokal anwesenden Spieler kommt
+                //     (lokaler Truck weit weg vom Terminal), wird unterdrueckt.
+                try
+                {
+                    var triggerZoneType = AccessTools.TypeByName("AmenityTriggerZone");
+                    var stay = AccessTools.Method(triggerZoneType, "OnTriggerStay");
+                    if (stay != null)
+                    {
+                        var stayPrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(TriggerZoneStayPrefix));
+                        stayPrefix.priority = GatePriority;
+                        harmonyInstance.Patch(stay, prefix: stayPrefix);
+                        StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Prefix auf AmenityTriggerZone.OnTriggerStay registriert (Fix B: Ghost-Trigger-Pfad).");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: AmenityTriggerZone.OnTriggerStay nicht gefunden - Restpfad-Gate dort inaktiv.");
+                    }
+                }
+                catch (Exception exTZ)
+                {
+                    StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: OnTriggerStay-Patch fehlgeschlagen: {exTZ.Message}");
+                }
+
+                try
+                {
+                    var terminalType = AccessTools.TypeByName("TruckAmenityTerminal");
+                    var onEnter = AccessTools.Method(terminalType, "OnAmenityEnter");
+                    if (onEnter != null)
+                    {
+                        var terminalPrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(TerminalEnterPrefix));
+                        terminalPrefix.priority = GatePriority; // VOR dem 315c-Prefix (400, ShopAtJobBoardBays)
+                        harmonyInstance.Patch(onEnter, prefix: terminalPrefix);
+                        StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Prefix auf TruckAmenityTerminal.OnAmenityEnter registriert (Fix B: letzte Sperre).");
+                    }
+                    else
+                    {
+                        StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: TruckAmenityTerminal.OnAmenityEnter nicht gefunden - Restpfad-Gate dort inaktiv.");
+                    }
+                }
+                catch (Exception exTE)
+                {
+                    StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: OnAmenityEnter-Patch fehlgeschlagen: {exTE.Message}");
                 }
             }
             catch (Exception ex)
@@ -159,7 +229,8 @@ namespace StarTruckMP.StarTruckClient
                 {
                     if (IsRemoteGhost(dockedTruck))
                     {
-                        LogSuppress(bay, $"docked truck ist Remote-Ghost '{dockedTruck.name}' (local '{myTruck.name}')");
+                        LogSuppress(bay.gameObject, "DockingBaySharedAssets.CanEnter/EnterAmenity",
+                            $"docked truck ist Remote-Ghost '{dockedTruck.name}' (local '{myTruck.name}')");
                         return false;
                     }
                     // Dock-Truck ist der lokale Truck -> legitimer eigener Dock.
@@ -172,7 +243,8 @@ namespace StarTruckMP.StarTruckClient
                 var dist = Vector3.Distance(bayPos, myTruck.transform.position);
                 if (dist > AmenityGateMaxMeters)
                 {
-                    LogSuppress(bay, $"local truck {dist:F0}m von Bay entfernt (Limit {AmenityGateMaxMeters:F0}m)");
+                    LogSuppress(bay.gameObject, "DockingBaySharedAssets.CanEnter/EnterAmenity",
+                        $"local truck {dist:F0}m von Bay entfernt (Limit {AmenityGateMaxMeters:F0}m)");
                     return false;
                 }
 
@@ -186,7 +258,129 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        /// <summary>
+        /// 369 (Fix B): Prefix vor AmenityTriggerZone.OnTriggerStay(Collider other).
+        ///
+        /// Root Cause des 368-Restbugs (Beweis: Suppress-Log des DockingBay-Gates AUF
+        /// BEIDEN Clients, trotzdem Werkstatt bei allen): Der Ghost-Truck steht
+        /// physisch in der Dock-/Amenity-Triggerzone der Station und loest dort
+        /// OnTriggerStay aus. Diese Zone feuert onAmenityEnter unabhAengig von
+        /// DockingBaySharedAssets.CanEnterAmenity/EnterAmenity — das 368-Gate sah
+        /// diesen Pfad nicht.
+        ///
+        /// Entscheidung:
+        ///  - Trigger-Quelle ist der LOKALE Truck -> native (Spieler ist selbst da).
+        ///  - Trigger-Quelle ist ein RemoteTruck-Ghost und der lokale Truck ist WEIT
+        ///    weg von der Zone -> skippen (return false): der Ghost repraesentiert nur
+        ///    einen fernen Spieler; sein Amenity-Eintritt darf hier nichts ausloesen.
+        ///  - Ghost, aber lokaler Truck NAHE -> native lassen (nicht mehr unterscheidbar,
+        ///    never-break-native).
+        ///  - OnTriggerExit bleibt unangetastet (natives Cleanup intakt).
+        /// </summary>
+        // ReSharper disable once RedundantAssignment
+        public static bool TriggerZoneStayPrefix(AmenityTriggerZone __instance, Collider other)
+        {
+            try
+            {
+                var client = global::StarTruckMP.StarTruckClient.StarTruckClient.client;
+                if (client == null || !client.IsConnected) return true; // Singleplayer: nativ
+                if (__instance == null || other == null) return true;
+
+                var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
+                if (myTruck == null) return true;
+
+                var triggerRoot = ResolveTriggerSource(other);
+                if (triggerRoot == null) return true;
+
+                // Lokaler Truck selbst: nie anfassen.
+                if (SameNativeObject(triggerRoot, myTruck)) return true;
+                if (!IsRemoteGhost(triggerRoot)) return true; // fremde native Objekte: nativ
+
+                // Ghost-Trigger: nur unterdruecken, wenn der lokale Spieler definitiv
+                // nicht selbst in der Naehe der Zone ist.
+                var myPos = (myTruck.transform != null) ? myTruck.transform.position : Vector3.zero;
+                var zonePos = (__instance.transform != null) ? __instance.transform.position : Vector3.zero;
+                var dist = Vector3.Distance(zonePos, myPos);
+                if (dist > AmenityGateMaxMeters)
+                {
+                    LogSuppress(__instance.gameObject, "TriggerZone.OnTriggerStay",
+                        $"Ghost-Trigger '{triggerRoot.name}', local truck {dist:F0}m von Zone entfernt (Limit {AmenityGateMaxMeters:F0}m)");
+                    return false; // kein m_truckInTrigger, kein onAmenityEnter vom Ghost
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"{LogTag} TriggerZoneStayPrefix Fehler: {ex.Message}");
+                return true; // niemals native Pfade per Exception blockieren
+            }
+        }
+
+        /// <summary>
+        /// 369 (Fix B): Prefix vor TruckAmenityTerminal.OnAmenityEnter — die LETZTE
+        /// Sperre vor dem Werkstatt-/Amenity-Zustand. Egal ueber welchen Pfad das
+        /// m_enterAmenityEvent hier ankommt (DockingCoroutine, AmenityTriggerZone,
+        /// direktes Event): wenn der lokale Truck weit vom Terminal entfernt ist, kann
+        /// der Eintritt nicht vom lokalen Spieler stammen -> skippen. Der Spieler, der
+        /// selbst dockt/steht, ist natuerlich neben seinem Terminal (Docked-Truck und
+        /// Terminal teilen die Station).
+        /// Prioritaet 800: laeuft VOR dem 315c-Shop-Prefix (400) von ShopAtJobBoardBays —
+        /// ein unterdrueckter fremder Eintritt kann dort niemals ein Shop-Open triggern.
+        /// </summary>
+        // ReSharper disable once RedundantAssignment
+        public static bool TerminalEnterPrefix(TruckAmenityTerminal __instance)
+        {
+            try
+            {
+                var client = global::StarTruckMP.StarTruckClient.StarTruckClient.client;
+                if (client == null || !client.IsConnected) return true; // Singleplayer: nativ
+                if (__instance == null) return true;
+
+                var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
+                if (myTruck == null) return true;
+
+                var termPos = (__instance.transform != null) ? __instance.transform.position : Vector3.zero;
+                var myPos = (myTruck.transform != null) ? myTruck.transform.position : Vector3.zero;
+                var dist = Vector3.Distance(termPos, myPos);
+                if (dist > AmenityGateMaxMeters)
+                {
+                    LogSuppress(__instance.gameObject, "TruckAmenityTerminal.OnAmenityEnter",
+                        $"local truck {dist:F0}m vom Terminal entfernt (Limit {AmenityGateMaxMeters:F0}m) — Eintritt nicht vom lokalen Spieler");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"{LogTag} TerminalEnterPrefix Fehler: {ex.Message}");
+                return true;
+            }
+        }
+
         // ── Helpers ──
+
+        /// <summary>
+        /// Liefert das Root-GameObject der OnTriggerStay-Quelle: attachedRigidbody
+        /// zuerst (Rigidbody-Trucks), sonst das Collider-GO selbst, sonst der oberste
+        /// Parent. Niemals werfen.
+        /// </summary>
+        private static UnityEngine.Object ResolveTriggerSource(Collider other)
+        {
+            try
+            {
+                var rb = other.attachedRigidbody;
+                var go = rb != null ? rb.gameObject : other.gameObject;
+                if (go == null) return null;
+                // Topmost Parent (Trigger-Zonen-Subcollider zeigen auf den Truck-Root).
+                var t = go.transform;
+                while (t != null && t.parent != null) t = t.parent;
+                return (t != null) ? t.gameObject : go;
+            }
+            catch { return null; }
+        }
+
 
         private static DockingBay ResolveBayCached(DockingBaySharedAssets shared)
         {
@@ -294,14 +488,15 @@ namespace StarTruckMP.StarTruckClient
             catch { return false; }
         }
 
-        private static void LogSuppress(DockingBay bay, string reason)
+        private static void LogSuppress(UnityEngine.Object anchor, string patchMethod, string reason)
         {
             suppressCount++;
             if (Time.realtimeSinceStartup - lastSuppressedLog < 5f) return;
             lastSuppressedLog = Time.realtimeSinceStartup;
-            var bayName = "<unknown>";
-            try { bayName = bay.gameObject?.name ?? "<unknown>"; } catch { }
-            StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Amenity-Eintritt unterdrueckt (#{suppressCount}, bay={bayName}): {reason}");
+            var anchorName = "<unknown>";
+            try { anchorName = (anchor as MonoBehaviour)?.gameObject?.name
+                    ?? (anchor as GameObject)?.name ?? anchor?.name ?? "<unknown>"; } catch { }
+            StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Amenity-Eintritt unterdrueckt (#{suppressCount}, {patchMethod}, anchor={anchorName}): {reason}");
         }
     }
 }

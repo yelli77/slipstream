@@ -61,6 +61,16 @@ namespace UnityEngine
     public class Transform
     {
         public Vector3 position;
+        public Transform parent;
+    }
+    public class Rigidbody
+    {
+        public GameObject gameObject;
+    }
+    public class Collider : Object
+    {
+        public Rigidbody attachedRigidbody;
+        public GameObject gameObject;
     }
     public static class Time
     {
@@ -68,13 +78,15 @@ namespace UnityEngine
     }
 }
 
-// ── Game proxy stubs ──
+// ── Game proxy stubs (Restpfade, Fix B) ──
 public class DockingBaySharedAssets : UnityEngine.Object { }
 public class DockingBay : UnityEngine.MonoBehaviour
 {
     public DockingBaySharedAssets m_sharedAssets;   // proxy property surface
     public UnityEngine.GameObject m_truck;          // docked truck (proxy property)
 }
+public class AmenityTriggerZone : UnityEngine.MonoBehaviour { }
+public class TruckAmenityTerminal : UnityEngine.MonoBehaviour { }
 
 // ── Mod statics stubs ──
 namespace StarTruckMP { public static class Log { public static List<string> Lines = new List<string>();
@@ -182,6 +194,112 @@ public static class TestGate
             UnityEngine.Time.realtimeSinceStartup = 10f; // TTL expired -> registry rescan finds same bay
             Check("cache expired -> rescan, still suppressed (ghost)", !StarTruckMP.StarTruckClient.AmenityLocalGate.AmenityGatePrefix(shared));
         }
+        // ── 369 Fix B: AmenityTriggerZone.OnTriggerStay (der 368-Restpfad) ──
+        // Case 8: Ghost loest OnTriggerStay aus, lokaler Truck weit weg -> suppress
+        {
+            var zone = new AmenityTriggerZone();
+            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop");
+            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(500, 0, 0) };
+            UnityEngine.Object.Registry.Add(zone);
+            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = farMyTruck; // 9000m
+            var col = new UnityEngine.Collider { gameObject = ghost, attachedRigidbody = new UnityEngine.Rigidbody { gameObject = ghost } };
+            Check("B1: Ghost-Trigger in Zone + lokaler Truck weit -> suppress",
+                !StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
+        }
+        // Case 9: lokaler Truck selbst in der Zone -> native (allow)
+        {
+            var zone = new AmenityTriggerZone();
+            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop2");
+            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
+            UnityEngine.Object.Registry.Add(zone);
+            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck; // 10m
+            var col = new UnityEngine.Collider { gameObject = dockedMyTruck, attachedRigidbody = new UnityEngine.Rigidbody { gameObject = dockedMyTruck } };
+            Check("B2: lokaler Truck in Zone -> allow (nativ)",
+                StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
+        }
+        // Case 10: Ghost-Trigger, aber lokaler Truck NAHE -> allow (never break native)
+        {
+            var zone = new AmenityTriggerZone();
+            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop3");
+            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
+            UnityEngine.Object.Registry.Add(zone);
+            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck;
+            var col = new UnityEngine.Collider { gameObject = ghost, attachedRigidbody = null };
+            Check("B3: Ghost-Trigger + lokaler Truck nahe -> allow (ambiguous)",
+                StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
+        }
+        // Case 11: TruckAmenityTerminal.OnAmenityEnter — letzte Sperre
+        {
+            var termFar = new TruckAmenityTerminal();
+            termFar.gameObject = new UnityEngine.GameObject("Terminal_Far");
+            termFar.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(500, 0, 0) };
+            UnityEngine.Object.Registry.Add(termFar);
+            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = farMyTruck; // 9000m
+            Check("B4: Terminal weit vom lokalen Truck -> suppress (letzter Choke-Point)",
+                !StarTruckMP.StarTruckClient.AmenityLocalGate.TerminalEnterPrefix(termFar));
+
+            var termNear = new TruckAmenityTerminal();
+            termNear.gameObject = new UnityEngine.GameObject("Terminal_Near");
+            termNear.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(12, 0, 0) };
+            UnityEngine.Object.Registry.Add(termNear);
+            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck;
+            Check("B5: Terminal am eigenen Dock -> allow (eigener Spieler)",
+                StarTruckMP.StarTruckClient.AmenityLocalGate.TerminalEnterPrefix(termNear));
+        }
+
+        // ── 369 Fix C: Gate(800) vs. 311 Shop-Rewrite(400) — Harmony-Chain-Simulation ──
+        // Harmony sortiert Prefixes absteigend nach Priority; ein Prefix mit return false
+        // skippt Native + alle niedriger priorisierten Prefixes. ShopPrefixPriority
+        // (=400) ist hier gespiegelt, weil ShopAtJobBoardBays.cs (Il2Cpp-Abhaengigkeiten)
+        // nicht im Stub-Projekt kompiliert.
+        {
+            const int shopPrefixPriorityMirrored = 400;
+            Check("C0: Gate-Priority (800) > 311-ShopPrefix-Priority (400) — Gate entscheidet zuerst",
+                StarTruckMP.StarTruckClient.AmenityLocalGate.GatePriority > shopPrefixPriorityMirrored);
+        }
+        RunChainSim(dockedMyTruck, ghost, farMyTruck);
+
+        /// <summary>
+        /// 369 Fix C: Simuliert die Harmony-Prefix-Kette auf
+        /// DockingBaySharedAssets.EnterAmenity — Gate (Prio 800, ECHTER Code) zuerst,
+        /// dann der 311-Shop-Rewrite (Prio 400, gespiegelt), dann der Postfix
+        /// (Screen-Open, gespiegelt). Beweist: Ghost-Dock => kein Rewrite, kein
+        /// Screen-Open; legitimes Shop-Dock => Rewrite + Screen-Open laufen.
+        /// </summary>
+        void RunChainSim(UnityEngine.GameObject localTruck, UnityEngine.GameObject ghostTruck, UnityEngine.GameObject farTruck)
+        {
+            int shopRewrites, screenOpens;
+            void Chain(UnityEngine.GameObject docked, UnityEngine.GameObject myTruckState, long ptr, string label)
+            {
+                shopRewrites = 0; screenOpens = 0;
+                StarTruckMP.StarTruckClient.StarTruckClient.myTruck = myTruckState;
+                // Priorities absteigend: Gate(800) zuerst, dann 311-Prefix(400), dann Postfix.
+                bool gateAllows = StarTruckMP.StarTruckClient.AmenityLocalGate.AmenityGatePrefix(Shared(ptr));
+                // 311-EnterAmenityPrefix (gespiegelt): void-Prefix, schreibt __args um
+                // (JobsBoard->Shop) und feuert den bewiesenen ShopScreen-Open-Pfad.
+                if (gateAllows) // nur bei gateAllows erreicht Harmony den 311-Prefix + Native + Postfix
+                {
+                    // nur JobsBoard-Bays werden umgeschrieben (311-Guard gespiegelt)
+                    bool isJobsBoardBay = true; // Test-Bays sind JobsBoard-Bays
+                    if (isJobsBoardBay) { shopRewrites++; screenOpens++; }
+                }
+                Check($"C1[{label}]: Ghost/Fern-Dock -> KEIN 311-Rewrite, KEIN Screen-Open (rewrites={shopRewrites}, opens={screenOpens})",
+                    docked == ghostTruck || myTruckState == farTruck
+                        ? (shopRewrites == 0 && screenOpens == 0)
+                        : (shopRewrites == 1 && screenOpens == 1));
+            }
+
+            // Ghost dockt (m_truck == RemoteTruck), lokaler Truck weit weg:
+            sharedPtr = 8100;
+            MakeBay(8100, ghostTruck, ghostTruck.transform.position);
+            Chain(ghostTruck, farTruck, 8100, "Ghost-Dock");
+
+            // Legitimes Shop-Dock: m_truck == lokaler Truck, truck an der Bay:
+            sharedPtr = 8101;
+            MakeBay(8101, localTruck, localTruck.transform.position);
+            Chain(localTruck, localTruck, 8101, "Legit-Shop-Dock");
+        }
+
         Console.WriteLine("Log lines: " + StarTruckMP.Log.Lines.Count);
         foreach (var l in StarTruckMP.Log.Lines) Console.WriteLine("  " + l);
         Console.WriteLine(failed == 0 ? "ALL TESTS PASSED" : $"FAILURES: {failed}");
