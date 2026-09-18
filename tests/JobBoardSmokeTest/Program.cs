@@ -60,6 +60,8 @@ public static class Program
         public string Name;
         public readonly Dictionary<string, List<string>> PoolBySector = new();
         public readonly List<string> TakenEvents = new();
+        // custom-build-369-Nachtrag: transferId je Pool-Broadcast (chunkIndex==0)
+        public readonly List<byte> BroadcastTransferIds = new();
     }
 
     private static readonly ClientState _stateA = new() { Name = "A" };
@@ -212,6 +214,25 @@ public static class Program
             Check("g6: kein Empfangsfehler im echten Pfad (keine recv-WARN-Logs waehrend des Gross-Transfers)",
                 _recvWarnA == recvWarnBeforeA && _recvWarnB == recvWarnBeforeB);
 
+            // ---- (h) custom-build-369-Nachtrag: serverseitige transferId-Eindeutigkeit ----
+            // Zwei SOFORT aufeinanderfolgende Broadcasts (im selben Tick, derselbe Sektor)
+            // muessen unterschiedliche transferIds liefern (vorher: float Now()*37%251
+            // quantisierte in ~128s-Fenster -> identische Ids).
+            int idsA0 = _stateA.BroadcastTransferIds.Count, idsB0 = _stateB.BroadcastTransferIds.Count;
+            _handler.JobBoards.BroadcastPool(_server, SectorBig);
+            _handler.JobBoards.BroadcastPool(_server, SectorBig);
+            bool twoReceived = WaitUntil(() =>
+                _stateA.BroadcastTransferIds.Count >= idsA0 + 2 && _stateB.BroadcastTransferIds.Count >= idsB0 + 2,
+                TimeSpan.FromSeconds(10));
+            // pro Client kommen chunk0-Ids in Reihenfolge -> die LETZTEN beiden Eintraege
+            // sind die beiden soeben ausgeloesten Broadcasts
+            byte idA1 = _stateA.BroadcastTransferIds[_stateA.BroadcastTransferIds.Count - 2];
+            byte idA2 = _stateA.BroadcastTransferIds[_stateA.BroadcastTransferIds.Count - 1];
+            byte idB1 = _stateB.BroadcastTransferIds[_stateB.BroadcastTransferIds.Count - 2];
+            byte idB2 = _stateB.BroadcastTransferIds[_stateB.BroadcastTransferIds.Count - 1];
+            Check($"h1: zwei sofort aufeinanderfolgende Broadcasts haben unterschiedliche transferIds (A: {idA1}→{idA2}, B: {idB1}→{idB2})",
+                twoReceived && idA1 != idA2 && idB1 != idB2);
+
             Console.WriteLine($"\n=== Ergebnis: {((_failures == 0) ? "ALLE ASSERTIONS GRUEN" : $"{_failures} FAIL")}, Dauer {sw.Elapsed.TotalSeconds:F1}s ===");
             return _failures == 0 ? 0 : 1;
         }
@@ -312,6 +333,7 @@ public static class Program
                 ushort chunkIndex = e.Message.GetUShort();
                 ushort totalChunks = e.Message.GetUShort();
                 byte[] data = e.Message.GetBytes();
+                if (chunkIndex == 0) state.BroadcastTransferIds.Add(transferId); // Fix-369-Assertion
                 // ECHTE Empfangslogik (PoolReceive, identisch zum Mod-Client) —
                 // inkl. 'recv: poolDownload ...'-Log und 'Pool vollstaendig'.
                 if (recv.HandleChunk(sector, transferId, chunkIndex, totalChunks, data)

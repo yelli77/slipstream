@@ -55,6 +55,18 @@ public class JobBoardServer
 
     private static float Now() => (float)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds;
 
+    // custom-build-369-Nachtrag: transferId ueber die Leitung ist ein byte. Der alte
+    // (byte)(Now()*37%251)-Wert quantisierte bei float32-Epochenzeit (~1.8e9 s) in
+    // ~128s-Fenstern -> ALLE Broadcasts im Fenster teilten dieselbe transferId
+    // (klientseitiges Transfer-Mixing). Jetzt: globaler monotoner Counter,
+    // Interlocked fuer Thread-Sicherheit (Broadcasts laufen auf verschiedenen Threads).
+    private static int _nextTransferId;
+
+    /// <summary>Eindeutige, monoton steigende transferId (byte-Wire-Format). Zwei
+    /// aufeinanderfolgende Broadcasts (auch an verschiedene Clients/Sektoren im selben
+    /// Tick) bekommen niemals denselben Wert (Counter-Inkrement, nicht Zeit-basiert).</summary>
+    private static byte NextTransferId() => (byte)(System.Threading.Interlocked.Increment(ref _nextTransferId) & 0xFF);
+
     public void HandleUpload(MessageReceivedEventArgs e, Riptide.Server server)
     {
         // Wireformat (identisch zu ChunkedBlobTransfer-Relay-Muster):
@@ -157,7 +169,7 @@ public class JobBoardServer
         if (members.Count == 0) return;
 
         int totalChunks = Math.Max(1, (payload.Length + MAX_CHUNK_PAYLOAD - 1) / MAX_CHUNK_PAYLOAD);
-        byte transferId = (byte)(Now() * 37 % 251); // pro Broadcast eindeutig genug
+        byte transferId = NextTransferId();
         // 343: Chunks nur in kleinen Bursts senden — Riptide-Reliable-Bursts verlieren
         // sonst den letzten Chunk (Lesson 335). 15 Chunks pro Burst, 2 ms Pause dazwischen.
         const int SEND_PACING = 15;
@@ -225,7 +237,7 @@ public class JobBoardServer
             return;
         }
         int totalChunks = Math.Max(1, (payload.Length + MAX_CHUNK_PAYLOAD - 1) / MAX_CHUNK_PAYLOAD);
-        byte transferId = (byte)(Now() * 53 % 251);
+        byte transferId = NextTransferId();
         for (int ci = 0; ci < totalChunks; ci++)
         {
             int len = Math.Min(MAX_CHUNK_PAYLOAD, payload.Length - ci * MAX_CHUNK_PAYLOAD);
