@@ -51,6 +51,11 @@ namespace UnityEngine
         // 377-Diag-Stub: reicht fuer die Testsuite (nur Logging, keine Assertions darauf).
         public static string LayerToName(int layer) => $"Layer{layer}";
     }
+    public static class Physics
+    {
+        // 378-Diag-Stub: reicht fuer die Testsuite (nur Logging, keine Assertions darauf).
+        public static bool GetIgnoreLayerCollision(int layerA, int layerB) => false;
+    }
     public class Component : Object
     {
         public GameObject gameObject;

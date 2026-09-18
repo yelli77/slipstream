@@ -117,6 +117,34 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"377 AmenityLocalGate-Diag: k_triggerColliderLayer nicht lesbar: {ex.Message}");
             }
 
+            // 378 Diagnose (additiv, KEINE Verhaltensaenderung): komplette Layer-Tabelle
+            // 0-31 + fuer jeden Layer, ob die Physik-Engine ihn aktuell gegen Layer 26
+            // ("PlayerTruckTrigger", empirisch aus Build-377-Log bestaetigt: das ist der
+            // Layer der Werkstatt-/Amenity-Triggerzone) ignoriert. Ziel: einen frei
+            // ungenutzten Layer-Index finden, auf den wir Ghost-Trucks legen koennen,
+            // OHNE einen der bestehenden, benannten Layer zu verwenden - dieser Fakt ist
+            // rein projektstatisch und braucht keinen Dock-/Werkstatt-Test, nur einen
+            // normalen Spielstart.
+            try
+            {
+                const int triggerZoneLayer = 26; // PlayerTruckTrigger (Build-377-Log, Zeile 420)
+                var lines = new System.Collections.Generic.List<string>();
+                var freeLayers = new System.Collections.Generic.List<int>();
+                for (int i = 0; i <= 31; i++)
+                {
+                    string nm = UnityEngine.LayerMask.LayerToName(i);
+                    bool ignoresTrigger = UnityEngine.Physics.GetIgnoreLayerCollision(i, triggerZoneLayer);
+                    lines.Add($"{i}:'{nm}'{(ignoresTrigger ? "(ignoriertZone26)" : "")}");
+                    if (string.IsNullOrEmpty(nm) && i >= 8) freeLayers.Add(i); // 0-7 sind Unity-Builtins, nie anfassen
+                }
+                StarTruckMP.Log.LogInfo($"378 AmenityLocalGate-Diag: Layer-Tabelle: [{string.Join(", ", lines)}]");
+                StarTruckMP.Log.LogInfo($"378 AmenityLocalGate-Diag: Freie/unbenannte Layer-Kandidaten (>=8) fuer Ghost-Trucks: [{string.Join(", ", freeLayers)}]");
+            }
+            catch (Exception ex1)
+            {
+                StarTruckMP.Log.LogWarning($"378 AmenityLocalGate-Diag: Layer-Tabellen-Dump fehlgeschlagen: {ex1.Message}");
+            }
+
             var envMeters = Environment.GetEnvironmentVariable("STRUCKMP_AMENITY_GATE_METERS");
             if (!string.IsNullOrEmpty(envMeters) &&
                 float.TryParse(envMeters, System.Globalization.NumberStyles.Float,
