@@ -102,6 +102,10 @@ public static class Program
                     var parsed = JobBoardCodec.DecodeJobs(newFmt);
                     Check("f2: NEUES Client-Format (int32-LE-Strings) decodiert korrekt (3/3 Jobs)",
                         parsed.Count == 3 && parsed[0].QuestId == "jobNew-0001");
+            // custom-build-369-Diagnose: Riptide-Interne Logs (ACK-Timeouts, Disconnects,
+            // 'Could not guarantee delivery') sichtbar machen — genau solche stillen
+            // Ereignisse sind der verdachtige Verlustpfad bei Gross-Transfers.
+            Riptide.RiptideLogger.Initialize(Console.WriteLine, false);
             StartServer();
             StartTicker();
             ConnectClients();
@@ -189,6 +193,8 @@ public static class Program
 
             bool bigMerged = WaitUntil(() => _store.GetJobCount(SectorBig) == BigJobCount && LogContains(SectorBig), TimeSpan.FromSeconds(20));
             Check($"g2: Gross-Upload gemerged ({_store.GetJobCount(SectorBig)}/{BigJobCount})", bigMerged);
+            if (!bigMerged)
+                Console.WriteLine($"[diag] nach 20s: A connected={_clientA.IsConnected}, B connected={_clientB.IsConnected}, StoreBig={_store.GetJobCount(SectorBig)}, PoolA={PoolCount(_stateA, SectorBig)}, PoolB={PoolCount(_stateB, SectorBig)}");
 
             int bigExpected = Math.Max(1, (bigPayload.Length + ChunkedSend.MAX_CHUNK - 1) / ChunkedSend.MAX_CHUNK);
             bool bigPoolA = WaitUntil(() => PoolCount(_stateA, SectorBig) == BigJobCount, TimeSpan.FromSeconds(20));
