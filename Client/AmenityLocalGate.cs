@@ -259,7 +259,7 @@ namespace StarTruckMP.StarTruckClient
         }
 
         /// <summary>
-        /// 369 (Fix B): Prefix vor AmenityTriggerZone.OnTriggerStay(Collider other).
+        /// 369 (Fix B): Prefix vor AmenityTriggerZone.OnTriggerStay(Collider col).
         ///
         /// Root Cause des 368-Restbugs (Beweis: Suppress-Log des DockingBay-Gates AUF
         /// BEIDEN Clients, trotzdem Werkstatt bei allen): Der Ghost-Truck steht
@@ -268,28 +268,40 @@ namespace StarTruckMP.StarTruckClient
         /// DockingBaySharedAssets.CanEnterAmenity/EnterAmenity — das 368-Gate sah
         /// diesen Pfad nicht.
         ///
+        /// 370-Fix (KRITISCH): Der Harmony-Prefix ist bisher NIE angewendet worden!
+        /// Feldlog (custom-build-369, zwei unabhaengige Clients): "Failed to patch
+        /// void AmenityTriggerZone::OnTriggerStay(UnityEngine.Collider col):
+        /// System.Exception: Parameter "other" not found in method [...] OnTriggerStay
+        /// (UnityEngine.Collider col)". Harmony matcht Prefix-Parameter NAMENTLICH
+        /// gegen die Original-Methode - die native Methode nennt ihren Parameter
+        /// "col", nicht "other". Bei Namens-Mismatch verwirft Harmony den KOMPLETTEN
+        /// Patch (IL Compile Error), OHNE die App abstuerzen zu lassen - nur eine
+        /// leicht zu uebersehende Warnung im Log. Damit war dieser Choke-Point (der
+        /// laut Code-Kommentar "TATSAECHLICH wirksame" Pfad) seit Build 368 auf JEDEM
+        /// Client komplett inaktiv, unabhaengig von der Gate-Logik selbst.
+        /// Fix: Parametername auf "col" umbenannt (muss exakt der nativen Signatur
+        /// entsprechen, damit Harmony ihn binden kann).
+        ///
         /// Entscheidung:
         ///  - Trigger-Quelle ist der LOKALE Truck -> native (Spieler ist selbst da).
-        ///  - Trigger-Quelle ist ein RemoteTruck-Ghost und der lokale Truck ist WEIT
-        ///    weg von der Zone -> skippen (return false): der Ghost repraesentiert nur
-        ///    einen fernen Spieler; sein Amenity-Eintritt darf hier nichts ausloesen.
-        ///  - Ghost, aber lokaler Truck NAHE -> native lassen (nicht mehr unterscheidbar,
-        ///    never-break-native).
+        ///  - Trigger-Quelle ist ein RemoteTruck-Ghost -> IMMER skippen (370: die alte
+        ///    Distanz-Ausnahme "Ghost, aber lokaler Truck NAHE -> allow" ist entfernt,
+        ///    siehe unten).
         ///  - OnTriggerExit bleibt unangetastet (natives Cleanup intakt).
         /// </summary>
         // ReSharper disable once RedundantAssignment
-        public static bool TriggerZoneStayPrefix(AmenityTriggerZone __instance, Collider other)
+        public static bool TriggerZoneStayPrefix(AmenityTriggerZone __instance, Collider col)
         {
             try
             {
                 var client = global::StarTruckMP.StarTruckClient.StarTruckClient.client;
                 if (client == null || !client.IsConnected) return true; // Singleplayer: nativ
-                if (__instance == null || other == null) return true;
+                if (__instance == null || col == null) return true;
 
                 var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
                 if (myTruck == null) return true;
 
-                var triggerRoot = ResolveTriggerSource(other);
+                var triggerRoot = ResolveTriggerSource(col);
                 if (triggerRoot == null) return true;
 
                 // Lokaler Truck selbst: nie anfassen.
