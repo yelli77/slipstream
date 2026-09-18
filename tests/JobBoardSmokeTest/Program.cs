@@ -245,8 +245,14 @@ public static class Program
             // muessen unterschiedliche transferIds liefern (vorher: float Now()*37%251
             // quantisierte in ~128s-Fenster -> identische Ids).
             int idsA0 = _stateA.BroadcastTransferIds.Count, idsB0 = _stateB.BroadcastTransferIds.Count;
-            _handler.JobBoards.BroadcastPool(_server, SectorBig);
-            _handler.JobBoards.BroadcastPool(_server, SectorBig);
+            // Haertung: BroadcastPool erzeugt Messages aus dem Pool (JobBoardServer.cs:181) —
+            // auch diese Aufrufe muessen unter _netLock laufen (exakter Crash-Stack des
+            // Riptide-Pool-Races: Message.RetrieveFromPool in BroadcastPool).
+            lock (_netLock)
+            {
+                _handler.JobBoards.BroadcastPool(_server, SectorBig);
+                _handler.JobBoards.BroadcastPool(_server, SectorBig);
+            }
             bool twoReceived = WaitUntil(() =>
                 _stateA.BroadcastTransferIds.Count >= idsA0 + 2 && _stateB.BroadcastTransferIds.Count >= idsB0 + 2,
                 TimeSpan.FromSeconds(10));
@@ -302,8 +308,11 @@ public static class Program
         _clientB = new Riptide.Client();
         _clientA.MessageReceived += (s, e) => OnClientMessage(e, _stateA, _recvA);
         _clientB.MessageReceived += (s, e) => OnClientMessage(e, _stateB, _recvB);
-        _clientA.Connect($"127.0.0.1:{ServerPort}"); // Riptide 2.x: Port gehoert in die Host-Adresse
-        _clientB.Connect($"127.0.0.1:{ServerPort}");
+        lock (_netLock) // Haertung: Connect erzeugt Handshake-Messages aus demselben Pool
+        {
+            _clientA.Connect($"127.0.0.1:{ServerPort}"); // Riptide 2.x: Port gehoert in die Host-Adresse
+            _clientB.Connect($"127.0.0.1:{ServerPort}");
+        }
         WaitUntil(() => _clientA.IsConnected && _clientB.IsConnected, TimeSpan.FromSeconds(10));
         if (!_clientA.IsConnected || !_clientB.IsConnected)
             throw new Exception($"Clients nicht verbunden (A={_clientA.IsConnected}, B={_clientB.IsConnected})");
