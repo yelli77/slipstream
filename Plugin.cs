@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-375";
+    public const string customBuildNumber = "custom-build-376";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -70,7 +70,25 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
         global::StarTruckMP.StarTruckClient.ShopAtJobBoardBays.Apply();
         // 368: Amenity-Gate - Repair/Werkstatt-Eintritt nur fuer den Spieler, der dockt.
-        global::StarTruckMP.StarTruckClient.AmenityLocalGate.Apply();
+        // 376: A/B-Kill-Switch (User-Verdacht: Werkstatt-Crashes traten erst NACH
+        // Einfuehrung dieses Gates auf). Gate bleibt per Default AKTIV (kein
+        // Verhaltensaenderung fuer normale Spieler) - kann aber gezielt per Steam-
+        // Startoption "STRUCKMP_DISABLE_AMENITY_GATE=1 %command%" oder per Datei
+        // STRUCKMP_DISABLE_AMENITY_GATE.txt im BepInEx-Config-Ordner deaktiviert
+        // werden, um kontrolliert zu testen, ob der Crash auch OHNE das Gate auftritt.
+        string disableGateEnv = Environment.GetEnvironmentVariable("STRUCKMP_DISABLE_AMENITY_GATE");
+        bool disableGateFile;
+        try
+        {
+            disableGateFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_DISABLE_AMENITY_GATE.txt"));
+        }
+        catch { disableGateFile = false; }
+        bool disableGate = (disableGateEnv == "1") || disableGateFile;
+        StarTruckMP.Log.LogInfo($"376 AmenityLocalGate Kill-Switch: env={disableGateEnv ?? "<null>"} file={disableGateFile} -> {(disableGate ? "DEAKTIVIERT" : "aktiv")}");
+        if (!disableGate)
+        {
+            global::StarTruckMP.StarTruckClient.AmenityLocalGate.Apply();
+        }
         // Build-334-Diagnose: beweist, dass der IdSync-Postfix wirklich applied ist.
         StarTruckMP.Log.LogInfo("Harmony: JobBoardSyncPatches applied (Postfix auf ProceduralJobGenerator.GenerateJobsForAllSectors -> JobBoardIdSync.OnLocalJobsGenerated)");
 
