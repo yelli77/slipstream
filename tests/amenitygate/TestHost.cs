@@ -44,6 +44,12 @@ namespace UnityEngine
     {
         public GameObject(string n) { name = n; }
         public Transform transform;
+        public int layer = 0; // 377-Diag-Stub: reines Test-Double, keine echte Physik-Layer-Logik
+    }
+    public static class LayerMask
+    {
+        // 377-Diag-Stub: reicht fuer die Testsuite (nur Logging, keine Assertions darauf).
+        public static string LayerToName(int layer) => $"Layer{layer}";
     }
     public class Component : Object
     {
@@ -86,6 +92,7 @@ public class DockingBay : UnityEngine.MonoBehaviour
 {
     public DockingBaySharedAssets m_sharedAssets;   // proxy property surface
     public UnityEngine.GameObject m_truck;          // docked truck (proxy property)
+    public static int k_triggerColliderLayer = 0;   // 377-Diag-Stub: native Konstante, hier nur Platzhalter
 }
 public class AmenityTriggerZone : UnityEngine.MonoBehaviour { }
 public class TruckAmenityTerminal : UnityEngine.MonoBehaviour { }

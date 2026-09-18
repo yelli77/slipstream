@@ -80,12 +80,42 @@ namespace StarTruckMP.StarTruckClient
         private const float BayCacheTtlSeconds = 2f;
 
         private static float lastSuppressedLog = -999f;
+        private static float lastLayerDiagLog = -999f;
         private static int suppressCount = 0;
 
         public static void Apply()
         {
             if (applied) return;
             applied = true;
+
+            // 377 Diagnose (rein additiv, KEINE Verhaltensaenderung): liest den nativen
+            // Layer, auf dem DockingBay seine Trigger-Collider fuer den Amenity-Ablauf
+            // erwartet (DockingBay.k_triggerColliderLayer - siehe Klassenkommentar oben,
+            // Punkt 3). Ziel: statt der Nachbearbeitung per Harmony-Gate (368/369/370)
+            // pruefen, ob wir Ghost-Trucks stattdessen sauber ueber die Unity-Physik-
+            // Layer-Kollisionsmatrix (Physics.IgnoreLayerCollision) von diesem Layer
+            // fernhalten koennen - dann wuerde OnTriggerStay fuer Ghosts dort NATIV nie
+            // mehr feuern, ganz ohne unsere Nachbearbeitung.
+            try
+            {
+                int triggerLayerRaw = global::DockingBay.k_triggerColliderLayer;
+                string AsLayerName(int idx) => (idx >= 0 && idx <= 31) ? UnityEngine.LayerMask.LayerToName(idx) : "<out-of-range>";
+                var maskBits = new System.Collections.Generic.List<string>();
+                for (int i = 0; i <= 31; i++)
+                {
+                    if ((triggerLayerRaw & (1 << i)) != 0)
+                    {
+                        maskBits.Add($"{i}:{AsLayerName(i)}");
+                    }
+                }
+                StarTruckMP.Log.LogInfo(
+                    $"377 AmenityLocalGate-Diag: DockingBay.k_triggerColliderLayer={triggerLayerRaw} " +
+                    $"(alsLayerIndex={AsLayerName(triggerLayerRaw)}, alsBitmaskGesetzteBits=[{string.Join(", ", maskBits)}])");
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"377 AmenityLocalGate-Diag: k_triggerColliderLayer nicht lesbar: {ex.Message}");
+            }
 
             var envMeters = Environment.GetEnvironmentVariable("STRUCKMP_AMENITY_GATE_METERS");
             if (!string.IsNullOrEmpty(envMeters) &&
@@ -303,6 +333,31 @@ namespace StarTruckMP.StarTruckClient
 
                 var triggerRoot = ResolveTriggerSource(col);
                 if (triggerRoot == null) return true;
+
+                // 377 Diagnose (additiv, keine Verhaltensaenderung): einmalige Layer-
+                // Momentaufnahme bei jedem OnTriggerStay-Aufruf, den unser Prefix sieht -
+                // zeigt die TATSAECHLICHEN Layer-Nummern von Zone/Ghost/lokalem Truck im
+                // Feld, unabhaengig vom k_triggerColliderLayer-Wert oben.
+                if (Time.realtimeSinceStartup - lastLayerDiagLog > 10f)
+                {
+                    lastLayerDiagLog = Time.realtimeSinceStartup;
+                    try
+                    {
+                        int zoneLayer = __instance.gameObject != null ? __instance.gameObject.layer : -1;
+                        int colLayer = col.gameObject != null ? col.gameObject.layer : -1;
+                        int triggerRootLayer = triggerRoot.layer;
+                        int myTruckLayer = myTruck.layer;
+                        StarTruckMP.Log.LogInfo(
+                            $"377 AmenityLocalGate-Diag: OnTriggerStay-Layers zone(GO='{__instance.gameObject?.name}')={zoneLayer}:{UnityEngine.LayerMask.LayerToName(zoneLayer)}, " +
+                            $"col(GO='{col.gameObject?.name}')={colLayer}:{UnityEngine.LayerMask.LayerToName(colLayer)}, " +
+                            $"triggerRoot(GO='{triggerRoot.name}')={triggerRootLayer}:{UnityEngine.LayerMask.LayerToName(triggerRootLayer)}, " +
+                            $"myTruck(GO='{myTruck.name}')={myTruckLayer}:{UnityEngine.LayerMask.LayerToName(myTruckLayer)}");
+                    }
+                    catch (Exception exDiag)
+                    {
+                        StarTruckMP.Log.LogWarning($"377 AmenityLocalGate-Diag Fehler: {exDiag.Message}");
+                    }
+                }
 
                 // Lokaler Truck selbst: nie anfassen.
                 if (SameNativeObject(triggerRoot, myTruck)) return true;
