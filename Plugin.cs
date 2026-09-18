@@ -69,6 +69,8 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
         global::StarTruckMP.StarTruckClient.ShopAtJobBoardBays.Apply();
+        // 368: Amenity-Gate - Repair/Werkstatt-Eintritt nur fuer den Spieler, der dockt.
+        global::StarTruckMP.StarTruckClient.AmenityLocalGate.Apply();
         // Build-334-Diagnose: beweist, dass der IdSync-Postfix wirklich applied ist.
         StarTruckMP.Log.LogInfo("Harmony: JobBoardSyncPatches applied (Postfix auf ProceduralJobGenerator.GenerateJobsForAllSectors -> JobBoardIdSync.OnLocalJobsGenerated)");
 
