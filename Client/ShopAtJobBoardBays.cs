@@ -70,6 +70,14 @@ namespace StarTruckMP.StarTruckClient
         private static bool harmonyApplied = false;
 
         /// <summary>
+        /// 369 (Fix C): Explizite Prioritaet dieses 311-Prefixes — IMMER unter dem
+        /// 368 AmenityLocalGate (AmenityLocalGate.GatePriority = 800), damit die
+        /// Gate-Entscheidung zuerst faellt und ein Suppress (Ghost-Dock) die gesamte
+        /// 311-Rewrite-Kette deterministisch ueberspringt.
+        /// </summary>
+        public const int ShopPrefixPriority = 400;
+
+        /// <summary>
         /// True, wenn dieser Dock-Event-Ablauf umgeschrieben werden soll:
         /// nur fuer verbundene MP-Clients (Singleplayer unveraendert lassen).
         /// Konsistent mit DockingBayHUD.RefreshDockingBays / JobBoardComputer.CheckToggle,
@@ -207,6 +215,14 @@ namespace StarTruckMP.StarTruckClient
             }
 
             var prefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPrefix));
+            // 369 (Fix C): Prioritaet EXPLIZIT unter dem 368 AmenityLocalGate (800) pinnen.
+            // Semantik: Harmony sortiert Prefixes absteigend nach Priority — das Gate
+            // entscheidet ZUERST. Gate=false (Ghost-/Fern-Dock) => 311-Prefix + Native
+            // werden geskippt (kein Rewrite, kein Screen-Open). Gate=true (legitimes
+            // Dock, eigener Truck in/nach der Bay) => 311-Rewrite-Kette laeuft KOMPLETT
+            // (POI-Rewrite + ShopScreen-Open via Postfix). Return-Wert des 311-Prefixes
+            // ist void => er skippt niemals selbst etwas, schreibt nur __args um.
+            prefix.priority = ShopPrefixPriority;
             var postfix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPostfix));
             harmony.Patch(mi, prefix: prefix, postfix: postfix);
             StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c + 315 Postfix).");
@@ -244,6 +260,10 @@ namespace StarTruckMP.StarTruckClient
                 if (onEnter != null)
                 {
                     var onEnterPrefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(OnAmenityEnterPrefix));
+                    // 369 (Fix C): unter dem 368 AmenityLocalGate-Terminal-Prefix (800)
+                    // pinnen — dessen Suppress (ferner Eintritt) muss VOR dieser Logik
+                    // greifen und dieses Prefix dann gar nicht mehr sehen.
+                    onEnterPrefix.priority = ShopPrefixPriority;
                     harmony.Patch(onEnter, prefix: onEnterPrefix);
                     StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays.Apply: Harmony-Prefix auf TruckAmenityTerminal.OnAmenityEnter registriert (nativer JobBoard-Open unterdrueckbar).");
                 }
@@ -626,9 +646,18 @@ namespace StarTruckMP.StarTruckClient
         /// <summary>
         /// 315c: Prefix vor TruckAmenityTerminal.OnAmenityEnter. Liefert false
         /// (skip nativer Rumpf -> kein JobBoard-Open), wenn dieses Enter von einer
-        /// umgeschriebenen JobsBoard-Bay kommt (Zeitfenster-Gate); sonst true.
+        /// umgeschriebenen JobsBoard-Bay kommt; sonst true.
+        ///
+        /// 369 (Fix C): Das Zeitfenster allein war UNSICHER — es schluckte auch das
+        /// legitime Shop-Terminal-Open einer ECHTEN Shop-Bay, wenn innerhalb von 15s
+        /// vorher ein JobsBoard-Rewrite lief ("Docking funktioniert, Shop oeffnet sich
+        /// nicht"). Jetzt wird zusaetzlich geprueft, dass dieses Terminal tatsaechlich
+        /// ein JobsBoard-Terminal ist (_currentAmenity == JobsBoard). Ein Shop-Terminal
+        /// (echte Shop-Bay) wird NIEMALS geschluckt; ohne lesbaren Zustand gilt das
+        /// alte Fenster-Verhalten (never-break-native bei Suppress ist hier unwichtig,
+        /// weil nur unbeschrieben wird, wenn vorher ein Rewrite gegriffen hat).
         /// </summary>
-        public static bool OnAmenityEnterPrefix()
+        public static bool OnAmenityEnterPrefix(TruckAmenityTerminal __instance)
         {
             try
             {
@@ -640,6 +669,15 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Unterdrueckungs-Fenster abgelaufen - natives OnAmenityEnter wieder aktiv.");
                     return true;
                 }
+                // 369 (Fix C): Nur das JobsBoard-Terminal schlucken. Ein echtes
+                // Shop-Terminal (legitimer Shop-Dock an einer Shop-Bay) immer durchlassen.
+                int terminalAmenity = ReadTerminalAmenity(__instance);
+                if (terminalAmenity >= 0 && terminalAmenity != (int)AmenityTypes.JobsBoard)
+                {
+                    suppressNativeOpen = false; // anderes Terminal -> Fenster konsumiert/irrelevant
+                    StarTruckMP.Log.LogInfo($"369 ShopAtJobBoardBays: OnAmenityEnter an NICHT-JobsBoard-Terminal (amenity={terminalAmenity}) — natives Open DURGELASSEN (Shop-Open bleibt intakt).");
+                    return true;
+                }
                 suppressNativeOpen = false;
                 StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: NATIVES OnAmenityEnter geschluckt (JobBoard-Open unterdrueckt, Shop-Open laeuft).");
                 return false;
@@ -649,6 +687,29 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.OnAmenityEnterPrefix Fehler: {ex.Message}");
                 return true; // niemals native Pfade per Exception-Nebenwirkung blockieren
             }
+        }
+
+        /// <summary>
+        /// 369 (Fix C): Liest TruckAmenityTerminal._currentAmenity (Property zuerst,
+        /// Field als Fallback — Il2Cpp-Proxy-Muster wie in AmenityLocalGate). -1 = nicht
+        /// lesbar (dann verhaelt sich das Suppress wie bisher rein zeitfensterbasiert).
+        /// </summary>
+        private static int ReadTerminalAmenity(TruckAmenityTerminal terminal)
+        {
+            try
+            {
+                var t = terminal.GetType();
+                var prop = t.GetProperty("_currentAmenity",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop != null && prop.CanRead)
+                    return Convert.ToInt32(prop.GetValue(terminal));
+                var field = t.GetField("_currentAmenity",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field != null)
+                    return Convert.ToInt32(field.GetValue(terminal));
+            }
+            catch { }
+            return -1;
         }
 
         /// <summary>
