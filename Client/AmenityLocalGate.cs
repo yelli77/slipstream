@@ -366,7 +366,7 @@ namespace StarTruckMP.StarTruckClient
         /// zuerst (Rigidbody-Trucks), sonst das Collider-GO selbst, sonst der oberste
         /// Parent. Niemals werfen.
         /// </summary>
-        private static UnityEngine.Object ResolveTriggerSource(Collider other)
+        private static GameObject ResolveTriggerSource(Collider other)
         {
             try
             {
