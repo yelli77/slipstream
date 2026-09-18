@@ -51,6 +51,8 @@ namespace UnityEngine
         public List<Collider> Colliders = new List<Collider>(); // 379-Diag-Stub
         public T[] GetComponentsInChildren<T>() where T : class
             => Colliders.OfType<T>().ToArray();
+        public T GetComponent<T>() where T : class
+            => Colliders.OfType<T>().FirstOrDefault(); // 380-Diag-Stub
     }
     public static class LayerMask
     {
@@ -93,6 +95,9 @@ namespace UnityEngine
         public Rigidbody attachedRigidbody;
         public GameObject gameObject;
     }
+    public class BoxCollider : Collider { } // 380-Diag-Stub
+    public class MeshCollider : Collider { public bool convex; } // 380-Diag-Stub
+
     public static class Time
     {
         public static float realtimeSinceStartup = 0f;

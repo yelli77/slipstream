@@ -489,7 +489,15 @@ namespace StarTruckMP.StarTruckClient
                     if (helper == null || helper.gameObject == null) continue;
                     try
                     {
-                        ghostColliders.AddRange(helper.gameObject.GetComponentsInChildren<Collider>());
+                        // 380 Fix: NUR die dedizierte konvexe BoxCollider auf dem Truck-Root
+                        // verwenden (siehe RemoteTruckCollisionHelper.Update() / Messages.cs
+                        // createPlayer()). NIEMALS GetComponentsInChildren<Collider>() nutzen -
+                        // das erfasst auch die absichtlich deaktivierten, nicht-konvexen
+                        // Mesh-Collider der Exterior-Geometrie, und Physics.IgnoreCollision
+                        // darauf destabilisiert PhysX (bekannter, im Code dokumentierter
+                        // Crash: "PhysX crashes on two non-convex mesh colliders touching").
+                        var boxCol = helper.gameObject.GetComponent<BoxCollider>();
+                        if (boxCol != null) ghostColliders.Add(boxCol);
                     }
                     catch { }
                 }
@@ -501,7 +509,14 @@ namespace StarTruckMP.StarTruckClient
                     if (zone == null || zone.gameObject == null) continue;
                     try
                     {
-                        zoneColliders.AddRange(zone.gameObject.GetComponentsInChildren<Collider>());
+                        // 380 Fix: nicht-konvexe MeshCollider ausschliessen (siehe Kommentar
+                        // oben bei ghostColliders) - reine Vorsichtsmassnahme, betrifft die
+                        // heutigen Box/Sphere/Capsule-Trigger-Collider nicht.
+                        foreach (var c in zone.gameObject.GetComponentsInChildren<Collider>())
+                        {
+                            if (c is MeshCollider mc && !mc.convex) continue;
+                            zoneColliders.Add(c);
+                        }
                     }
                     catch { }
                 }
