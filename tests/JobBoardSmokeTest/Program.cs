@@ -105,7 +105,7 @@ public static class Program
             // custom-build-369-Diagnose: Riptide-Interne Logs (ACK-Timeouts, Disconnects,
             // 'Could not guarantee delivery') sichtbar machen — genau solche stillen
             // Ereignisse sind der verdachtige Verlustpfad bei Gross-Transfers.
-            Riptide.RiptideLogger.Initialize(Console.WriteLine, false);
+            Riptide.Utils.RiptideLogger.Initialize(Console.WriteLine, false);
             StartServer();
             StartTicker();
             ConnectClients();
