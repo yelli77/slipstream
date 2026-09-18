@@ -601,6 +601,16 @@ namespace StarTruckMP.StarTruckClient
                         StarTruckMP.Log.LogInfo($"playerConnected: applied buffered name '{pendingConnName}' for player {id}");
                     }
                     else newPlayer.Name = remoteName;
+                    // custom-build-366 (Bug 2/Konstellation 5): steamId aus frueherer
+                    // Zuordnung restaurieren — Reconnect (Disconnect entfernte den
+                    // playerList-Eintrag) wuerde sonst steamId=0 setzen und das Badge
+                    // fehlen lassen, bis ein neues setPlayerSteamId-Broadcast eintrifft.
+                    ulong pcSid = Encoding.PioneerBadge.GetKnownSteamId(id);
+                    if (pcSid != 0)
+                    {
+                        newPlayer.steamId = pcSid;
+                        StarTruckMP.Log.LogInfo($"[BadgeDiag] playerConnected [{id}]: restored steamId {pcSid} after (re)connect");
+                    }
                     playerList.Add(id, newPlayer);
                     forceStateResend = true;
                 }
@@ -669,6 +679,15 @@ namespace StarTruckMP.StarTruckClient
                         }
                         else currentPlayer.Name = $"Player_{playerId}";
                         currentPlayer.destinationGateId = remoteDestGate;
+                        // custom-build-366 (Bug 2): steamId aus frueherer Zuordnung
+                        // restaurieren — frisch registrierte Structs haben steamId=0,
+                        // damit wuerde das Badge nach Re-Registration fehlen.
+                        ulong otFlySid = Encoding.PioneerBadge.GetKnownSteamId(playerId);
+                        if (otFlySid != 0)
+                        {
+                            currentPlayer.steamId = otFlySid;
+                            StarTruckMP.Log.LogInfo($"[BadgeDiag] movementUpdate on-the-fly registration [{playerId}]: restored steamId {otFlySid}");
+                        }
                         currentPlayer.truckTrans.Pos = playerPos;
                         currentPlayer.truckTrans.Rot = playerRot;
                         currentPlayer.playerTrans.Pos = playerPos;
@@ -793,6 +812,9 @@ namespace StarTruckMP.StarTruckClient
                                 }
                                 SnapRemotePlayerToLocal(playerId, currentPlayer);
                                 PositionNameLabelImmediately(playerId, currentPlayer);
+                                // custom-build-366 (Bug 2/Konstellation 2b+5): Deferred-Spawn-
+                                // Marker — Respawn nach eigenem Sektorwechsel/Reconnect.
+                                StarTruckMP.Log.LogInfo($"[RespawnDiag] deferred-spawn player {playerId} in sector '{currentSector}': truck=OK, label={(currentPlayer.NameLabel != null ? "OK" : "NULL")}, steamId={(currentPlayer.steamId != 0 ? currentPlayer.steamId.ToString() : "unknown")}");
                                 } // end else (Truck != null)
                                 } // end zero/NaN position guard
                                 } // end else (cooldown)
@@ -877,6 +899,40 @@ namespace StarTruckMP.StarTruckClient
                     bool foundPlayer = playerList.TryGetValue(playerId, out currentPlayer);
                     if (!foundPlayer) goto skipTrailer;
 
+                    // custom-build-366 (Bug 1): vollstaendig initialisierten Eintrag
+                    // erzwingen — ein Default-playerInfo (Trailers==null, z.B. aus einem
+                    // TryGetValue-Miss im updateSector-Handler) liess den Multi-Trailer-
+                    // Handler mit NullReferenceException sterben und den Trailer nie spawnen.
+                    if (currentPlayer.Trailers == null || currentPlayer.trailerExtraTargets == null)
+                    {
+                        currentPlayer = EnsurePlayerRegistered(playerId);
+                    }
+
+                    // custom-build-366 (Konstellation 4): Sektor-Guard — ein Remote-Spieler
+                    // in einem ANDEREN Sektor darf hier KEINE Trailer-Meshes erzeugen.
+                    // Vorher sprawnten fremde Trailer im eigenen Sektor (kein Guard wie beim
+                    // Truck-Spawn). Nur Targets merken; Meshes ggf. despawnen.
+                    bool trailerInMySector = string.IsNullOrEmpty(currentPlayer.sector)
+                        || currentPlayer.sector == "none"
+                        || string.IsNullOrEmpty(currentSector)
+                        || currentSector == "none"
+                        || currentPlayer.sector == currentSector;
+                    if (!trailerInMySector)
+                    {
+                        bool hadMeshes = (currentPlayer.Trailer != null) || currentPlayer.Trailers.Count > 0;
+                        if (hadMeshes)
+                        {
+                            StarTruckMP.Log.LogInfo($"[RespawnDiag] trailer-guard player {playerId} (remote sector='{currentPlayer.sector}' != local='{currentSector}'): despawning remote trailer meshes (multi={currentPlayer.Trailers.Count}, legacy={(currentPlayer.Trailer != null)})");
+                            if (currentPlayer.Trailer != null) { RemoteHitchVFX.Hide(playerId); GameObject.Destroy(currentPlayer.Trailer); currentPlayer.Trailer = null; }
+                            foreach (var kv in currentPlayer.Trailers)
+                                if (kv.Value != null) GameObject.Destroy(kv.Value);
+                            currentPlayer.Trailers.Clear();
+                            currentPlayer.trailerExtraTargets.Clear();
+                        }
+                        playerList[playerId] = currentPlayer;
+                        goto skipTrailer;
+                    }
+
                     // v1 multi-trailer detection: px < 0 and sentinel string "MULTI"
                     bool isMultiTrailer = tt[0] < -0.5f && remoteTrailerModel == "MULTI";
 
@@ -912,7 +968,7 @@ namespace StarTruckMP.StarTruckClient
                                     trailerObj.transform.eulerAngles = new Vector3(tpos[3], tpos[4], tpos[5]);
                                 }
                                 currentPlayer.Trailers[trackingId] = trailerObj;
-                                StarTruckMP.Log.LogInfo($"MultiTrailer: spawned trailer {trackingId} type='{containerType}' for player {playerId}");
+                                StarTruckMP.Log.LogInfo($"[RespawnDiag] MultiTrailer: spawned trailer {trackingId} type='{containerType}' for player {playerId} in sector '{currentSector}'");
                                 // Build 346: Remote-Hitch-VFX (rein visuell) beim Trailer-Spawn zeigen
                                 if (currentPlayer.Truck != null)
                                     RemoteHitchVFX.Show(playerId, currentPlayer.Truck, trailerObj);
@@ -983,6 +1039,7 @@ namespace StarTruckMP.StarTruckClient
                                 currentPlayer.trailerSmoothVel = Vector3.zero;
                                 currentPlayer.trailerTargetPos = trailerPos;
                                 currentPlayer.trailerTargetRot = trailerRot;
+                                StarTruckMP.Log.LogInfo($"[RespawnDiag] LegacyTrailer: spawned trailer model='{currentPlayer.trailerModel}' for player {playerId} in sector '{currentSector}'");
                                 // Build 346: Remote-Hitch-VFX (rein visuell) beim Legacy-Trailer-Spawn
                                 if (currentPlayer.Truck != null)
                                     RemoteHitchVFX.Show(playerId, currentPlayer.Truck, currentPlayer.Trailer);
@@ -1064,9 +1121,18 @@ namespace StarTruckMP.StarTruckClient
                 GameObject.Destroy(clientInfo.Truck);
                 GameObject.Destroy(clientInfo.Player);
                 if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
-                if (clientInfo.NameLabel != null) GameObject.Destroy(clientInfo.NameLabel);
+                // custom-build-366: Multi-Trailer-Meshes + Label beim Disconnect mit
+                // abbauen (sonst State-Leak in Trailers-Dict / Geister-Badge).
+                if (clientInfo.Trailers != null)
+                {
+                    foreach (var kv in clientInfo.Trailers)
+                        if (kv.Value != null) GameObject.Destroy(kv.Value);
+                    clientInfo.Trailers.Clear();
+                }
+                if (clientInfo.NameLabel != null) { Encoding.PioneerBadge.DetachFor(clientInfo.NameLabel); GameObject.Destroy(clientInfo.NameLabel); }
                 playerList.Remove(clientId);
                 pendingNames.Remove(clientId);
+                StarTruckMP.Log.LogInfo($"[RespawnDiag] clientDisconnect player {clientId}: visuals destroyed, entry removed (reconnect re-registers fresh)");
             }
 
             if (e.MessageId == (ushort)messageType.updateSector)
@@ -1074,10 +1140,15 @@ namespace StarTruckMP.StarTruckClient
                 ushort clientId = e.Message.GetUShort();
                 if (clientId != client.Id)
                 {
-                    playerInfo clientInfo;
-                    playerList.TryGetValue(clientId, out clientInfo);
+                    // custom-build-366 (Bug 1): EnsurePlayerRegistered statt rohem TryGetValue —
+                    // ein TryGetValue-Miss schleppte sonst einen Default-playerInfo (Trailers
+                    // == null, steamId=0) in die playerList: Trailer-Handler crashte (Bug 1),
+                    // Badge fehlte nach Respawn (Bug 2).
+                    playerInfo clientInfo = EnsurePlayerRegistered(clientId);
+                    string oldSector = clientInfo.sector;
                     clientInfo.sector = e.Message.GetString();
                     playerList[clientId] = clientInfo;
+                    StarTruckMP.Log.LogInfo($"[RespawnDiag] updateSector player {clientId}: '{oldSector}' -> '{clientInfo.sector}' (local='{currentSector}')");
 
                     RemoveFromSector(clientId, clientInfo);
 
@@ -1105,8 +1176,8 @@ namespace StarTruckMP.StarTruckClient
                 if (clientId != client.Id)
                 {
                     var livery = e.Message.GetString();
-                    playerInfo clientInfo;
-                    playerList.TryGetValue(clientId, out clientInfo);
+                    // custom-build-366: kein Default-Struct in die Liste schleppen.
+                    playerInfo clientInfo = EnsurePlayerRegistered(clientId);
                     clientInfo.livery = livery;
                     playerList[clientId] = clientInfo;
                     if (clientInfo.Truck != null)
@@ -1120,8 +1191,8 @@ namespace StarTruckMP.StarTruckClient
                 if (trailerPlayerId != client.Id)
                 {
                     string containerType = e.Message.GetString();
-                    playerInfo clientInfo;
-                    playerList.TryGetValue(trailerPlayerId, out clientInfo);
+                    // custom-build-366: kein Default-Struct in die Liste schleppen.
+                    playerInfo clientInfo = EnsurePlayerRegistered(trailerPlayerId);
                     string oldModel = clientInfo.trailerModel ?? "";
                     clientInfo.trailerModel = containerType;
                     StarTruckMP.Log.LogInfo($"updateTrailerModel: player {trailerPlayerId} received model='{containerType}' (old='{oldModel}')");
@@ -1537,24 +1608,84 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
+        // custom-build-366 (Bugs 1+2): playerInfo IMMER vollstaendig initialisiert anlegen
+        // (alle Trailer-Dicts non-null) und SteamId aus frueherer Zuordnung restaurieren.
+        // Vorher: (a) Default-playerInfo (Trailers==null) via TryGetValue-Miss in den
+        // updateSector-Handler eingeschleppt -> NullReferenceException im Multi-Trailer-
+        // Handler -> Trailer sprang nie; (b) Struct-Neuanlage vergass steamId -> Badge
+        // fehlte nach Respawn, bis (falls ueberhaupt) ein neues setPlayerSteamId-Broadcast kam.
+        private static playerInfo NewPlayerInfo(ushort id, string sector, string name)
+        {
+            var pi = new playerInfo();
+            pi.Trailers = new System.Collections.Generic.Dictionary<long, GameObject>();
+            pi.trailerExtraTargets = new System.Collections.Generic.Dictionary<long, movementTrans>();
+            pi.trailerExtraDriftTimers = new System.Collections.Generic.Dictionary<long, float>();
+            pi.trailerExtraSmoothVels = new System.Collections.Generic.Dictionary<long, Vector3>();
+            pi.sector = sector ?? "none";
+            pi.Name = name ?? "";
+            ulong knownSid = Encoding.PioneerBadge.GetKnownSteamId(id);
+            if (knownSid != 0)
+            {
+                pi.steamId = knownSid;
+                StarTruckMP.Log.LogInfo($"[BadgeDiag] NewPlayerInfo[{id}]: restored known steamId {knownSid} (badge-eligible after respawn)");
+            }
+            return pi;
+        }
+
+        // Get-or-register: garantiert vollstaendig initialisierten playerList-Eintrag.
+        public static playerInfo EnsurePlayerRegistered(ushort id)
+        {
+            if (playerList.TryGetValue(id, out var existing) &&
+                existing.Trailers != null && existing.trailerExtraTargets != null)
+                return existing;
+            var fresh = NewPlayerInfo(id,
+                existing.sector ?? currentSector, existing.Name);
+            fresh.Truck = existing.Truck;
+            fresh.Player = existing.Player;
+            fresh.Trailer = existing.Trailer;
+            fresh.NameLabel = existing.NameLabel;
+            fresh.steamId = existing.steamId != 0 ? existing.steamId : Encoding.PioneerBadge.GetKnownSteamId(id);
+            fresh.destinationGateId = existing.destinationGateId;
+            playerList[id] = fresh;
+            StarTruckMP.Log.LogInfo($"[RespawnDiag] EnsurePlayerRegistered[{id}]: re-initialized player state (was incomplete/default)");
+            return fresh;
+        }
+
         public static void RemoveFromSector(ushort clientId, playerInfo clientInfo)
         {
 
             if (clientInfo.sector != currentSector)
             {
-                if (clientInfo.Truck != null)
+                bool hadVisuals = clientInfo.Truck != null || clientInfo.Trailer != null ||
+                                  (clientInfo.Trailers != null && clientInfo.Trailers.Count > 0) ||
+                                  clientInfo.NameLabel != null;
+                if (hadVisuals)
                 {
-                    StarTruckMP.Log.LogInfo($"Despawning player {clientId} (different sector)");
-                        GameObject.Destroy(clientInfo.Truck);
-                    GameObject.Destroy(clientInfo.Player);
-                    if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
-                    // custom-build-348: Badge-Referenz mit aufraeumen.
-                    if (clientInfo.NameLabel != null) { Encoding.PioneerBadge.DetachFor(clientInfo.NameLabel); GameObject.Destroy(clientInfo.NameLabel); clientInfo.NameLabel = null; }
-                    clientInfo.Truck = null;
-                    clientInfo.Player = null;
-                    clientInfo.Trailer = null;
-                    playerList[clientId] = clientInfo;
+                    StarTruckMP.Log.LogInfo($"[RespawnDiag] despawn player {clientId} (remote sector='{clientInfo.sector}' != local='{currentSector}'): truck={(clientInfo.Truck != null)}, legacyTrailer={(clientInfo.Trailer != null)}, multiTrailers={(clientInfo.Trailers != null ? clientInfo.Trailers.Count : -1)}, label={(clientInfo.NameLabel != null)}");
                 }
+                if (clientInfo.Truck != null) GameObject.Destroy(clientInfo.Truck);
+                GameObject.Destroy(clientInfo.Player);
+                if (clientInfo.Trailer != null) GameObject.Destroy(clientInfo.Trailer);
+                // custom-build-366 (Bug 1/Konstellation 7): Multi-Trailer-Meshes mit
+                // despawnen UND alle Trailer-Target-Dicts leeren — sonst bleiben
+                // Fake-Null-Referenzen (alte Szene) + Stale-Targets ueber den
+                // Sektorwechsel hinaus stehen (State-Leak, Konstellation 3).
+                if (clientInfo.Trailers != null)
+                {
+                    foreach (var kv in clientInfo.Trailers)
+                        if (kv.Value != null) GameObject.Destroy(kv.Value);
+                    clientInfo.Trailers.Clear();
+                }
+                if (clientInfo.trailerExtraTargets != null) clientInfo.trailerExtraTargets.Clear();
+                if (clientInfo.trailerExtraDriftTimers != null) clientInfo.trailerExtraDriftTimers.Clear();
+                if (clientInfo.trailerExtraSmoothVels != null) clientInfo.trailerExtraSmoothVels.Clear();
+                // custom-build-366 (Bug 2): Label/Badge-Abbau NICHT mehr vom Truck abhaengig
+                // machen — vorher blieb ein Label ohne Truck (Teil-Despawn) als Geist stehen.
+                if (clientInfo.NameLabel != null) { Encoding.PioneerBadge.DetachFor(clientInfo.NameLabel); GameObject.Destroy(clientInfo.NameLabel); clientInfo.NameLabel = null; }
+                clientInfo.Truck = null;
+                clientInfo.Player = null;
+                clientInfo.Trailer = null;
+                playerList[clientId] = clientInfo;
             }
             else if (clientInfo.sector == currentSector && clientInfo.Truck == null)
             {
@@ -1595,6 +1726,9 @@ namespace StarTruckMP.StarTruckClient
                 }
                 SnapRemotePlayerToLocal(clientId, clientInfo);
                 PositionNameLabelImmediately(clientId, clientInfo);
+                // custom-build-366 (Bug 2/Konstellation 2): Respawn-Marker — beweist im
+                // Testlog, dass Truck+Label+Badge nach dem Sektorwechsel neu angelegt wurden.
+                StarTruckMP.Log.LogInfo($"[RespawnDiag] respawn player {clientId} in sector '{currentSector}': truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}, label={(clientInfo.NameLabel != null ? "OK" : "NULL")}, steamId={(clientInfo.steamId != 0 ? clientInfo.steamId.ToString() : "unknown")}");
                 StarTruckMP.Log.LogInfo($"Spawn result for player {clientId}: truck={(clientInfo.Truck != null ? "OK" : "NULL")}, player={(clientInfo.Player != null ? "OK" : "NULL")}");
             }
         }

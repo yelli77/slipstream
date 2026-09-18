@@ -215,6 +215,49 @@ public class MessageHandler
         bool hitched=e.Message.GetBool(); float[] t=e.Message.GetFloats();
         string containerType = "";
         try { containerType = e.Message.GetString(); } catch { }
+
+        // custom-build-366 (Bug 1): v1 Multi-Trailer-Nutzlast erkennen und 1:1 weiterleiten.
+        // Vorher wurde MULTI als Legacy-Einzeltrailer geparst (pos=(-1,count,0), model='MULTI')
+        // und verstümmelt rebroadcastet — der Client-Handler warf beim Lesen der fehlenden
+        // Trailer-Einträge eine Exception und der Remote-Trailer sprang NIE.
+        bool isMulti = t.Length >= 2 && t[0] < -0.5f && containerType == "MULTI";
+        if (isMulti)
+        {
+            try
+            {
+                int count = e.Message.GetUShort();
+                if (count < 0 || count > 64) throw new InvalidOperationException($"implausible trailer count {count}");
+                var ids = new long[count];
+                var types = new string[count];
+                var positions = new float[count][];
+                for (int i = 0; i < count; i++)
+                {
+                    ids[i] = e.Message.GetLong();
+                    types[i] = e.Message.GetString();
+                    float[] tp = e.Message.GetFloats();
+                    if (tp.Length < 6) throw new InvalidOperationException("trailer entry with <6 floats");
+                    positions[i] = tp;
+                }
+                p.TrailerHitched = count > 0;
+                if (count > 0)
+                {
+                    p.TrailerPosition = new Vector3f(positions[0][0], positions[0][1], positions[0][2]);
+                    p.TrailerRotation = new Vector3f(positions[0][3], positions[0][4], positions[0][5]);
+                    p.TrailerModel = string.IsNullOrEmpty(types[0]) ? "MULTI" : types[0];
+                }
+                p.LastUpdate = DateTime.UtcNow;
+                _players[e.FromConnection.Id] = p;
+                Console.WriteLine($"[INFO] HandleTrailer[366]: MULTI relay player {e.FromConnection.Id}: {count} trailer(s), models=[{string.Join(",", types)}]");
+                server.SendToAll(ServerMessages.CreateMultiTrailerMovement(e.FromConnection.Id, (ushort)count, ids, types, positions));
+                return;
+            }
+            catch (Exception multiEx)
+            {
+                Console.WriteLine($"[WARN] HandleTrailer[366]: MULTI parse failed from player {e.FromConnection.Id}: {multiEx.Message} — message verworfen");
+                return;
+            }
+        }
+
         var pos=new Vector3f(t[0],t[1],t[2]); var rot=new Vector3f(t[3],t[4],t[5]);
         p.TrailerHitched=hitched;p.TrailerPosition=pos;p.TrailerRotation=rot;p.TrailerModel=containerType;p.LastUpdate=DateTime.UtcNow;
         _players[e.FromConnection.Id]=p;

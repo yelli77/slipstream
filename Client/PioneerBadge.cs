@@ -91,7 +91,16 @@ namespace StarTruckMP.Encoding
             {
                 if (nameLabel == null) { DetachFor(nameLabel); return null; }
                 if (!StarTruckClient.StarTruckClient.playerList.TryGetValue(playerId, out var p)) return nameLabel;
-                if (!IsPioneer(p, playerId)) { DetachFor(nameLabel); return nameLabel; }
+                if (!IsPioneer(p, playerId))
+                {
+                    // custom-build-366 (Bug 2): Diagnose-Marker — unterscheidet im Testlog,
+                    // ob das Badge bewusst NICHT angehaengt wurde (kein Pionier) oder ob
+                    // die SteamId-Zuordnung nach einem Respawn fehlt (dann restore-faehig).
+                    if (p.steamId == 0 && !SteamIdByPlayer.ContainsKey(playerId))
+                        StarTruckMP.Log.LogInfo($"[BadgeDiag] AttachOrUpdate[{playerId}]: NO pioneer info (steamId unknown) — badge skipped for '{nameLabel.name}'");
+                    DetachFor(nameLabel);
+                    return nameLabel;
+                }
 
                 // Vorhandenes Badge nicht doppelt anlegen.
                 int key = nameLabel.GetInstanceID();
@@ -119,6 +128,15 @@ namespace StarTruckMP.Encoding
             if (nameLabel == null) return;
             int key = nameLabel.GetInstanceID();
             BadgeByLabel.Remove(key); // Kind-Objekt stirbt mit dem Label automatisch.
+        }
+
+        // custom-build-366 (Bug 2): Bekannte SteamId eines Spielers zurueckgeben (Fallback
+        // fuer Re-Registration nach Sektorwechsel/Reconnect — playerInfo ist ein Struct und
+        // verliert steamId, wenn der Eintrag neu angelegt wird, bevor ein setPlayerSteamId-
+        // Broadcast neu eintrifft). Ohne steamId wuerde das Badge nach dem Respawn fehlen.
+        public static ulong GetKnownSteamId(ushort playerId)
+        {
+            return SteamIdByPlayer.TryGetValue(playerId, out ulong sid) ? sid : 0UL;
         }
 
         private static GameObject CreateBadge(GameObject nameLabel)
