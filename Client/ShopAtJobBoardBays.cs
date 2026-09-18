@@ -848,15 +848,26 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Unterdrueckungs-Fenster abgelaufen - natives OnAmenityEnter wieder aktiv.");
                     return true;
                 }
-                // 369 (Fix C): Nur das JobsBoard-Terminal schlucken. Ein echtes
-                // Shop-Terminal (legitimer Shop-Dock an einer Shop-Bay) immer durchlassen.
-                int terminalAmenity = ReadTerminalAmenity(__instance);
-                if (terminalAmenity >= 0 && terminalAmenity != (int)AmenityTypes.JobsBoard)
-                {
-                    suppressNativeOpen = false; // anderes Terminal -> Fenster konsumiert/irrelevant
-                    StarTruckMP.Log.LogInfo($"369 ShopAtJobBoardBays: OnAmenityEnter an NICHT-JobsBoard-Terminal (amenity={terminalAmenity}) — natives Open DURGELASSEN (Shop-Open bleibt intakt).");
-                    return true;
-                }
+                // 375 Fix: Der bisherige "Fix C" (369) verliess sich zusaetzlich auf
+                // ReadTerminalAmenity(__instance) (_currentAmenity via Reflection), um
+                // zu pruefen, ob dieses Terminal WIRKLICH ein JobsBoard-Terminal ist,
+                // bevor das native Open geschluckt wird. Beweis aus dem Purity-Log
+                // (User-Report "Auftragsboard lag ueber dem Shop Board beim
+                // Shop-Docking"): _currentAmenity liest zum Zeitpunkt dieses Prefix
+                // fuer eine soeben umgeschriebene JobsBoard-Bay noch 0 (None) statt der
+                // erwarteten 1 (JobsBoard) - der native Zustand ist zu diesem Zeitpunkt
+                // schlicht noch nicht aktualisiert. Dadurch nahm der obige Zweig
+                // faelschlich "das ist KEIN JobsBoard-Terminal" an und liess das native
+                // JobBoard-Open zusaetzlich zu unserem eigenen Shop-Open durch -> beide
+                // Screens gleichzeitig offen.
+                //
+                // Seit 372 ist suppressNativeOpen bereits praezise: es wird am Anfang
+                // JEDES JobsBoard-Dock-Versuchs zurueckgesetzt (EnterAmenityPrefix) und
+                // nur bei einem tatsaechlich erfolgreichen Rewrite GENAU dieses Docks
+                // gesetzt. Die zusaetzliche, jetzt nachweislich unzuverlaessige
+                // Terminal-Amenity-Pruefung ist damit redundant und aktiv schaedlich -
+                // sie wird entfernt. Suppression haengt jetzt ausschliesslich an
+                // suppressNativeOpen (plus dem 15s-Zeitfenster oben).
                 suppressNativeOpen = false;
                 StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: NATIVES OnAmenityEnter geschluckt (JobBoard-Open unterdrueckt, Shop-Open laeuft).");
                 return false;
