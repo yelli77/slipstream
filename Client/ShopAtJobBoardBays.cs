@@ -354,6 +354,28 @@ namespace StarTruckMP.StarTruckClient
                 catch { return; }
                 if (amenityInt != (int)AmenityTypes.JobsBoard) return;
 
+                // 372 Fix: State fuer DIESEN Dock-Versuch zuruecksetzen, BEVOR die
+                // Fallback-Pruefungen (Bay/Station/ShopDescription) laufen. Beweis
+                // (User-Report 372): In Atlas Prime oeffnet sich an mehreren
+                // JobsBoard->Shop-Bays GAR KEIN Menue, obwohl Docking klappt - waehrend
+                // Purity funktioniert. Root Cause: FindStationShopDescription() liefert
+                // fuer Stationen ohne eigene native Shop-DockingBayGroup (Palm View,
+                // Harmony Link, New Liberty) null, EnterAmenityPrefix bricht dann VOR
+                // dem Setzen von lastShopDisplayName/lastStationShop/suppressNativeOpen
+                // ab - aber die statischen Felder behalten den Stand des letzten
+                // ERFOLGREICHEN Rewrites (ggf. an einer ganz anderen Bay/Station!).
+                // Ergebnis: OnAmenityEnterPrefix (315c) schluckt anhand des stehen
+                // gebliebenen suppressNativeOpen-Flags weiterhin das native
+                // JobBoard-Open - und der (nicht umgeschriebene) Dock zeigt gar nichts
+                // mehr an, statt sauber auf die native Jobboerse zurueckzufallen.
+                // Fix: Bei jedem JobsBoard-Amenity-Enter-Versuch den State sofort
+                // zuruecksetzen, damit ein Fallback in diesem Aufruf garantiert zu
+                // einem unveraenderten (ehrlichen) nativen Pfad fuehrt.
+                lastShopDisplayName = null;
+                lastStationShop = null;
+                lastWasRewrite = false;
+                suppressNativeOpen = false;
+
                 var bay = FindBayForSharedAssets(__instance);
                 if (bay == null)
                 {
@@ -789,7 +811,7 @@ namespace StarTruckMP.StarTruckClient
                 var allBays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
                 if (allBays == null || allBays.Length == 0) return;
 
-                int rewritten = 0, noPoi = 0, noShared = 0, noShopSettings = 0;
+                int rewritten = 0, noPoi = 0, noShared = 0, noShopSettings = 0, noStationShop = 0;
                 foreach (var bay in allBays)
                 {
                     if (bay == null || bay.gameObject == null) continue;
@@ -797,6 +819,25 @@ namespace StarTruckMP.StarTruckClient
                     {
                         // JobsBoard-Bay-Klassifikation (shared with DockingBayHUD).
                         if (!DockingBayAmenityUtil.IsJobsBoardBay(bay)) continue;
+
+                        // 372 Fix: Cosmetic-Label (Shop-Icon + Anzeigename) nur setzen,
+                        // wenn der FUNKTIONALE Rewrite (EnterAmenityPrefix) an dieser Bay
+                        // ueberhaupt greifen KANN, d.h. die Station eine eigene native
+                        // Shop-DockingBayGroup mit ShopDescription hat. Vorher lief 311b
+                        // unabhaengig vom Prefix und beschriftete JEDE JobsBoard-Bay als
+                        // Shop (basierend auf m_poiSettingsShop, das immer existiert) -
+                        // auch an Stationen, wo der Dock danach mangels ShopDescription
+                        // gar nicht funktional umgeschrieben wird. Ergebnis war die vom
+                        // User gemeldete Diskrepanz: Label sagt "Shop", Dock verhaelt
+                        // sich (im Fallback) wie Jobboerse bzw. oeffnete zuvor gar
+                        // nichts (siehe Fix in EnterAmenityPrefix). Ehrliches Label:
+                        // ohne Station-ShopDescription bleibt die Bay optisch Jobboerse.
+                        var poiStation = bay.ParentStation;
+                        if (poiStation == null || FindStationShopDescription(poiStation) == null)
+                        {
+                            noStationShop++;
+                            continue;
+                        }
 
                         // m_sharedAssets (DockingBaySharedAssets ScriptableObject) with
                         // per-amenity POI settings (m_poiSettingsShop etc.).
@@ -883,11 +924,12 @@ namespace StarTruckMP.StarTruckClient
                     }
                 }
 
-                if (rewritten > 0 || noShared > 0 || noPoi > 0 || noShopSettings > 0)
+                if (rewritten > 0 || noShared > 0 || noPoi > 0 || noShopSettings > 0 || noStationShop > 0)
                 {
                     StarTruckMP.Log.LogInfo(
                         $"311b POI-Rewrite: {rewritten} JobsBoard-Bays auf Shop-POI umgeschrieben " +
-                        $"(kein POI: {noPoi}, keine SharedAssets: {noShared}, keine Shop-Settings: {noShopSettings}).");
+                        $"(kein POI: {noPoi}, keine SharedAssets: {noShared}, keine Shop-Settings: {noShopSettings}, " +
+                        $"keine Station-ShopDescription (372): {noStationShop}).");
                 }
             }
             catch (Exception ex)
