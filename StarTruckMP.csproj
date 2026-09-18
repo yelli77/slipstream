@@ -31,6 +31,7 @@
          aufzuweichen. -->
     <Compile Include="common/LaunchMarker.cs" />
     <Compile Include="common/ChunkedSend.cs" />
+    <Compile Include="common/PoolReceive.cs" />
   </ItemGroup>
 
   <ItemGroup>
