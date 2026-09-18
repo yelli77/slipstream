@@ -500,6 +500,17 @@ namespace StarTruckMP.StarTruckClient
                 catch { return; }
                 if (amenityInt != (int)AmenityTypes.JobsBoard) return;
 
+                // 374b Fix: Diagnose-Log direkt beim Eintritt in den JobsBoard-Zweig -
+                // zeigt fuer den naechsten Testlauf zweifelsfrei, OB EnterAmenityPrefix
+                // fuer einen konkreten Dock-Versuch ueberhaupt aufgerufen wird (statt
+                // nur die spaeteren Bail-out-Zweige, die bisher schweigen, wenn schon
+                // dieser Punkt nie erreicht wird).
+                try
+                {
+                    StarTruckMP.Log.LogInfo($"374b ShopAtJobBoardBays: EnterAmenityPrefix -> JobsBoard-Dock erkannt (sharedAssets='{__instance?.name}').");
+                }
+                catch { }
+
                 // 372 Fix: State fuer DIESEN Dock-Versuch zuruecksetzen, BEVOR die
                 // Fallback-Pruefungen (Bay/Station/ShopDescription) laufen. Beweis
                 // (User-Report 372): In Atlas Prime oeffnet sich an mehreren
@@ -1046,19 +1057,26 @@ namespace StarTruckMP.StarTruckClient
                         var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
                         if (textSet) rewritten++;
 
-                        // 315e: Diese shopSettings-Instanz fuer den
-                        // Marker-Sweep registrieren (deckt ALLE Marker, die diese
-                        // Settings referenzieren oder noch jobsboard-artig benannt sind).
-                        // 315f: pendingShopDisplayName wird nicht mehr benoetigt -
-                        // der Sweep verwendet ShopBayDisplayName direkt.
+                        // 374 Fix: NICHT mehr die shopSettings-Instanz selbst registrieren
+                        // (rewrittenShopSettings) - Beweis (User-Report 374, Palm View):
+                        // m_poiSettingsShop ist ein PRO-STATION geteiltes Asset, das
+                        // sowohl die umgeschriebene JobsBoard-Bay als auch die ECHTE,
+                        // native Shop-Bay derselben Station referenzieren (Log 315e:
+                        // "before='Star Break Supplies', after='Cosmo's Cash 'n Carry'" -
+                        // das war Palm Views ECHTER Shop-Marker, nicht die JobsBoard-Bay!).
+                        // Der Settings-Pointer-Match in SweepPoiMarkerLabels traf dadurch
+                        // JEDEN Marker der Station, der dieselben Settings nutzt - inklusive
+                        // des echten Shops - und ueberschrieb dessen echten Namen mit der
+                        // generischen Konstante. Fix: stattdessen die Identitaet DIESES
+                        // POI-GameObjects registrieren (praezise, nicht stationsweit geteilt).
                         try
                         {
-                            if (!rewrittenShopSettings.Any(s => s != null && s.Pointer == shopSettings.Pointer))
-                                rewrittenShopSettings.Add(shopSettings);
+                            if (poi.gameObject != null)
+                                rewrittenPoiGameObjectIds.Add(poi.gameObject.GetInstanceID());
                         }
                         catch (Exception exReg)
                         {
-                            StarTruckMP.Log.LogWarning($"315e Registrierung fehlgeschlagen: {exReg.Message}");
+                            StarTruckMP.Log.LogWarning($"374 Registrierung fehlgeschlagen: {exReg.Message}");
                         }
                         // 315e: Sofort-Sweep nach dem Rewrite derselben Runde (deckt
                         // bereits gespawnte Marker; spaeter gespawnte deckt der Poll).
@@ -1109,7 +1127,7 @@ namespace StarTruckMP.StarTruckClient
         {
             try
             {
-                if (rewrittenShopSettings == null || rewrittenShopSettings.Count == 0) return;
+                if (rewrittenPoiGameObjectIds == null || rewrittenPoiGameObjectIds.Count == 0) return;
                 var poiManager = PointsOfInterest.Get();
                 var entries = poiManager?.entries;
                 if (entries == null) return;
@@ -1122,20 +1140,22 @@ namespace StarTruckMP.StarTruckClient
                         var marker = entry.marker;
                         if (marker == null) continue;
 
-                        // Match (a): settings-Pointer == eine unserer shopSettings-Instanzen.
-                        bool settingsMatch = false;
+                        // 374 Fix: Match (a) war frueher ein Settings-Pointer-Vergleich -
+                        // falsch, weil m_poiSettingsShop pro STATION geteilt ist und damit
+                        // auch echte, native Shop-Bays derselben Station traf (siehe
+                        // Kommentar bei der Registrierung oben). Jetzt: Identitaet des
+                        // POI-GameObjects selbst - trifft ausschliesslich Marker, die WIR
+                        // tatsaechlich umgeschrieben haben.
+                        bool ownedMatch = false;
                         try
                         {
-                            if (entry.settings != null)
+                            if (entry.gameObject != null
+                                && rewrittenPoiGameObjectIds.Contains(entry.gameObject.GetInstanceID()))
                             {
-                                var p = entry.settings.Pointer;
-                                foreach (var s in rewrittenShopSettings)
-                                {
-                                    if (s != null && s.Pointer == p) { settingsMatch = true; break; }
-                                }
+                                ownedMatch = true;
                             }
                         }
-                        catch { settingsMatch = false; }
+                        catch { ownedMatch = false; }
 
                         // Label-Text fuer before/after-Diagnose + Match (b) beschaffen:
                         // bevorzugt _label, Fallback beliebiger TMP am Marker.
@@ -1162,7 +1182,7 @@ namespace StarTruckMP.StarTruckClient
                                 || before.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
                                 || before.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
 
-                        if (!settingsMatch && !jobsBoardish) continue;
+                        if (!ownedMatch && !jobsBoardish) continue;
                         if (string.IsNullOrWhiteSpace(before)) continue;
 
                         // 315g-Heuristik: Zieltext ist immer die Konstante
@@ -1206,11 +1226,11 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        // 315e: Referenzen der im letzten 311b-Runde gesetzten shopSettings-Instanzen.
-        // 315f: pendingShopDisplayName entfernt - der Sweep verwendet die Konstante
-        // ShopBayDisplayName direkt (Label zeigt immer die Konstante, nie einen
-        // anderen Namen).
-        private static readonly List<PointOfInterestSettings> rewrittenShopSettings = new List<PointOfInterestSettings>();
+        // 315e/315f (Historie): frueher wurde hier die geteilte shopSettings-Instanz
+        // registriert - siehe 374-Fix-Kommentar oben, warum das falsch war (Settings
+        // sind pro Station geteilt, nicht pro Bay). 374: stattdessen die Identitaet
+        // der von UNS umgeschriebenen POI-GameObjects (praezise, pro Bay).
+        private static readonly HashSet<int> rewrittenPoiGameObjectIds = new HashSet<int>();
 
         /// <summary>
         /// 314: Setzt den sichtbaren Label-Text des Live-Markers direkt auf den
