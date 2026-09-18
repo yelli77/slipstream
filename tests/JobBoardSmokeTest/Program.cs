@@ -34,6 +34,23 @@ namespace StarTruckMP.Tests;
 ///      ueber die ECHTE Empfangs-Assemblierung (common/PoolReceive, dieselbe Klasse wie
 ///      Client/JobBoardServerSync) bis 'Pool vollstaendig' — das alte 12/12-Muster
 ///      (Spiegel-Empfaenger, ~40 Chunks) liess den 368er-Empfangsfehler durch.
+///  (h) custom-build-369: zwei sofort aufeinanderfolgende Broadcasts -> unterschiedliche
+///      transferIds.
+///
+/// Riptide-2.2-Message-Pool-Race (SmokeTest-Haertung):
+/// Riptide 2.2 bietet KEINE threadsichere Betriebsart an (kein manueller/sequence-
+/// Receive-Modus; Client.Update()/Server.Update() pollen UDP synchron und fuehren
+/// MessageReceived-Handler inline aus; der statische Message-Pool in
+/// Message.RetrieveFromPool/Pool.Add ist nicht geschuetzt). Der Ticker-Thread haelt
+/// _netLock waehrend Update() — ABER Message.Create() der Sende-Strecke lief im
+/// Main-Thread UNGELOCKT (ChunkedSend erzeugt die Chunks ausserhalb des Send-Callbacks).
+/// Create und Update greifen damit konkurrierend auf denselben Pool zu ->
+/// NullReferenceException / ArgumentOutOfRangeException in Message.RetrieveFromPool /
+/// InsufficientCapacityException bei AddBytes, reproduzierbar nach g6 (Gross-Transfer,
+/// viele Pool-Zyklen). Loesung (nur Test-Code): ALLE Message.Create+Send-Sequenzen
+/// laufen exclusiv unter demselben _netLock wie der Update-Pump — SendChunked wird
+/// komplett unter dem Lock gefahren (Pacing-Pausen von 2ms halten den Pump kurz an,
+/// loopback-tolerant), takenMsg/Create und Disconnect ebenfalls.
 /// </summary>
 public static class Program
 {
@@ -115,8 +132,10 @@ public static class Program
             // ---- (a)+(b)+(e): Upload 200 Jobs mit echtem Sende-Pfad inkl. Pacing ----
             byte[] payload = SerializeJobs(JobCount, "jobA");
             var stats = new ChunkedSend.Stats();
-            int chunks = ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorMain,
-                0, 42, payload, m => { lock (_netLock) _clientA.Send(m); }, null, stats);
+            int chunks;
+            lock (_netLock)   // Haertung: Message.Create in SendChunked unter demselben Lock wie Update()
+                chunks = ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorMain,
+                    0, 42, payload, m => _clientA.Send(m), null, stats);
             Console.WriteLine($"[test] Upload gesendet: {JobCount} Jobs, {payload.Length} bytes, {chunks} Chunks, {stats.BurstSizes.Count} Bursts (Profil: {string.Join(",", stats.BurstSizes)})");
 
             Check($"e1: Burst-Pacing eingehalten (max Burst {stats.MaxBurstSize} <= 15)", stats.PacingOk);
@@ -139,10 +158,16 @@ public static class Program
 
             // ---- (c) jobTaken ----
             string takenId = idsA[0];
-            var takenMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.jobTaken);
-            takenMsg.AddString(SectorMain);
-            takenMsg.AddString(takenId);
-            lock (_netLock) _clientB.Send(takenMsg);
+            // Haertung: Create+Send komplett unter _netLock (siehe Header-Kommentar) —
+            // Message.Create greift auf denselben nicht-threadsicheren Pool zu wie Update().
+            Riptide.Message takenMsg;
+            lock (_netLock)
+            {
+                takenMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.jobTaken);
+                takenMsg.AddString(SectorMain);
+                takenMsg.AddString(takenId);
+                _clientB.Send(takenMsg);
+            }
             bool takenOk = WaitUntil(() => _store.GetJobCount(SectorMain) == JobCount - 1
                 && PoolCount(_stateA, SectorMain) == JobCount - 1
                 && PoolCount(_stateB, SectorMain) == JobCount - 1
@@ -157,13 +182,13 @@ public static class Program
             // deterministische Verluste, verteilt ueber Bursts (2-3 Chunks):
             var drop = new HashSet<int> { 2, 7 };
             if (totalChunksL > 20) drop.Add(20);
-            ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorLoss,
-                0, 77, payloadL, m => { lock (_netLock) _clientA.Send(m); }, drop, null);
+            lock (_netLock) ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorLoss,
+                0, 77, payloadL, m => _clientA.Send(m), drop, null);
             Thread.Sleep(2500);
             Check($"d1: Upload mit {drop.Count} verlorenen Chunks bleibt stuck (Pool NICHT gemerged, count={_store.GetJobCount(SectorLoss)})", _store.GetJobCount(SectorLoss) == 0);
             // Re-Send-Netz (Build-364): kompletter Re-Send mit NEUEM transferId
-            ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorLoss,
-                0, 78, payloadL, m => { lock (_netLock) _clientA.Send(m); }, null, null);
+            lock (_netLock) ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorLoss,
+                0, 78, payloadL, m => _clientA.Send(m), null, null);
             bool resent = WaitUntil(() => _store.GetJobCount(SectorLoss) == LossJobCount, TimeSpan.FromSeconds(10));
             Check($"d2: Re-Send mit neuem transferId komplettiert den Upload ({_store.GetJobCount(SectorLoss)}/{LossJobCount})", resent);
 
@@ -188,8 +213,9 @@ public static class Program
             int recvWarnBeforeA = _recvWarnA, recvWarnBeforeB = _recvWarnB;
 
             byte[] bigPayload = SerializeJobs(BigJobCount, "jobG", descLen: BigDescLen);
-            int bigUploadChunks = ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorBig,
-                0, 91, bigPayload, m => { lock (_netLock) _clientA.Send(m); }, null, null);
+            int bigUploadChunks;
+            lock (_netLock) bigUploadChunks = ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorBig,
+                0, 91, bigPayload, m => _clientA.Send(m), null, null);
             Console.WriteLine($"[test] Gross-Upload gesendet: {BigJobCount} Jobs, {bigPayload.Length} bytes, {bigUploadChunks} Chunks (erwartete Pool-Chunks ~{Math.Ceiling(bigPayload.Length / 900.0)})");
             Check($"g1: Gross-Upload hat 150+ Chunks (tatsaechlich {bigUploadChunks})", bigUploadChunks >= 150);
 
@@ -244,7 +270,7 @@ public static class Program
         finally
         {
             _stopFlag?.Set();
-            try { _clientA?.Disconnect(); _clientB?.Disconnect(); } catch { }
+            try { lock (_netLock) { _clientA?.Disconnect(); _clientB?.Disconnect(); } } catch { }
             Thread.Sleep(200);
             try { _server?.Stop(); } catch { }
         }
