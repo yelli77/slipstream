@@ -71,19 +71,17 @@ namespace StarTruckMP.StarTruckClient
         private static string lastLoggedSkip = null;
 
         // Empfangs-Seite: Chunk-Assemblierung pro Absender-Transfer.
-        private class IncomingPool
-        {
-            public string Sector;
-            public int TotalChunks;
-            public readonly byte[][] Chunks = null;
-            public int Received;
-            public float LastChunkTime;
-
-            public IncomingPool(int totalChunks)
-                => Chunks = new byte[Math.Max(totalChunks, 1)][];
-        }
-
-        private static readonly Dictionary<byte, IncomingPool> incoming = new();
+        // custom-build-369 (Punkt A): Unity-freie Assemblierung in common/PoolReceive
+        // (headless testbar, JobBoardSmokeTest faehrt die ECHTE Empfangslogik).
+        // 369-Fix: alle stillen Fehlschlaege des 368er-Handlers (stille Duplikat-/
+        // Out-of-Range-/Timeout-Discards, transferId-Kollisions-Mixing) sind entfernt —
+        // jeder Fehler wird geloggt (PoolReceive._logWarn), jeder Chunk erzeugt ein
+        // 'recv: poolDownload sector=X chunk=i/n'-Log. Timeout-Discard lauft budgetiert
+        // in Update() (PoolReceive.Maintenance).
+        private static readonly global::StarTruckMP.Common.PoolReceive.Assembler incoming =
+            new(() => Time.unscaledTime,
+                m => StarTruckMP.Log.LogInfo(m),
+                m => StarTruckMP.Log.LogWarning(m));
 
         // Der aktuelle Pool (questId -> Anzeige-Text) + Meta.
         private static readonly Dictionary<string, string> pooledQuests = new();
@@ -276,47 +274,47 @@ namespace StarTruckMP.StarTruckClient
                 ushort totalChunks = e.Message.GetUShort();
                 byte[] chunkData = e.Message.GetBytes();
 
-                if (!incoming.TryGetValue(transferId, out var pool) || pool.Sector != sector || pool.TotalChunks != totalChunks)
+                // custom-build-369: ECHTE Assemblierung (common/PoolReceive). Liefert die
+                // Payload bei Vollstaendigkeit hier zurueck; alle Fehler/Anomalien loggt
+                // der Assembler selbst (kein stilles Werfen mehr).
+                if (incoming.HandleChunk(sector, transferId, chunkIndex, totalChunks, chunkData)
+                    && incoming.Completed.Count > 0)
                 {
-                    pool = new IncomingPool(totalChunks) { Sector = sector };
-                    incoming[transferId] = pool;
+                    var (_, payload) = incoming.Completed.Dequeue();
+                    ApplyPool(sector, payload);
                 }
-                if (chunkIndex >= pool.Chunks.Length) return;
-                if (pool.Chunks[chunkIndex] == null)
-                {
-                    pool.Chunks[chunkIndex] = chunkData;
-                    pool.Received++;
-                }
-                pool.LastChunkTime = Time.unscaledTime;
-                if (pool.Received < totalChunks) return;
-
-                // komplett: Payload assemblieren
-                incoming.Remove(transferId);
-                int payloadLen = 0;
-                foreach (var c in pool.Chunks) payloadLen += c?.Length ?? 0;
-                var payload = new byte[payloadLen];
-                int off = 0;
-                foreach (var c in pool.Chunks)
-                {
-                    if (c == null) continue;
-                    Buffer.BlockCopy(c, 0, payload, off, c.Length);
-                    off += c.Length;
-                }
-
-                ApplyPool(sector, payload);
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"JobBoardServerSync.HandlePoolIncoming fehlgeschlagen: {ex}");
+                // 369: kein stiller Fehlschlag — Fehler hier heisst Header-Parse/Meta-Problem.
+                StarTruckMP.Log.LogWarning($"JobBoardServerSync.HandlePoolIncoming fehlgeschlagen (sector-parse, chunkMeta unbekannt): {ex}");
             }
         }
 
         private static void ApplyPool(string sector, byte[] payload)
         {
+            try
+            {
+                ApplyPoolStrict(sector, payload);
+            }
+            catch (Exception ex)
+            {
+                // 369: korrupte Payloads (z.B. Transfer-Mixing) sind LAUT statt still.
+                int head = Math.Min(payload?.Length ?? 0, 24);
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < head; i++) sb.Append(payload[i].ToString("x2")).Append(' ');
+                StarTruckMP.Log.LogWarning($"JobBoardServerSync.ApplyPool: Pool-Payload fuer Sektor '{sector}' KORRUPT ({payload?.Length ?? 0} bytes, head: {sb}): {ex.Message} — Pool verworfen, wartet auf neuen Broadcast");
+            }
+        }
+
+        private static void ApplyPoolStrict(string sector, byte[] payload)
+        {
             var newPooled = new Dictionary<string, string>();
             int off = 0;
             int jobCount = BitConverter.ToInt32(payload, off); off += 4;
             int version = BitConverter.ToInt32(payload, off); off += 4;
+            if (jobCount < 0 || jobCount > 100000)
+                throw new InvalidOperationException($"implausibler jobCount {jobCount} (Payload {payload.Length} bytes)");
             for (int j = 0; j < jobCount && off < payload.Length; j++)
             {
                 string questId = ReadString(payload, ref off);
@@ -342,13 +340,17 @@ namespace StarTruckMP.StarTruckClient
             pooledVersion = version;
             lastPoolReceiveTime = Time.unscaledTime;
             consecutiveResends = 0; // Build-368: Pool funktioniert hat einmal -> Backoff-Zaehler reset
-            StarTruckMP.Log.LogInfo($"JobBoardServerSync: Pool empfangen fuer Sektor '{sector}': {newPooled.Count} Jobs (v{version}, regress={versionRegress}).");
+            StarTruckMP.Log.LogInfo($"JobBoardServerSync: Pool vollstaendig: {newPooled.Count} Jobs, v{version} (Sektor '{sector}', regress={versionRegress}).");
         }
 
+        // 369: strikt statt still — ungueltige Laengen (korrupte/Mixed Payload) werfen,
+        // damit der Catch in ApplyPool den Fehler laut loggt (vor 369: still "" + Desync).
         private static string ReadString(byte[] b, ref int off)
         {
+            if (off + 4 > b.Length) throw new InvalidOperationException($"ReadString: Laengen-Feld hinter Payload-Ende (off={off}, len={b.Length})");
             int len = BitConverter.ToInt32(b, off); off += 4;
-            if (len <= 0 || off + len > b.Length) return "";
+            if (len < 0 || off + len > b.Length) throw new InvalidOperationException($"ReadString: ungueltige Laenge {len} (off={off}, Payload {b.Length} bytes)");
+            if (len == 0) return "";
             var s = System.Text.Encoding.UTF8.GetString(b, off, len);
             off += len;
             return s;
@@ -474,13 +476,8 @@ namespace StarTruckMP.StarTruckClient
             try
             {
                 // Veraltete Incoming-Assemblierungen abraeumen (budgetiert, 1x/s reicht).
-                if (incoming.Count > 0)
-                {
-                    var stale = new List<byte>();
-                    foreach (var kv in incoming)
-                        if (Time.unscaledTime - kv.Value.LastChunkTime > INCOMING_TIMEOUT) stale.Add(kv.Key);
-                    foreach (var k in stale) incoming.Remove(k);
-                }
+                // 369: mit LAUTEM Log statt stillem Discard (PoolReceive.Maintenance).
+                incoming.Maintenance(INCOMING_TIMEOUT);
                 // Sektorwechsel: Pool des alten Sektors ist irrelevant.
                 if (pooledSector != null && pooledSector != StarTruckClient.currentSector)
                 {
@@ -517,7 +514,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static void OnDisconnect()
         {
-            incoming.Clear();
+            incoming.Reset();
             pooledQuests.Clear();
             pooledSector = null;
             pooledVersion = -1;

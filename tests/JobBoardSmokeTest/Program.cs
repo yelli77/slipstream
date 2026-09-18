@@ -29,6 +29,11 @@ namespace StarTruckMP.Tests;
 ///      zuverlaessig ab — Lesson 335; der Test modelliert den Verlust an der Sendestelle.)
 ///  (e) Burst-Pacing-Verifikation: der echte Sende-Pfad darf KEINEN Burst > SEND_PACING(15)
 ///      erzeugen — ein Verstoess failt den Test hart (Pacing-Regelverstoess-Detektor).
+///  (f) Build-368 Wireformat-Beweis (altes 7-Bit-Varint-Format vs. Server-Codec).
+///  (g) custom-build-369 Empfangs-Regression: Gross-Pool mit 150+ Chunks, empfangen
+///      ueber die ECHTE Empfangs-Assemblierung (common/PoolReceive, dieselbe Klasse wie
+///      Client/JobBoardServerSync) bis 'Pool vollstaendig' — das alte 12/12-Muster
+///      (Spiegel-Empfaenger, ~40 Chunks) liess den 368er-Empfangsfehler durch.
 /// </summary>
 public static class Program
 {
@@ -60,9 +65,20 @@ public static class Program
     private static readonly ClientState _stateA = new() { Name = "A" };
     private static readonly ClientState _stateB = new() { Name = "B" };
 
-    // Chunk-Assemblierung pro Sektor (Spiegel von JobBoardServerSync.IncomingPool).
-    private static readonly Dictionary<string, Dictionary<int, byte[]>> _incomingA = new();
-    private static readonly Dictionary<string, Dictionary<int, byte[]>> _incomingB = new();
+    // custom-build-369: Client-Empfang ueber die ECHTE Assemblierungs-Logik
+    // (common/PoolReceive — dieselbe Klasse wie Client/JobBoardServerSync), nicht mehr
+    // ueber einen Test-Spiegel. Dadurch deckt der Test jetzt den echten Empfangspfad
+    // (transferId-Keying, Reassembly, 'recv:'/'Pool vollstaendig'-Logging) ab.
+    private static int _recvChunksA, _recvChunksB;   // 'recv: poolDownload ...'-Logs
+    private static int _recvWarnA, _recvWarnB;       // recv-WARN-Logs (Fehler im Empfangspfad)
+    private static readonly PoolReceive.Assembler _recvA = new(
+        () => (float)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds,
+        m => { if (m.StartsWith("recv: poolDownload")) Interlocked.Increment(ref _recvChunksA); Console.WriteLine("[recv A] " + m); },
+        m => { Interlocked.Increment(ref _recvWarnA); Console.WriteLine("[recv-WARN A] " + m); });
+    private static readonly PoolReceive.Assembler _recvB = new(
+        () => (float)(DateTime.UtcNow - DateTime.UnixEpoch).TotalSeconds,
+        m => { if (m.StartsWith("recv: poolDownload")) Interlocked.Increment(ref _recvChunksB); Console.WriteLine("[recv B] " + m); },
+        m => { Interlocked.Increment(ref _recvWarnB); Console.WriteLine("[recv-WARN B] " + m); });
 
     public static int Main()
             {
@@ -143,6 +159,51 @@ public static class Program
             bool resent = WaitUntil(() => _store.GetJobCount(SectorLoss) == LossJobCount, TimeSpan.FromSeconds(10));
             Check($"d2: Re-Send mit neuem transferId komplettiert den Upload ({_store.GetJobCount(SectorLoss)}/{LossJobCount})", resent);
 
+            // ---- (g) custom-build-369 Regression: ECHTER Empfangspfad mit 150+ Chunks ----
+            // Das 12/12-Muster (kleine Pools, ~40 Chunks) liess den 368er-Fehler durch:
+            // der Empfang lief im Test als SPIEGEL, nicht als echte Logik, und grosse
+            // Transfers (115-226 Chunks in den Spielerlogs) wurden nie gefahren. Hier:
+            // 512 Jobs mit 400-Zeichen-Beschreibungen -> ~227KB Payload -> ~250 Chunks
+            // Pool-Download, empfangen ueber die ECHTE PoolReceive-Assemblierung (dieselbe
+            // Klasse wie Client/JobBoardServerSync) bis 'Pool vollstaendig'.
+            const int BigJobCount = 512;   // == MAX_JOBS_PER_SECTOR des Servers
+            const int BigDescLen = 400;
+            string SectorBig = "TESTSEKTOR_C";
+            _clientA.Send(BuildSectorMessage(SectorBig));
+            _clientB.Send(BuildSectorMessage(SectorBig));
+            bool bothInBig = WaitUntil(() =>
+                _store.GetPlayerSector(_clientA.Id) == SectorBig && _store.GetPlayerSector(_clientB.Id) == SectorBig,
+                TimeSpan.FromSeconds(10));
+            Check("g0: beide Clients im Gross-Pool-Sektor", bothInBig);
+            _recvA.Reset(); _recvB.Reset();
+            int recvChunksBeforeA = _recvChunksA, recvChunksBeforeB = _recvChunksB;
+            int recvWarnBeforeA = _recvWarnA, recvWarnBeforeB = _recvWarnB;
+
+            byte[] bigPayload = SerializeJobs(BigJobCount, "jobG", descLen: BigDescLen);
+            int bigUploadChunks = ChunkedSend.SendChunked((ushort)MessageType.jobBoardUpload, SectorBig,
+                0, 91, bigPayload, m => _clientA.Send(m), null, null);
+            Console.WriteLine($"[test] Gross-Upload gesendet: {BigJobCount} Jobs, {bigPayload.Length} bytes, {bigUploadChunks} Chunks (erwartete Pool-Chunks ~{Math.Ceiling(bigPayload.Length / 900.0)})");
+            Check($"g1: Gross-Upload hat 150+ Chunks (tatsaechlich {bigUploadChunks})", bigUploadChunks >= 150);
+
+            bool bigMerged = WaitUntil(() => _store.GetJobCount(SectorBig) == BigJobCount && LogContains(SectorBig), TimeSpan.FromSeconds(20));
+            Check($"g2: Gross-Upload gemerged ({_store.GetJobCount(SectorBig)}/{BigJobCount})", bigMerged);
+
+            int bigExpected = Math.Max(1, (bigPayload.Length + ChunkedSend.MAX_CHUNK - 1) / ChunkedSend.MAX_CHUNK);
+            bool bigPoolA = WaitUntil(() => PoolCount(_stateA, SectorBig) == BigJobCount, TimeSpan.FromSeconds(20));
+            bool bigPoolB = WaitUntil(() => PoolCount(_stateB, SectorBig) == BigJobCount, TimeSpan.FromSeconds(20));
+            int recvA = _recvChunksA - recvChunksBeforeA, recvB = _recvChunksB - recvChunksBeforeB;
+            Console.WriteLine($"[test] Pool-Download-Empfang: A {recvA}/{bigExpected} recv-Logs, B {recvB}/{bigExpected} recv-Logs");
+            Check($"g3: Client A Pool vollstaendig ueber echten Empfangspfad ({PoolCount(_stateA, SectorBig)}/{BigJobCount}, {recvA}/{bigExpected} Chunks empfangen)",
+                bigPoolA && recvA >= bigExpected);
+            Check($"g4: Client B Pool vollstaendig ueber echten Empfangspfad ({PoolCount(_stateB, SectorBig)}/{BigJobCount}, {recvB}/{bigExpected} Chunks empfangen)",
+                bigPoolB && recvB >= bigExpected);
+            var bigIdsA = PoolIds(_stateA, SectorBig);
+            var bigIdsB = PoolIds(_stateB, SectorBig);
+            Check("g5: Gross-Pool inhaltlich identisch bei beiden Clients",
+                bigIdsA != null && bigIdsB != null && bigIdsA.Count == BigJobCount && bigIdsA.SequenceEqual(bigIdsB));
+            Check("g6: kein Empfangsfehler im echten Pfad (keine recv-WARN-Logs waehrend des Gross-Transfers)",
+                _recvWarnA == recvWarnBeforeA && _recvWarnB == recvWarnBeforeB);
+
             Console.WriteLine($"\n=== Ergebnis: {((_failures == 0) ? "ALLE ASSERTIONS GRUEN" : $"{_failures} FAIL")}, Dauer {sw.Elapsed.TotalSeconds:F1}s ===");
             return _failures == 0 ? 0 : 1;
         }
@@ -184,8 +245,8 @@ public static class Program
     {
         _clientA = new Riptide.Client();
         _clientB = new Riptide.Client();
-        _clientA.MessageReceived += (s, e) => OnClientMessage(e, _stateA, _incomingA);
-        _clientB.MessageReceived += (s, e) => OnClientMessage(e, _stateB, _incomingB);
+        _clientA.MessageReceived += (s, e) => OnClientMessage(e, _stateA, _recvA);
+        _clientB.MessageReceived += (s, e) => OnClientMessage(e, _stateB, _recvB);
         _clientA.Connect($"127.0.0.1:{ServerPort}"); // Riptide 2.x: Port gehoert in die Host-Adresse
         _clientB.Connect($"127.0.0.1:{ServerPort}");
         WaitUntil(() => _clientA.IsConnected && _clientB.IsConnected, TimeSpan.FromSeconds(10));
@@ -224,32 +285,27 @@ public static class Program
 
     // ---- Client-Empfang: Spiegel von JobBoardServerSync.HandlePoolIncoming/ApplyPool,
     // Decodierung ueber den ECHTEN JobBoardCodec (kein zweites Wire-Format).
-    private static void OnClientMessage(MessageReceivedEventArgs e, ClientState state, Dictionary<string, Dictionary<int, byte[]>> incoming)
+    private static void OnClientMessage(MessageReceivedEventArgs e, ClientState state, PoolReceive.Assembler recv)
     {
         switch ((MessageType)e.MessageId)
         {
             case MessageType.jobBoardDownload:
             {
                 string sector = e.Message.GetString();
-                e.Message.GetUShort();
+                e.Message.GetUShort(); // senderId-Placeholder
                 byte transferId = e.Message.GetByte();
                 ushort chunkIndex = e.Message.GetUShort();
                 ushort totalChunks = e.Message.GetUShort();
                 byte[] data = e.Message.GetBytes();
-                if (!incoming.TryGetValue(sector, out var buf) || buf.Count >= totalChunks && chunkIndex == 0)
-                    buf = new Dictionary<int, byte[]>();
-                incoming[sector] = buf;
-                buf[chunkIndex] = data;
-                if (buf.Count == totalChunks)
+                // ECHTE Empfangslogik (PoolReceive, identisch zum Mod-Client) —
+                // inkl. 'recv: poolDownload ...'-Log und 'Pool vollstaendig'.
+                if (recv.HandleChunk(sector, transferId, chunkIndex, totalChunks, data)
+                    && recv.Completed.Count > 0)
                 {
-                    incoming.Remove(sector);
-                    var payload = new byte[buf.Values.Sum(c => c.Length)];
-                    int off = 0;
-                    foreach (var kv in buf.OrderBy(kv => kv.Key))
-                    { Buffer.BlockCopy(kv.Value, 0, payload, off, kv.Value.Length); off += kv.Value.Length; }
+                    var (doneSector, payload) = recv.Completed.Dequeue();
                     var (jobs, version) = JobBoardCodec.DecodePool(payload);
-                    state.PoolBySector[sector] = jobs.Select(j => j.QuestId).ToList();
-                    Console.WriteLine($"[client {state.Name}] Pool empfangen: {state.PoolBySector[sector].Count} Jobs (v{version}, {totalChunks} Chunks)");
+                    state.PoolBySector[doneSector] = jobs.Select(j => j.QuestId).ToList();
+                    Console.WriteLine($"[client {state.Name}] Pool vollstaendig: {jobs.Count} Jobs, v{version} ({totalChunks} Chunks, Sektor '{doneSector}')");
                 }
                 break;
             }
