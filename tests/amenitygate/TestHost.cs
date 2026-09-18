@@ -219,7 +219,10 @@ public static class TestGate
             Check("B2: lokaler Truck in Zone -> allow (nativ)",
                 StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
         }
-        // Case 10: Ghost-Trigger, aber lokaler Truck NAHE -> allow (never break native)
+        // Case 10 (370-Fix): Ghost-Trigger, lokaler Truck NAHE -> jetzt IMMER suppress.
+        // Vorher "allow (ambiguous)" - genau das war der 369-Feldbug: an gemeinsamen
+        // Shop/Werkstatt/JobBoard-Bays ist "lokaler Truck nah" der Normalfall, nicht
+        // die Ausnahme, die Distanz-Ausnahme liess den Ghost-Trigger fast immer durch.
         {
             var zone = new AmenityTriggerZone();
             zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop3");
@@ -227,8 +230,8 @@ public static class TestGate
             UnityEngine.Object.Registry.Add(zone);
             StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck;
             var col = new UnityEngine.Collider { gameObject = ghost, attachedRigidbody = null };
-            Check("B3: Ghost-Trigger + lokaler Truck nahe -> allow (ambiguous)",
-                StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
+            Check("B3: Ghost-Trigger + lokaler Truck nahe -> suppress (370: kein Ambiguous-Fall mehr)",
+                !StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
         }
         // Case 11: TruckAmenityTerminal.OnAmenityEnter — letzte Sperre
         {

@@ -296,19 +296,24 @@ namespace StarTruckMP.StarTruckClient
                 if (SameNativeObject(triggerRoot, myTruck)) return true;
                 if (!IsRemoteGhost(triggerRoot)) return true; // fremde native Objekte: nativ
 
-                // Ghost-Trigger: nur unterdruecken, wenn der lokale Spieler definitiv
-                // nicht selbst in der Naehe der Zone ist.
-                var myPos = (myTruck.transform != null) ? myTruck.transform.position : Vector3.zero;
-                var zonePos = (__instance.transform != null) ? __instance.transform.position : Vector3.zero;
-                var dist = Vector3.Distance(zonePos, myPos);
-                if (dist > AmenityGateMaxMeters)
-                {
-                    LogSuppress(__instance.gameObject, "TriggerZone.OnTriggerStay",
-                        $"Ghost-Trigger '{triggerRoot.name}', local truck {dist:F0}m von Zone entfernt (Limit {AmenityGateMaxMeters:F0}m)");
-                    return false; // kein m_truckInTrigger, kein onAmenityEnter vom Ghost
-                }
-
-                return true;
+                // 370-Fix: Ghost ist hier bereits DEFINITIV identifiziert (kein Verdacht,
+                // ResolveTriggerSource + IsRemoteGhost sind exakt). Der lokale Spieler
+                // bekommt fuer SEINEN Truck einen eigenen, unabhaengigen OnTriggerStay-
+                // Call (siehe SameNativeObject-Check oben, laeuft nativ weiter) - es gibt
+                // also NIE einen legitimen Grund, einen Ghost-Trigger durchzulassen.
+                //
+                // Root Cause des 369-Restbugs (Feldtest: ALLE Spieler landen weiterhin in
+                // der Werkstatt, obwohl das Gate laut Log feuert): die alte
+                // Distanz-Ausnahme unten liess den Ghost-Trigger durch, wenn der lokale
+                // Truck "zufaellig nah" an der Zone war. Seit Shop/Werkstatt/JobBoard an
+                // DENSELBEN Bays haengen (feature/shop-at-jobboard-bays), stehen mehrere
+                // Spieler dort staendig nah beieinander (< 750m) - "nah" ist der
+                // Normalfall geworden, nicht die Ausnahme. Die Distanz-Ausnahme griff
+                // damit praktisch immer und hat das Gate faktisch wirkungslos gemacht.
+                // Fix: Ghost-Trigger IMMER unterdruecken, unabhaengig von der Distanz.
+                LogSuppress(__instance.gameObject, "TriggerZone.OnTriggerStay",
+                    $"Ghost-Trigger '{triggerRoot.name}' definitiv erkannt - immer unterdrueckt (370, Distanz-Ausnahme entfernt)");
+                return false; // kein m_truckInTrigger, kein onAmenityEnter vom Ghost
             }
             catch (Exception ex)
             {
