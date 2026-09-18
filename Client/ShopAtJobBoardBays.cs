@@ -105,6 +105,21 @@ namespace StarTruckMP.StarTruckClient
             return ShouldRewrite();
         }
 
+        // 372b: Diagnose-Dump je Station nur einmal pro Session (vergleicht Atlas
+        // Prime vs. Purity anhand echter Laufzeitdaten, statt weiter zu raten).
+        private static readonly HashSet<string> loggedStationShopDiagnostics = new HashSet<string>();
+
+        // 373 Fix: Ziel (User): JEDES System mit Docking-Ports soll beim Docken
+        // einen Shop verfuegbar haben - auch Stationen ohne eigene native
+        // Shop-DockingBayGroup (z.B. Palm View/Harmony Link/New Liberty in Atlas
+        // Prime). globalFallbackShopDescription cached den ersten echten Shop, den
+        // wir je gesehen haben (persistiert ueber Sektorwechsel, da ShopDescription
+        // ein ScriptableObject-Asset ist, kein Szenenobjekt) - letzter Ausweg, wenn
+        // weder die eigene Station noch eine andere aktuell geladene Station einen
+        // Shop hat.
+        private static ShopDescription globalFallbackShopDescription;
+        private static readonly HashSet<string> loggedShopFallbackUse = new HashSet<string>();
+
         /// <summary>
         /// Liest die shopDescription der ersten DockingBayGroup der Station, deren
         /// amenityType == Shop ist (Station.DockingBayGroups).
@@ -112,29 +127,160 @@ namespace StarTruckMP.StarTruckClient
         private static ShopDescription FindStationShopDescription(Station stationObj)
         {
             if (stationObj == null) return null;
+            string stationName = null;
+            try { stationName = stationObj.gameObject?.name; } catch { }
+            var diagKey = stationName ?? ("Station#" + stationObj.GetHashCode());
             try
             {
                 var groups = stationObj.DockingBayGroups;
                 if (groups == null)
                 {
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: Station.DockingBayGroups ist null/leer.");
+                    if (loggedStationShopDiagnostics.Add(diagKey))
+                    {
+                        StarTruckMP.Log.LogWarning($"372b ShopAtJobBoardBays: Station.DockingBayGroups ist null/leer (station={stationName}).");
+                    }
                     return null;
                 }
+
+                // 372b: Vollstaendiger Gruppen-Dump (einmal pro Station), um Atlas
+                // Prime vs. Purity anhand echter Laufzeitdaten zu vergleichen -
+                // zeigt amenityType + ob shopDescription gesetzt ist, je Gruppe.
+                if (loggedStationShopDiagnostics.Add(diagKey))
+                {
+                    try
+                    {
+                        var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
+                        var parts = new List<string>();
+                        int idx = 0;
+                        foreach (var gg in groups)
+                        {
+                            idx++;
+                            if (gg == null) { parts.Add($"#{idx}=null"); continue; }
+                            string sdInfo = "shopDesc=null";
+                            try
+                            {
+                                if (gg.shopDescription != null)
+                                    sdInfo = $"shopDesc='{gg.shopDescription.shopDisplayName}'";
+                            }
+                            catch (Exception exSd) { sdInfo = $"shopDesc=ERR({exSd.Message})"; }
+                            parts.Add($"#{idx}=amenity:{gg.amenityType},{sdInfo}");
+                        }
+                        StarTruckMP.Log.LogInfo(
+                            $"372b ShopAtJobBoardBays: Station-Diagnose station='{stationName}' sector='{sector}' " +
+                            $"groupCount={groups.Count} [{string.Join(" | ", parts)}]");
+                    }
+                    catch (Exception exDiag)
+                    {
+                        StarTruckMP.Log.LogWarning($"372b ShopAtJobBoardBays: Diagnose-Dump fehlgeschlagen: {exDiag.Message}");
+                    }
+                }
+
                 foreach (var g in groups)
                 {
                     if (g == null) continue;
                     if (g.amenityType != StationAmenity.Shop) continue;
                     var sd = g.shopDescription;
-                    if (sd != null) return sd;
+                    if (sd != null)
+                    {
+                        // 373: eigener echter Shop gefunden - als globalen Fallback
+                        // cachen, falls andere Stationen (dieser oder ein spaeterer
+                        // Sektor) keinen eigenen haben.
+                        globalFallbackShopDescription = sd;
+                        return sd;
+                    }
                     // Gruppe vorhanden, aber Description null -> continue (nicht abbrechen)
                 }
-                StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: Station hat keine Shop-DockingBayGroup mit shopDescription.");
+
+                // 373 Fix: Diese Station hat selbst keinen Shop. Fallback-Kette,
+                // damit trotzdem JEDE JobsBoard-Bay einen funktionierenden Shop
+                // bekommt: 1) andere, gerade geladene Stationen (gleicher Sektor),
+                // 2) zuletzt bekannter echter Shop aus einem frueher besuchten
+                // Sektor. Items/Preise sind dann nicht "lokal", aber ein
+                // funktionierender Shop ist das erklaerte Ziel - besser als der
+                // bisherige Fallback (Bay bleibt Jobboerse).
+                var sectorFallback = FindAnyShopDescriptionInLoadedStations(stationObj);
+                if (sectorFallback != null)
+                {
+                    globalFallbackShopDescription = sectorFallback;
+                    if (loggedShopFallbackUse.Add(diagKey))
+                    {
+                        StarTruckMP.Log.LogInfo($"373 ShopAtJobBoardBays: Sektor-Fallback-Shop fuer Station '{stationName}' verwendet (andere Station im selben Sektor hat einen Shop).");
+                    }
+                    return sectorFallback;
+                }
+
+                if (IsShopDescriptionAlive(globalFallbackShopDescription))
+                {
+                    if (loggedShopFallbackUse.Add(diagKey))
+                    {
+                        StarTruckMP.Log.LogInfo($"373 ShopAtJobBoardBays: Cross-Sektor-Fallback-Shop fuer Station '{stationName}' verwendet (kein Shop im aktuellen Sektor gefunden).");
+                    }
+                    return globalFallbackShopDescription;
+                }
+
+                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays: Station hat keine Shop-DockingBayGroup mit shopDescription und kein Fallback-Shop verfuegbar (station={stationName}).");
             }
             catch (Exception ex)
             {
                 StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.FindStationShopDescription fehlgeschlagen: {ex.Message}");
             }
             return null;
+        }
+
+        /// <summary>
+        /// 373: Sucht in ALLEN aktuell geladenen Stationen (typischerweise der
+        /// laufende Sektor) nach einer echten Shop-DockingBayGroup mit
+        /// shopDescription - Kandidat fuer den Sektor-Fallback.
+        /// </summary>
+        private static ShopDescription FindAnyShopDescriptionInLoadedStations(Station exclude)
+        {
+            try
+            {
+                var allStations = UnityEngine.Object.FindObjectsOfType<Station>();
+                if (allStations == null) return null;
+                foreach (var st in allStations)
+                {
+                    if (st == null) continue;
+                    if (exclude != null && (ReferenceEquals(st, exclude) || st.Pointer == exclude.Pointer)) continue;
+                    try
+                    {
+                        var groups = st.DockingBayGroups;
+                        if (groups == null) continue;
+                        foreach (var g in groups)
+                        {
+                            if (g == null) continue;
+                            if (g.amenityType != StationAmenity.Shop) continue;
+                            var sd = g.shopDescription;
+                            if (sd != null) return sd;
+                        }
+                    }
+                    catch { continue; }
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"373 ShopAtJobBoardBays.FindAnyShopDescriptionInLoadedStations fehlgeschlagen: {ex.Message}");
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 373: Liveness-Check fuer eine cross-Sektor gecachte ShopDescription -
+        /// ScriptableObject-Assets ueberleben Sektorwechsel normalerweise, aber
+        /// niemals ungeprueft auf eine ggf. zerstoerte native Referenz zugreifen.
+        /// </summary>
+        private static bool IsShopDescriptionAlive(ShopDescription sd)
+        {
+            if (sd == null) return false;
+            try
+            {
+                var _ = sd.shopDisplayName;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static void Apply()
