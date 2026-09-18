@@ -13,7 +13,8 @@ namespace HarmonyLib
     public static class Priority { public const int First = 800; }
     public class HarmonyMethod
     {
-        public int Priority { get; set; }
+        public int priority; // HarmonyMethod-Feld (Il2Cpp-Realitaet, Property-Schreibweise kompiliert nicht)
+        public int Priority { get => priority; set => priority = value; }
         public HarmonyMethod(Type t, string m) { }
     }
     public class Harmony
@@ -33,7 +34,7 @@ namespace UnityEngine
 {
     public class Object
     {
-        public long Pointer = 0;
+        public IntPtr Pointer = IntPtr.Zero;
         public string name = "";
         public static List<Object> Registry = new List<Object>();
         public static T[] FindObjectsOfType<T>() where T : Object
@@ -62,6 +63,7 @@ namespace UnityEngine
     {
         public Vector3 position;
         public Transform parent;
+        public GameObject gameObject;
     }
     public class Rigidbody
     {
@@ -115,7 +117,7 @@ public static class TestGate
 
     static DockingBay MakeBay(long sharedPtr, UnityEngine.GameObject dockedTruck, UnityEngine.Vector3 bayPos)
     {
-        var shared = new DockingBaySharedAssets { Pointer = sharedPtr };
+        var shared = new DockingBaySharedAssets { Pointer = (IntPtr)sharedPtr };
         var bay = new DockingBay { m_sharedAssets = shared, m_truck = dockedTruck };
         bay.gameObject = new UnityEngine.GameObject("Docking_Bay_XX");
         bay.transform = new UnityEngine.Transform { position = bayPos };
@@ -125,15 +127,15 @@ public static class TestGate
     }
     static long sharedPtr = 5000;
     static DockingBaySharedAssets Shared(long p) =>
-        (DockingBaySharedAssets)UnityEngine.Object.Registry.First(o => o is DockingBaySharedAssets s && s.Pointer == p);
+        (DockingBaySharedAssets)UnityEngine.Object.Registry.First(o => o is DockingBaySharedAssets s && s.Pointer == (IntPtr)p);
 
     public static int Main()
     {
-        var dockedMyTruck = new UnityEngine.GameObject("StarTruck(Clone)") { Pointer = 111 };
+        var dockedMyTruck = new UnityEngine.GameObject("StarTruck(Clone)") { Pointer = (IntPtr)111 };
         dockedMyTruck.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
-        var ghost = new UnityEngine.GameObject("RemoteTruck7") { Pointer = 222 };
+        var ghost = new UnityEngine.GameObject("RemoteTruck7") { Pointer = (IntPtr)222 };
         ghost.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
-        var farMyTruck = new UnityEngine.GameObject("StarTruck(Clone)") { Pointer = 333 };
+        var farMyTruck = new UnityEngine.GameObject("StarTruck(Clone)") { Pointer = (IntPtr)333 };
         farMyTruck.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(9000, 0, 0) };
 
         // Case 1: legit dock — bay's m_truck == local truck → allow
@@ -178,7 +180,7 @@ public static class TestGate
         }
         // Case 6: unresolvable bay -> allow (never break native)
         {
-            var shared = new DockingBaySharedAssets { Pointer = 9999 };
+            var shared = new DockingBaySharedAssets { Pointer = (IntPtr)9999 };
             StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck;
             Check("unresolvable bay -> allow", StarTruckMP.StarTruckClient.AmenityLocalGate.AmenityGatePrefix(shared));
         }
