@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
+using System.Linq;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -456,6 +457,87 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"{LogTag} TerminalEnterPrefix Fehler: {ex.Message}");
                 return true;
+            }
+        }
+
+        // 379 Fix (Root Cause statt Nachbearbeitung): Physics.IgnoreCollision zwischen
+        // JEDEM Ghost-Truck-Collider und JEDER Amenity-/Werkstatt-Triggerzone im
+        // Sektor. Root Cause (Build 377/378 Live-Diagnose bestaetigt): Ghost-Trucks
+        // liegen auf demselben Physik-Layer wie der lokale Truck (noetig fuer
+        // Truck-vs-Truck-Kollision) und alle 32 Projekt-Layer sind bereits belegt -
+        // ein dedizierter Ghost-Layer ist daher NICHT verfuegbar. Physics.IgnoreCollision
+        // arbeitet stattdessen pro Collider-INSTANZ, nicht pro Layer: der lokale Truck
+        // bleibt von der Werkstatt-Triggerzone komplett unberuehrt, nur Ghost-Truck
+        // <-> Triggerzone wird ignoriert. Effekt: OnTriggerStay feuert fuer Ghosts an
+        // dieser Zone NATIV nie mehr - der eigentliche Root Cause ist behoben, nicht
+        // nur nachtraeglich abgefangen. Die bestehenden Gates (368/369/370, 311/315)
+        // bleiben unveraendert als zusaetzliches Sicherheitsnetz aktiv, bis dieser Fix
+        // im Feld bestaetigt ist.
+        private static readonly HashSet<(int ghostColliderId, int zoneColliderId)> ignoredPairs =
+            new HashSet<(int, int)>();
+
+        public static void SweepGhostTriggerImmunity()
+        {
+            try
+            {
+                var client = global::StarTruckMP.StarTruckClient.StarTruckClient.client;
+                if (client == null || !client.IsConnected) return; // Singleplayer: nichts zu tun
+
+                var ghostColliders = new List<Collider>();
+                foreach (var helper in UnityEngine.Object.FindObjectsOfType<global::StarTruckMP.Encoding.RemoteTruckCollisionHelper>())
+                {
+                    if (helper == null || helper.gameObject == null) continue;
+                    try
+                    {
+                        ghostColliders.AddRange(helper.gameObject.GetComponentsInChildren<Collider>());
+                    }
+                    catch { }
+                }
+                if (ghostColliders.Count == 0) return;
+
+                var zoneColliders = new List<Collider>();
+                foreach (var zone in UnityEngine.Object.FindObjectsOfType<AmenityTriggerZone>())
+                {
+                    if (zone == null || zone.gameObject == null) continue;
+                    try
+                    {
+                        zoneColliders.AddRange(zone.gameObject.GetComponentsInChildren<Collider>());
+                    }
+                    catch { }
+                }
+                if (zoneColliders.Count == 0) return;
+
+                int newlyIgnored = 0;
+                foreach (var gc in ghostColliders)
+                {
+                    if (gc == null) continue;
+                    int gcId = gc.GetInstanceID();
+                    foreach (var zc in zoneColliders)
+                    {
+                        if (zc == null) continue;
+                        int zcId = zc.GetInstanceID();
+                        var key = (gcId, zcId);
+                        if (ignoredPairs.Contains(key)) continue;
+                        try
+                        {
+                            Physics.IgnoreCollision(gc, zc, true);
+                            ignoredPairs.Add(key);
+                            newlyIgnored++;
+                        }
+                        catch (Exception exPair)
+                        {
+                            StarTruckMP.Log.LogWarning($"379 SweepGhostTriggerImmunity: IgnoreCollision Fehler ({gc.name} / {zc.name}): {exPair.Message}");
+                        }
+                    }
+                }
+                if (newlyIgnored > 0)
+                {
+                    StarTruckMP.Log.LogInfo($"379 SweepGhostTriggerImmunity: {newlyIgnored} neue Ghost<->Triggerzone-Paare auf IgnoreCollision gesetzt (gesamt getrackt: {ignoredPairs.Count}, ghosts={ghostColliders.Count}, zones={zoneColliders.Count}).");
+                }
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"379 SweepGhostTriggerImmunity Fehler: {ex.Message}");
             }
         }
 

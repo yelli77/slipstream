@@ -39,12 +39,18 @@ namespace UnityEngine
         public static List<Object> Registry = new List<Object>();
         public static T[] FindObjectsOfType<T>() where T : Object
             => Registry.OfType<T>().ToArray();
+        private static int nextInstanceId = 1;
+        private readonly int instanceId = nextInstanceId++;
+        public int GetInstanceID() => instanceId; // 379-Diag-Stub
     }
     public class GameObject : Object
     {
         public GameObject(string n) { name = n; }
         public Transform transform;
         public int layer = 0; // 377-Diag-Stub: reines Test-Double, keine echte Physik-Layer-Logik
+        public List<Collider> Colliders = new List<Collider>(); // 379-Diag-Stub
+        public T[] GetComponentsInChildren<T>() where T : class
+            => Colliders.OfType<T>().ToArray();
     }
     public static class LayerMask
     {
@@ -55,6 +61,8 @@ namespace UnityEngine
     {
         // 378-Diag-Stub: reicht fuer die Testsuite (nur Logging, keine Assertions darauf).
         public static bool GetIgnoreLayerCollision(int layerA, int layerB) => false;
+        // 379-Diag-Stub: no-op, nur damit AmenityLocalGate.cs kompiliert.
+        public static void IgnoreCollision(Collider a, Collider b, bool ignore) { }
     }
     public class Component : Object
     {
@@ -100,6 +108,10 @@ public class DockingBay : UnityEngine.MonoBehaviour
     public static int k_triggerColliderLayer = 0;   // 377-Diag-Stub: native Konstante, hier nur Platzhalter
 }
 public class AmenityTriggerZone : UnityEngine.MonoBehaviour { }
+namespace StarTruckMP.Encoding
+{
+    public class RemoteTruckCollisionHelper : UnityEngine.MonoBehaviour { } // 379-Diag-Stub
+}
 public class TruckAmenityTerminal : UnityEngine.MonoBehaviour { }
 
 // ── Mod statics stubs ──

@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-378";
+    public const string customBuildNumber = "custom-build-379";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -110,6 +110,12 @@ public class StarTruckMP : BasePlugin
             {
                 poiUpdateTimer = 5f;
                 StarTruckClient.ShopAtJobBoardBays.ApplyShopPoiToJobsBoardBays();
+                // 379: periodischer Sweep, der jeden Ghost-Truck-Collider gegen jede
+                // Amenity-/Werkstatt-Triggerzone im Sektor auf Physics.IgnoreCollision
+                // setzt - behebt den Root Cause (Ghost-Truck triggert native
+                // Werkstatt-Logik lokal auf jedem Client) direkt an der Physik-Ebene,
+                // statt ihn nur nachtraeglich per Harmony abzufangen.
+                StarTruckClient.AmenityLocalGate.SweepGhostTriggerImmunity();
             }
             StarTruckClient.StarTruckClient.Update();
             StarTruckClient.StarTruckClient.FixedUpdate();
