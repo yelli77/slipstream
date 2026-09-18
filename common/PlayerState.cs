@@ -22,6 +22,15 @@ public class PlayerState
     public Vector3f TrailerRotation { get; set; }
     public string Livery { get; set; } = "";
     public string TrailerModel { get; set; } = "";
+
+    // custom-build-367 (Bug A): letzter bekannter MULTI-Trailerzustand, damit der
+    // Join-Catchup (OnClientConnected) dem Neu-Joiner ALLE Trailer mit ECHTEM
+    // Containertyp schicken kann — vorher wurde nur ein Legacy-Einzeltrailer ohne
+    // containerType gesendet (model=''), woraufhin der Client einen Fallback-Mesh
+    // (bzw. Placeholder) baute, bis die erste MULTI-Bewegung eintraf.
+    public long[] MultiTrailerIds { get; set; }
+    public string[] MultiTrailerTypes { get; set; }
+    public float[][] MultiTrailerPositions { get; set; }
     public ulong SteamId { get; set; }
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
     public string DestinationGateId { get; set; } = "";

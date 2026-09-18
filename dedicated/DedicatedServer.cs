@@ -150,9 +150,25 @@ public class DedicatedServer
         _server.Send(joinMsg, e.Client);
         foreach (var kv in _players)
         {
+            if (kv.Key == e.Client.Id) continue;
+            // custom-build-367 (Bug A): MULTI-Spieler bekommen den VOLLSTAENDIGEN
+            // Trailerzustand (alle Ids/Typen/Positionen) als MULTI-Catchup — vorher
+            // ging nur ein Legacy-Einzeltrailer OHNE containerType raus (model=''),
+            // der Client baute daraus einen Fallback-/Placeholder-Mesh.
+            if (kv.Value.TrailerHitched && kv.Value.MultiTrailerIds != null && kv.Value.MultiTrailerIds.Length > 0
+                && kv.Value.MultiTrailerTypes != null && kv.Value.MultiTrailerPositions != null)
+            {
+                _server.Send(ServerMessages.CreateMultiTrailerMovement(kv.Key,
+                    (ushort)kv.Value.MultiTrailerIds.Length,
+                    kv.Value.MultiTrailerIds, kv.Value.MultiTrailerTypes, kv.Value.MultiTrailerPositions), e.Client);
+                Log($"Join-catchup[367]: MULTI trailer snapshot for player {kv.Key} ({kv.Value.MultiTrailerIds.Length} trailer(s), types=[{string.Join(",", kv.Value.MultiTrailerTypes)}]) -> client {e.Client.Id}");
+                continue;
+            }
             if (kv.Value.TrailerHitched)
             {
-                _server.Send(ServerMessages.CreateTrailerMovement(kv.Key, true, kv.Value.TrailerPosition, kv.Value.TrailerRotation), e.Client);
+                // custom-build-367 (Bug A): echten Containertyp mitschicken (vorher ''
+                // -> Client-Fallback-Mesh bis zur ersten eigenen Bewegung des Spielers).
+                _server.Send(ServerMessages.CreateTrailerMovement(kv.Key, true, kv.Value.TrailerPosition, kv.Value.TrailerRotation, kv.Value.TrailerModel), e.Client);
                 if (!string.IsNullOrEmpty(kv.Value.TrailerModel))
                 {
                     var tmMsg = Message.Create(MessageSendMode.Reliable, (ushort)MessageType.UpdateTrailerModel);

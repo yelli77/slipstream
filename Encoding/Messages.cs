@@ -345,10 +345,25 @@ namespace StarTruckMP.Encoding
                 if (sampleCargo == null)
                 {
                     StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no CargoContainer found in scene, falling back to placeholder.");
+                    // custom-build-367 (Bug A): Diag-Marker — beweist im Testlog, welcher
+                    // Typ ankam und dass der Placeholder nur bei wirklich unbekanntem Typ
+                    // / leerer Szene greift.
+                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: model='{containerType ?? ""}' → mesh=placeholder (fallback=true)");
                     return createTrailerPlaceholder(playerId);
                 }
 
                 GameObject cargoRoot = sampleCargo.gameObject;
+
+                // custom-build-367 (Bug A): Diag-Marker 'model=X → mesh=Y (fallback=…)'
+                // — Michael kann im Testlog direkt ablesen, welcher Containertyp beim
+                // Client ankam und ob der Mesh exakt gematcht wurde.
+                string matchedType = null;
+                try { matchedType = GetContainerTypeIdentifier(sampleCargo); } catch { }
+                bool exactMatch = !string.IsNullOrEmpty(containerType)
+                    && !string.IsNullOrEmpty(matchedType) && matchedType == containerType;
+                StarTruckMP.Log.LogInfo($"createTrailerMesh[{playerId}]: model='{containerType ?? ""}' → mesh='{cargoRoot.name}' (fallback={!exactMatch})");
+                if (!exactMatch && !string.IsNullOrEmpty(containerType))
+                    StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: no local CargoContainer matching type='{containerType}' (scene mesh '{cargoRoot.name}' type='{matchedType ?? "?"}' used as fallback)");
 
                 // Instantiate a copy of the cargo container
                 GameObject newTrailer = GameObject.Instantiate(cargoRoot, Vector3.zero, Quaternion.Euler(Vector3.zero));
@@ -401,6 +416,7 @@ namespace StarTruckMP.Encoding
             catch (System.Exception ex)
             {
                 StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}] failed: {ex.Message}, falling back to placeholder.");
+                StarTruckMP.Log.LogWarning($"createTrailerMesh[{playerId}]: model='{containerType ?? ""}' → mesh=placeholder (fallback=true, exception)");
                 return createTrailerPlaceholder(playerId);
             }
         }

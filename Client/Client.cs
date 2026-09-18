@@ -810,8 +810,20 @@ namespace StarTruckMP.StarTruckClient
                                     spawnedRb.velocity = playerVel;
                                     spawnedRb.angularVelocity = playerAngVel;
                                 }
+                                // custom-build-367 (Bug B): Frische Netzwerk-Position VOR dem
+                                // Snap in truckTrans schreiben — vorher benutzte
+                                // SnapRemotePlayerToLocal einen evtl. STALE truckTrans-Stand
+                                // (alte/Join-Position) und SmoothTruckMovement lerpte dann
+                                // mit gedeckelter Velocity über Meter-Distanz heran.
+                                currentPlayer.truckTrans.Pos = playerPos;
+                                currentPlayer.truckTrans.Rot = playerRot;
+                                currentPlayer.truckTrans.Vel = playerVel;
+                                currentPlayer.truckTrans.AngVel = playerAngVel;
                                 SnapRemotePlayerToLocal(playerId, currentPlayer);
                                 PositionNameLabelImmediately(playerId, currentPlayer);
+                                // custom-build-367 (Bug B): Spawn-Snap-Marker — beweist im
+                                // Testlog, dass das erste Placement EXAKT war (kein Lerp-Anflug).
+                                StarTruckMP.Log.LogInfo($"[SpawnSnap] deferred-spawn player {playerId} hard-snapped to abs={playerPos} (no velocity-capped approach)");
                                 // custom-build-366 (Bug 2/Konstellation 2b+5): Deferred-Spawn-
                                 // Marker — Respawn nach eigenem Sektorwechsel/Reconnect.
                                 StarTruckMP.Log.LogInfo($"[RespawnDiag] deferred-spawn player {playerId} in sector '{currentSector}': truck=OK, label={(currentPlayer.NameLabel != null ? "OK" : "NULL")}, steamId={(currentPlayer.steamId != 0 ? currentPlayer.steamId.ToString() : "unknown")}");
@@ -935,6 +947,17 @@ namespace StarTruckMP.StarTruckClient
 
                     // v1 multi-trailer detection: px < 0 and sentinel string "MULTI"
                     bool isMultiTrailer = tt[0] < -0.5f && remoteTrailerModel == "MULTI";
+
+                    // custom-build-367 (Bug A): ein alter Legacy-Einzeltrailer (z.B. aus
+                    // dem Join-Catchup) darf neben den MULTI-Trailern NICHT weiterleben —
+                    // er zeigt sonst dauerhaft einen Fallback-/Doppel-Mesh.
+                    if (isMultiTrailer && currentPlayer.Trailer != null)
+                    {
+                        StarTruckMP.Log.LogInfo($"[RespawnDiag] MultiTrailer: destroying stale legacy trailer for player {playerId} (model='{currentPlayer.trailerModel}')");
+                        RemoteHitchVFX.Hide(playerId);
+                        GameObject.Destroy(currentPlayer.Trailer);
+                        currentPlayer.Trailer = null;
+                    }
 
                     if (isMultiTrailer)
                     {
@@ -1947,6 +1970,10 @@ namespace StarTruckMP.StarTruckClient
         private static readonly float MaxVelocity = 40f;              // hard clamp: max linear velocity (m/s)
         private static readonly float MaxAngularVelocity = 10f;       // hard clamp: max angular velocity (rad/s)
         private static readonly float ReadyCorrectionK = 2.5f;        // moderate K after grace period (before first contact)
+        // custom-build-367 (Bug B): Initial-Placement-Fenster — nach Spawn/Sektorwechsel
+        // wird jeder Fehler > InitialSnapMinError für 15s hart gesnapped statt gelerpt.
+        private const float InitialSnapWindow = 15f;                  // seconds after spawn
+        private const float InitialSnapMinError = 2f;                 // meters
 
         public static void SmoothTruckMovement()
         {
@@ -2000,6 +2027,28 @@ namespace StarTruckMP.StarTruckClient
                     rp.driftTimer = 0f;
                     playerList[kv.Key] = rp;
                     StarTruckMP.Log.LogInfo($"SmoothTruckMovement[{kv.Key}]: sustained-drift snap, errorDist={errorDist:F1}m persistiert > {SustainedDriftTime}s, targetLocal={targetPos}");
+                    continue;
+                }
+
+                // custom-build-367 (Bug B): Initial-Placement-Fenster. Michael-Regel:
+                // Nach dem Respawn/Sektor-Wechsel steht der Remote-Truck SOFORT exakt am
+                // Ziel — KEINE geschwindigkeitsgedeckelte Lerp-Anfahrt über Meter-Distanz.
+                // Innerhalb von 15s nach dem Spawn wird jeder Fehler > 2m hart gesnapped;
+                // der Lerp-Pfad greift erst, wenn das Fenster abgelaufen ist.
+                if (rp.spawnTime > 0f
+                    && UnityEngine.Time.time - rp.spawnTime < InitialSnapWindow
+                    && errorDist > InitialSnapMinError
+                    && !rp.isColliding)
+                {
+                    rp.Truck.transform.position = targetPos;
+                    rp.Truck.transform.eulerAngles = rp.truckTargetRot;
+                    rb.position = targetPos;
+                    rb.rotation = Quaternion.Euler(rp.truckTargetRot);
+                    rb.velocity = rp.truckTrans.Vel;
+                    rb.angularVelocity = rp.truckTrans.AngVel;
+                    playerList[kv.Key] = rp;
+                    StarTruckMP.Log.LogInfo($"[SpawnSnap] SmoothTruckMovement[{kv.Key}]: initial-placement snap, errorDist={errorDist:F1}m (window {InitialSnapWindow:F0}s after spawn) targetLocal={targetPos}");
+                    rp.driftTimer = 0f;
                     continue;
                 }
                 if (errorDist > TruckMaxCorrection)
@@ -2112,7 +2161,20 @@ namespace StarTruckMP.StarTruckClient
                 }
                 if (p.NameLabel != null && p.NameLabel.activeInHierarchy && p.Truck != null)
                 {
-                    p.NameLabel.transform.position = p.Truck.transform.position + new Vector3(0, 35f, 0);
+                    // custom-build-367 (Bug C): Label+Badge als KIND des Truck-Roots —
+                    // sie erben damit die exakt interpolierte Render-Transform des Trucks
+                    // (RigidbodyInterpolation.Interpolate). Vorher wurde die Label-Position
+                    // jeden Frame aus transform.position kopiert; die Interpolations-Pose
+                    // des Truck-Meshes wird aber erst NACH den Script-Updates geschrieben —
+                    // Label/Badge hinkten bei Fahrt 1 Frame hinterher (Flimmern/Schlieren).
+                    // Rotation bleibt Billboard (weltrelativ), Position rigid am Truck.
+                    if (p.NameLabel.transform.parent != p.Truck.transform)
+                    {
+                        p.NameLabel.transform.SetParent(p.Truck.transform, true);
+                        StarTruckMP.Log.LogInfo($"[BadgeFollow] label of player {kv.Key} parented to truck (rigid follow, no per-frame world copy)");
+                    }
+                    float yScale = Mathf.Max(p.Truck.transform.lossyScale.y, 0.0001f);
+                    p.NameLabel.transform.localPosition = new Vector3(0f, 35f / yScale, 0f);
                     // custom-build-363: Label wird von CreateNameLabel unsichtbar geparkt
                     // (erbt sonst die LicensePlate-Position des EIGENEN Trucks). Erst hier,
                     // an der korrekten Position, wieder sichtbar schalten.

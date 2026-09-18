@@ -244,6 +244,15 @@ public class MessageHandler
                     p.TrailerPosition = new Vector3f(positions[0][0], positions[0][1], positions[0][2]);
                     p.TrailerRotation = new Vector3f(positions[0][3], positions[0][4], positions[0][5]);
                     p.TrailerModel = string.IsNullOrEmpty(types[0]) ? "MULTI" : types[0];
+                    // custom-build-367 (Bug A): vollstaendigen MULTI-Zustand fuer den
+                    // Join-Catchup mitspeichern (Ids/Typen/Positionen 1:1).
+                    p.MultiTrailerIds = ids;
+                    p.MultiTrailerTypes = types;
+                    p.MultiTrailerPositions = positions;
+                }
+                else
+                {
+                    p.MultiTrailerIds = null; p.MultiTrailerTypes = null; p.MultiTrailerPositions = null;
                 }
                 p.LastUpdate = DateTime.UtcNow;
                 _players[e.FromConnection.Id] = p;
@@ -260,6 +269,9 @@ public class MessageHandler
 
         var pos=new Vector3f(t[0],t[1],t[2]); var rot=new Vector3f(t[3],t[4],t[5]);
         p.TrailerHitched=hitched;p.TrailerPosition=pos;p.TrailerRotation=rot;p.TrailerModel=containerType;p.LastUpdate=DateTime.UtcNow;
+        // custom-build-367 (Bug A): Legacy-Single-Trailer ueberschreibt jeden alten
+        // MULTI-Zustand — der Catchup darf dem Neu-Joiner keine veralteten MULTI-Trailer schicken.
+        p.MultiTrailerIds=null;p.MultiTrailerTypes=null;p.MultiTrailerPositions=null;
         _players[e.FromConnection.Id]=p;
         server.SendToAll(ServerMessages.CreateTrailerMovement(e.FromConnection.Id,hitched,pos,rot,containerType));
     }
