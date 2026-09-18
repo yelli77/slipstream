@@ -91,7 +91,7 @@ namespace StarTruckMP.StarTruckClient
                 harmonyInstance = new Harmony("StarTruckMP.AmenityLocalGate");
 
                 var gatePrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(AmenityGatePrefix));
-                gatePrefix.Priority = Priority.First;
+                gatePrefix.priority = 800; // HarmonyMethod-Feld (Property-Schreibweise kompiliert hier nicht)
 
                 var canEnterType = AccessTools.TypeByName("DockingBaySharedAssets");
                 if (canEnterType != null)
@@ -191,7 +191,7 @@ namespace StarTruckMP.StarTruckClient
         private static DockingBay ResolveBayCached(DockingBaySharedAssets shared)
         {
             long key;
-            try { key = shared.Pointer; } catch { return null; }
+            try { key = shared.Pointer.ToInt64(); } catch { return null; }
 
             var now = Time.realtimeSinceStartup;
             if (bayCache.TryGetValue(key, out var cached))
@@ -289,7 +289,7 @@ namespace StarTruckMP.StarTruckClient
             {
                 var ptrProp = proxy.GetType().GetProperty("Pointer");
                 if (ptrProp == null) return false;
-                return Convert.ToInt64(ptrProp.GetValue(proxy)) == native.Pointer;
+                return Convert.ToInt64(ptrProp.GetValue(proxy)) == native.Pointer.ToInt64();
             }
             catch { return false; }
         }
