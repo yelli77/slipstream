@@ -376,7 +376,7 @@ namespace StarTruckMP.StarTruckClient
                 // Topmost Parent (Trigger-Zonen-Subcollider zeigen auf den Truck-Root).
                 var t = go.transform;
                 while (t != null && t.parent != null) t = t.parent;
-                return (t != null) ? t.gameObject : go;
+                return (t != null && t.gameObject != null) ? t.gameObject : go;
             }
             catch { return null; }
         }
