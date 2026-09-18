@@ -776,6 +776,32 @@ namespace StarTruckMP.StarTruckClient
     [HarmonyPatch]
     public class JobAcceptPatches
     {
+        // Build-368 (Prio 2, Freeze-Fix): Prefix vor der NATIVEN Annahme. Wenn der
+        // Server-Pool trotz Uploads nie angekommen ist (defekter Sync-Zustand), friert
+        // die native Annahme (blocking Wait auf Pool-/Job-Daten, Log 367: Spiel frozr ->
+        // 'Client disconnected from Server: 3'). Dann sauber ABRECHEN: Prefix=false
+        // (native Annahme laeuft nicht), UI-Hinweis statt Freeze, Spiel laeuft weiter.
+        // Nach dem Wireformat-Fix (368) kommt der Pool an -> Guard bleibt passiv.
+        [HarmonyPatch(typeof(global::ProceduralJobGenerator), nameof(global::ProceduralJobGenerator.AcceptJob))]
+        [HarmonyPrefix]
+        public static bool AcceptJob_Prefix(global::QuestInstance job)
+        {
+            try
+            {
+                if (!JobBoardServerSync.PoolMissingAfterUpload(out string reason)) return true;
+                string qid = "";
+                try { qid = job?.questId ?? ""; } catch { }
+                StarTruckMP.Log.LogWarning($"JobAcceptPatches: Job-Annahme ABGEBROCHEN (Pool fehlt): questId='{qid}' ({reason})");
+                try { JobBoardComputer.ShowAcceptBlockedHint(); } catch { }
+                return false; // native Annahme (Freeze-Pfad) nicht ausfuehren
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"AcceptJob_Prefix Fehler: {ex.Message}");
+                return true; // im Zweifel natives Verhalten lassen (kein Funktionsverlust)
+            }
+        }
+
         [HarmonyPatch(typeof(global::ProceduralJobGenerator), nameof(global::ProceduralJobGenerator.AcceptJob))]
         [HarmonyPostfix]
         public static void AcceptJob_Postfix(global::QuestInstance job)

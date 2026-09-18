@@ -65,11 +65,25 @@ public static class Program
     private static readonly Dictionary<string, Dictionary<int, byte[]>> _incomingB = new();
 
     public static int Main()
-    {
-        Console.WriteLine("=== JobBoardSmokeTest (StarTruckMP) ===");
-        var sw = Stopwatch.StartNew();
-        try
-        {
+            {
+                Console.WriteLine("=== JobBoardSmokeTest (StarTruckMP) ===");
+                var sw = Stopwatch.StartNew();
+                try
+                {
+                    // (f) Build-368 Root-Cause-Beweis: das ALTE Client-Format (BinaryWriter.
+                    // Write(string) = 7-Bit-Varint-Laenge) kann vom echten Server-Codec
+                    // (JobBoardCodec.DecodeJobs, int32-LE-Laengen) NICHT decodiert werden.
+                    // Der Server-Merge wirft -> kein BroadcastPool -> nie ein Pool-Download
+                    // (Log 367: 'kein Pool-Download nach Upload' endlos).
+                    byte[] oldFmt = SerializeJobs_OldBinaryWriterFormat(3);
+                    bool oldFails = false;
+                    try { var old = JobBoardCodec.DecodeJobs(oldFmt); oldFails = old.Count != 3; }
+                    catch (Exception) { oldFails = true; }
+                    Check("f1: ALTES Client-Format (7-bit-Varint-Strings) wird vom Server-Codec NICHT decodiert (Root-Cause 368)", oldFails);
+                    byte[] newFmt = SerializeJobs(3, "jobNew", descLen: 10);
+                    var parsed = JobBoardCodec.DecodeJobs(newFmt);
+                    Check("f2: NEUES Client-Format (int32-LE-Strings) decodiert korrekt (3/3 Jobs)",
+                        parsed.Count == 3 && parsed[0].QuestId == "jobNew-0001");
             StartServer();
             StartTicker();
             ConnectClients();
@@ -288,6 +302,25 @@ public static class Program
             ws($"{prefix} Job {i}");
             ws(new string('x', descLen) + $" #{i}");
             bw.Write(0); // paramCount = 0
+        }
+        bw.Flush();
+        return ms.ToArray();
+    }
+
+    // Build-368: Replikat des ALTEN Client-Formats (Client/JobBoardServerSync.cs vor dem
+    // Fix): BinaryWriter.Write(string) schreibt die String-Laenge als 7-Bit-Varint —
+    // genau das, was der Server-Codec nicht lesen kann (Regression-Beweis, Assertion f1).
+    private static byte[] SerializeJobs_OldBinaryWriterFormat(int count)
+    {
+        using var ms = new MemoryStream();
+        using var bw = new BinaryWriter(ms);
+        bw.Write(count);
+        for (int i = 1; i <= count; i++)
+        {
+            bw.Write($"jobOld-{i:D4}");
+            bw.Write($"jobOld Job {i}");
+            bw.Write(new string('x', 40) + $" #{i}");
+            bw.Write(0);
         }
         bw.Flush();
         return ms.ToArray();

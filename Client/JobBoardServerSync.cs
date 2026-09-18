@@ -44,15 +44,19 @@ namespace StarTruckMP.StarTruckClient
         private static float nextUploadAllowedTime = 0f;
         private const float MIN_UPLOAD_INTERVAL = 1.5f;
 
-        // Build-364 (Re-Send-Netz): war der letzte Upload zwar verschickt, ist aber seitdem
+        // Build-368 (Re-Send-Backoff): war der letzte Upload zwar verschickt, ist aber seitdem
         // KEIN Pool-Download vom Server angekommen (letzter Pool-Empfang liegt VOR dem
         // Upload und > NO_POOL_RESEND_AFTER Sekunden zurueck), gehen wir von verlorenen
-        // Chunks aus (Riptide-Reliable-Burst, Lesson 335) und erlauben EIN Re-Send mit
-        // neuem transferId — max. 1x pro 15 s, kein endloses Spammen.
+        // Chunks aus (Riptide-Reliable-Burst, Lesson 335) und erlauben Re-Sends mit
+        // EXponentiellem Backoff (15s, 30s, 60s, 120s) — nach MAX_CONSECUTIVE_RESENDS
+        // ohne einen einzigen Pool-Empfang stoppen wir ganz (kein Endlos-Re-Send mehr,
+        // Log-Fund custom-build-367: 22+ identische Re-Sends im 15s-Takt).
         private const float NO_POOL_RESEND_AFTER = 15f;
         private const float RESEND_MIN_INTERVAL = 15f;
+        private const int MAX_CONSECUTIVE_RESENDS = 4;
         private static float lastUploadTime = -999f;
         private static float nextResendTime = 0f;
+        private static int consecutiveResends = 0;
 
         // Build-362 (Upload-Retry): OnLocalJobsGenerated() lief EINMALIG pro Generierung
         // (Harmony-Postfix auf GenerateJobsForAllSectors). War der Client zum Generierungs-
@@ -125,7 +129,21 @@ namespace StarTruckMP.StarTruckClient
                                     && (Time.unscaledTime - lastUploadTime) > NO_POOL_RESEND_AFTER
                                     && Time.unscaledTime >= nextResendTime)
                                 {
-                                    nextResendTime = Time.unscaledTime + RESEND_MIN_INTERVAL;
+                                    // Build-368: Backoff 15/30/60/120s; nach 4 erfolglosen Re-Sends ganz
+                                    // aufhoeren — ein Server, der nach 4+Uploads nie einen Pool schickt,
+                                    // ist kaputt (Root-Cause 368: Wireformat-Mismatch, jetzt behoben),
+                                    // und Endlos-Re-Sends spammen nur (Log 367).
+                                    consecutiveResends++;
+                                    if (consecutiveResends > MAX_CONSECUTIVE_RESENDS)
+                                    {
+                                        if (lastLoggedSkip == null || lastLoggedSkip != "resend-giveup")
+                                        {
+                                            lastLoggedSkip = "resend-giveup";
+                                            StarTruckMP.Log.LogWarning($"JobBoardServerSync: {MAX_CONSECUTIVE_RESENDS} Re-Sends ohne Pool-Download fuer Sektor '{sector}' — Re-Send deaktiviert bis ein Pool ankommt.");
+                                        }
+                                        return;
+                                    }
+                                    nextResendTime = Time.unscaledTime + RESEND_MIN_INTERVAL * (1 << Math.Min(consecutiveResends - 1, 3));
                                     nextUploadAllowedTime = Time.unscaledTime + MIN_UPLOAD_INTERVAL;
 
                                     byte[] payload = SerializeJobs(liveJobs);
@@ -134,7 +152,7 @@ namespace StarTruckMP.StarTruckClient
                                     lastUploadedHash = hash;
                                     lastUploadTime = Time.unscaledTime;
                                     lastLoggedSkip = null;
-                                    StarTruckMP.Log.LogInfo($"JobBoardServerSync: Upload-Retry: kein Pool-Download nach Upload, Re-Send: {liveJobs.Count} Jobs fuer Sektor '{sector}' ({payload.Length} bytes, {totalChunks} Chunks).");
+                                    StarTruckMP.Log.LogInfo($"JobBoardServerSync: Upload-Retry (Re-Send {consecutiveResends}/{MAX_CONSECUTIVE_RESENDS}, kein Pool-Download nach Upload): {liveJobs.Count} Jobs fuer Sektor '{sector}' ({payload.Length} bytes, {totalChunks} Chunks).");
                                     return;
                                 }
                                 return;
@@ -150,6 +168,7 @@ namespace StarTruckMP.StarTruckClient
                                 lastUploadedHash = hash;
                                 lastUploadTime = Time.unscaledTime;
                                 nextResendTime = Time.unscaledTime + RESEND_MIN_INTERVAL; // erst 15s nach dem Upload darf ein Re-Send pruefen
+                                consecutiveResends = 0; // neuer Inhalt = neue Chance
                                 lastLoggedSkip = null;
                                 StarTruckMP.Log.LogInfo($"JobBoardServerSync: {liveJobs.Count} Jobs fuer Sektor '{sector}' hochgeladen ({payload.Length} bytes, {chunksSent}/{chunksSent} Chunks).");
                                 return;
@@ -189,6 +208,16 @@ namespace StarTruckMP.StarTruckClient
         // gegen die eigene QuestInstance. Params waren 85% der Upload-Groesse (169 Jobs:
         // 114 KB -> ~20 KB). Format bleibt kompatibel (paramCount je Job dynamisch gelesen,
         // alte 342-Clients mit Params decodieren weiterhin korrekt).
+        //
+        // BUILD-368 ROOT-CAUSE-FIX: BINARYWRITER.WRITE(STRING) schreibt die Laenge als
+        // 7-BIT-VARINT (System.IO.BinarWriter-Kodierung), der Server (JobBoardCodec.
+        // DecodeJobs, dedicated/JobBoardCodec.cs:119-124) liest die Laenge aber als
+        // INT32-LE. Bei questId-Laengen < 128 ist der Varint 1 Byte vs. 4 Bytes gelesen
+        // -> der Server-Parse explodiert/garbage, Merge wirft (JobBoardServer.HandleUpload
+        // catch, dedicated/JobBoardServer.cs:126-129), BroadcastPool wird NIE erreicht ->
+        // nie ein Pool-Download (Log 367: 'kein Pool-Download nach Upload' endlos).
+        // Jetzt: String-Laenge explizit als int32-LE (BinWriter.Write(int) ist LE-4-Bytes,
+        // identisch zu JobBoardCodec.WriteString) — Wireformat entspricht exakt dem Codec.
         private static byte[] SerializeJobs(Il2CppSystem.Collections.Generic.List<global::QuestInstance> jobs)
         {
             using var ms = new MemoryStream();
@@ -202,12 +231,20 @@ namespace StarTruckMP.StarTruckClient
                 try { questId = job?.questId ?? ""; } catch { }
                 try { displayName = job?.displayName ?? ""; } catch { }
                 try { displayDescription = job?.displayDescription ?? ""; } catch { }
-                w.Write(questId);
-                w.Write(displayName);
-                w.Write(displayDescription);
+                WriteNetString(w, questId);
+                WriteNetString(w, displayName);
+                WriteNetString(w, displayDescription);
                 w.Write(0); // paramCount=0: Parameter werden vom Board/Accept nicht gelesen
             }
             return ms.ToArray();
+        }
+
+        // String im JobBoardCodec-Format: [int32-LE laenge][utf8-bytes].
+        private static void WriteNetString(BinaryWriter w, string s)
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(s ?? "");
+            w.Write(bytes.Length);
+            if (bytes.Length > 0) w.Write(bytes);
         }
 
         // Gemeinsamer Chunk-Sender (Upload). Format identisch zum ChunkedBlobTransfer-Relay:
@@ -304,6 +341,7 @@ namespace StarTruckMP.StarTruckClient
             pooledSector = sector;
             pooledVersion = version;
             lastPoolReceiveTime = Time.unscaledTime;
+            consecutiveResends = 0; // Build-368: Pool funktioniert hat einmal -> Backoff-Zaehler reset
             StarTruckMP.Log.LogInfo($"JobBoardServerSync: Pool empfangen fuer Sektor '{sector}': {newPooled.Count} Jobs (v{version}, regress={versionRegress}).");
         }
 
@@ -488,6 +526,38 @@ namespace StarTruckMP.StarTruckClient
             lastUploadedHash = null;
             lastUploadTime = -999f;
             nextResendTime = 0f;
+            consecutiveResends = 0;
+            lastLoggedSkip = null;
+        }
+
+        // ------------------------------------------------------------------
+        // ACCEPT-GUARD (Build-368, Prio 2)
+        // ------------------------------------------------------------------
+        /// <summary>
+        /// True, wenn der Server-Pool fuer den Sektor NIE angekommen ist, obwohl wir
+        /// mehrfach hochgeladen haben (>20s her, letzter Pool-Empfang liegt vor dem
+        /// letzten Upload). In diesem defekten Zustand war die native Job-Annahme der
+        /// Freeze-Ausloeser (Log 367: Malik nimmt Job an -> Spiel friert -> disconnect 3,
+        /// vermutlich blocking Wait auf Pool-/Job-Daten, die nie ankommen). Der
+        /// Accept-Prefix bricht die Annahme dann SAUBER ab (UI-Hinweis statt Freeze).
+        /// Nach dem Wireformat-Fix (368) kommt der Pool an und der Guard bleibt passiv.
+        /// </summary>
+        public static bool PoolMissingAfterUpload(out string reason)
+        {
+            reason = null;
+            try
+            {
+                var client = StarTruckClient.client;
+                if (client == null || !client.IsConnected) return false; // Solo: nie blockieren
+                string sector = StarTruckClient.currentSector;
+                if (string.IsNullOrEmpty(sector) || sector == "none") return false;
+                if (lastUploadedSector != sector || lastUploadTime <= -900f) return false;
+                if (lastPoolReceiveTime >= lastUploadTime) return false; // Pool da
+                if (Time.unscaledTime - lastUploadTime <= 20f) return false; // noch im Grace-Fenster
+                reason = $"kein Server-Pool nach Upload ({(int)(Time.unscaledTime - lastUploadTime)}s, {consecutiveResends} Re-Sends) — Pool-Sync defekt";
+                return true;
+            }
+            catch { return false; }
         }
     }
 }

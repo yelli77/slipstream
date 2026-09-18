@@ -55,6 +55,24 @@ namespace StarTruckMP.StarTruckClient
         {
         }
 
+        // Build-368 (Prio 2): UI-Hinweis bei abgebrochener Job-Annahme (Pool fehlt).
+        // Nutzt das bestehende Overlay (EnsureUI); kein blocking Call, nur einmalig
+        // pro Ereignis sichtbar fuer HINT_SECONDS.
+        private static float acceptHintUntil = 0f;
+        private static string acceptHintText = null;
+        private const float HINT_SECONDS = 8f;
+
+        public static void ShowAcceptBlockedHint()
+        {
+            acceptHintText = "JOB-ANNAHME ABGEBROCHEN:\nServer-Pool nicht empfangen\n(Sync defekt).\nSpiel laeuft weiter.";
+            acceptHintUntil = Time.unscaledTime + HINT_SECONDS;
+            try { EnsureUI(); } catch { }
+            if (canvasObj != null) canvasObj.SetActive(true);
+            nextTextRefresh = 0f;
+            visible = true;
+            StarTruckMP.Log.LogInfo("JobBoardComputer: Accept-Blocked-Hint angezeigt.");
+        }
+
         private static bool TryOpenGameJobBoard()
         {
             // (A) PRIMAERPFAAD: echtes Jobboard via MenuState.LoadAndShow
@@ -334,6 +352,22 @@ private static void SetVisible(bool v)
             if (canvasObj == null && cockpitObj != null && !cockpitObj.activeInHierarchy) return;
             if (Time.unscaledTime < nextTextRefresh) return;
             nextTextRefresh = Time.unscaledTime + 1.0f;
+            // Build-368: Accept-Blocked-Hint hat Vorrang (kein blocking Call, nur Text).
+            if (Time.unscaledTime < acceptHintUntil && !string.IsNullOrEmpty(acceptHintText))
+            {
+                if (text != null) { text.text = acceptHintText; text.ForceMeshUpdate(); }
+                if (cockpitText != null && cockpitObj != null && cockpitObj.activeInHierarchy) { cockpitText.text = acceptHintText; cockpitText.ForceMeshUpdate(); }
+                return;
+            }
+            if (acceptHintUntil > 0f && Time.unscaledTime >= acceptHintUntil)
+            {
+                // Hint abgelaufen: Overlay wieder aus, falls wir es nur fuer den Hint an hatten.
+                acceptHintText = null;
+                acceptHintUntil = 0f;
+                if (canvasObj != null) canvasObj.SetActive(false);
+                visible = false;
+                return;
+            }
             var jobs = ProceduralJobGenerator.GetAvailableJobs();
             string sector = StarTruckClient.currentSector;
             string body = BuildBody(sector, jobs);

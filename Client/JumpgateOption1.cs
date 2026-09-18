@@ -183,6 +183,16 @@ namespace StarTruckMP.StarTruckClient
         private static readonly Dictionary<string, float> lastCollectLog = new Dictionary<string, float>();
         private static readonly Dictionary<string, string> lastCollectSignature = new Dictionary<string, string>();
 
+        private static bool ShouldLogOnChangeOnly(Dictionary<string, string> sigMap,
+            string key, string signature)
+        {
+            // Build-368: ausschliesslich Aenderungsgetrieben — derselbe Zustand wird NIE
+            // erneut geloggt (kein Zeitfenster), nur die Veraenderung selbst.
+            if (sigMap.TryGetValue(key, out var prevSig) && prevSig == signature) return false;
+            sigMap[key] = signature;
+            return true;
+        }
+
         private static bool ShouldLogThrottled(Dictionary<string, float> timeMap, Dictionary<string, string> sigMap,
             string key, string signature, float now)
         {
@@ -229,9 +239,17 @@ namespace StarTruckMP.StarTruckClient
                         // (Board/Gate vs. Spieler-Destination) oder max. 1x pro 10s.
                         try
                         {
+                            // Build-368: nur noch bei destGate-AENDERUNG des Spielers loggen
+                            // (frueher max. 1x/10s pro Board — das war pro Board x Spieler
+                            // immer noch Dauerspam, wenn destGate leer blieb). TODO(368):
+                            // destGate ist im movementUpdate-Protokoll vollstaendig verdrahtet
+                            // (Sender Encoding/Messages.cs:442, Server dedicated/MessageHandler.cs:195-208,
+                            // Empfaenger Client/Client.cs:655-720), Log 367 zeigt aber trotzdem
+                            // dauerhaft '' — vermutlich laeuft der Remote-Spieler noch ohne
+                            // destGate-faehigen Build; hier neu pruefen, sobald beide Seiten 368 haben.
                             string mmSig = $"{kv.Key}:{p.destinationGateId}";
-                            string mmKey = entryGateId ?? "?";
-                            if (ShouldLogThrottled(lastMismatchLog, lastMismatchSignature, mmKey, mmSig, Time.realtimeSinceStartup))
+                            string mmKey = "mm:" + (entryGateId ?? "?") + ":" + kv.Key;
+                            if (ShouldLogOnChangeOnly(lastMismatchSignature, mmKey, mmSig))
                                 StarTruckMP.Log.LogInfo($"JumpgateOption1: gate mismatch — board '{entryGateId}' (norm '{wantGate}') vs player {kv.Key} destGate '{p.destinationGateId}' (norm '{JumpgateUtils.NormalizeGateId(p.destinationGateId)}')");
                         }
                         catch { }
