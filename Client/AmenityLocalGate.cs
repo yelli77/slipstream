@@ -76,8 +76,13 @@ namespace StarTruckMP.StarTruckClient
         // Bay-Aufloesung (FindObjectsOfType) ist teuer; CanEnterAmenity kann pro Frame
         // aus der DockingCoroutine gepollt werden. Cache pro SharedAssets-Pointer mit
         // kurzem TTL.
-        private static readonly Dictionary<long, (DockingBay bay, float resolvedAt)> bayCache =
-            new Dictionary<long, (DockingBay, float)>();
+        // 384: Alle DockingBays teilen sich EIN DockingBaySharedAssets-Objekt (Diagnose-Dump
+        // Atlas Prime: alle 18 Bays shared=0x220CE172F00). Eine Aufloesung ueber den
+        // SharedAssets-Pointer liefert deshalb IMMER dieselbe (beliebige) Bay -> das Gate
+        // suppressete legitime Docks an allen anderen Stationen (Distanz zur falschen Bay).
+        // Cache daher nur fuer die Bay-LISTE; die Auswahl erfolgt pro Aufruf (billig).
+        private static List<DockingBay> allBaysCache = null;
+        private static float allBaysCachedAt = -999f;
         private const float BayCacheTtlSeconds = 2f;
 
         private static float lastSuppressedLog = -999f;
@@ -204,11 +209,14 @@ namespace StarTruckMP.StarTruckClient
 
                 if (__instance == null) return true;
 
-                var bay = ResolveBayCached(__instance);
-                if (bay == null) return true; // Bay nicht aufloesbar -> nie eingreifen
-
                 var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
                 if (myTruck == null) return true;
+
+                // 384: Bay ueber den lokalen Truck bestimmen (m_truck == myTruck, sonst
+                // naechste nicht von einem Ghost belegte Bay) statt ueber das globale
+                // SharedAssets-Objekt.
+                var bay = ResolveBayForLocalTruck(myTruck);
+                if (bay == null) return true; // Bay nicht aufloesbar -> nie eingreifen
 
                 // Discriminator (a): kennt die Bay bereits "ihren" Dock-Truck und ist das
                 // ein Remote-Ghost, ist der ganze Ablauf ein Ghost-Dock -> skippen.
@@ -236,6 +244,7 @@ namespace StarTruckMP.StarTruckClient
                     return false;
                 }
 
+                LogAllow(bay.gameObject, dist);
                 return true;
             }
             catch (Exception ex)
@@ -386,51 +395,81 @@ namespace StarTruckMP.StarTruckClient
 
         // ── Helpers ──
 
-        private static DockingBay ResolveBayCached(DockingBaySharedAssets shared)
+        /// <summary>
+        /// 384: Liste aller DockingBays im Sektor (FindObjectsOfType ist teuer, CanEnterAmenity
+        /// kann pro Frame gepollt werden) - kurzer TTL-Cache nur fuer die Liste.
+        /// </summary>
+        private static List<DockingBay> GetAllBaysCached()
         {
-            long key;
-            try { key = shared.Pointer.ToInt64(); } catch { return null; }
-
             var now = Time.realtimeSinceStartup;
-            if (bayCache.TryGetValue(key, out var cached))
-            {
-                // Unity-null-Check: Bay kann zerstoert worden sein (Sektorwechsel).
-                if (cached.bay != null && now - cached.resolvedAt < BayCacheTtlSeconds)
-                    return cached.bay;
-                bayCache.Remove(key);
-            }
-
-            DockingBay resolved = null;
+            if (allBaysCache != null && now - allBaysCachedAt < BayCacheTtlSeconds)
+                return allBaysCache;
             try
             {
+                var list = new List<DockingBay>();
                 var bays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
-                foreach (var bay in bays)
+                if (bays != null)
                 {
-                    if (bay == null) continue;
-                    try
-                    {
-                        var sa = bay.m_sharedAssets;
-                        if (sa == null) continue;
-                        if (ReferenceEquals(sa, shared) || sa.Pointer == shared.Pointer)
-                        {
-                            resolved = bay;
-                            break;
-                        }
-                    }
-                    catch { continue; }
+                    foreach (var bay in bays)
+                        if (bay != null) list.Add(bay);
                 }
+                allBaysCache = list;
+                allBaysCachedAt = now;
+                return list;
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"{LogTag} ResolveBay fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"{LogTag} GetAllBays fehlgeschlagen: {ex.Message}");
                 return null;
             }
+        }
 
-            if (resolved != null)
+        private static bool TryGetPosition(UnityEngine.Object o, out Vector3 pos)
+        {
+            pos = Vector3.zero;
+            try
             {
-                bayCache[key] = (resolved, now);
+                var c = o as Component;
+                if (c != null && c.transform != null) { pos = c.transform.position; return true; }
+                var g = o as GameObject;
+                if (g != null && g.transform != null) { pos = g.transform.position; return true; }
             }
-            return resolved;
+            catch { }
+            return false;
+        }
+
+        /// <summary>
+        /// 384: Bestimmt die Bay, an der der LOKALE Truck dockt: 1) Bay, deren m_truck der
+        /// lokale Truck ist (eindeutig); 2) sonst die naechste Bay zum lokalen Truck, die
+        /// nicht von einem Remote-Ghost belegt ist. Steht der lokale Truck weit von jeder
+        /// Bay, liefert (2) eine ferne Bay -> das Distanz-Gate suppressed wie bisher.
+        /// </summary>
+        private static DockingBay ResolveBayForLocalTruck(UnityEngine.Object myTruck)
+        {
+            var bays = GetAllBaysCached();
+            if (bays == null || bays.Count == 0) return null;
+            if (!TryGetPosition(myTruck, out var myPos)) return null;
+
+            DockingBay best = null;
+            var bestDist = float.MaxValue;
+            foreach (var bay in bays)
+            {
+                if (bay == null) continue;
+                try
+                {
+                    var docked = TryGetDockedTruckGameObject(bay);
+                    if (docked != null)
+                    {
+                        if (SameNativeObject(docked, myTruck)) return bay;
+                        if (IsRemoteGhost(docked)) continue;
+                    }
+                    if (bay.transform == null) continue;
+                    var d = Vector3.Distance(bay.transform.position, myPos);
+                    if (d < bestDist) { bestDist = d; best = bay; }
+                }
+                catch { continue; }
+            }
+            return best;
         }
 
         /// <summary>
@@ -490,6 +529,18 @@ namespace StarTruckMP.StarTruckClient
                 return Convert.ToInt64(ptrProp.GetValue(proxy)) == native.Pointer.ToInt64();
             }
             catch { return false; }
+        }
+
+        private static float lastAllowLog = -999f;
+
+        /// <summary>385: Diagnose - erlaubter (lokaler) Amenity-Eintritt, gedrosselt auf 5 s.</summary>
+        private static void LogAllow(UnityEngine.Object anchor, float dist)
+        {
+            if (Time.realtimeSinceStartup - lastAllowLog < 5f) return;
+            lastAllowLog = Time.realtimeSinceStartup;
+            var anchorName = "<unknown>";
+            try { anchorName = (anchor as GameObject)?.name ?? anchor?.name ?? "<unknown>"; } catch { }
+            StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Amenity-Eintritt erlaubt (lokal, bay={anchorName}, {dist:F0}m)");
         }
 
         private static void LogSuppress(UnityEngine.Object anchor, string patchMethod, string reason)
