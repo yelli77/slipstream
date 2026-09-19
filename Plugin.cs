@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-390";
+    public const string customBuildNumber = "custom-build-391";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -73,6 +73,9 @@ public class StarTruckMP : BasePlugin
         // JobAcceptPatches war bis 389 NIE registriert (toter Code) — deshalb kamen keine AcceptJob-Logs/jobTaken.
         try { Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardScreenDiagPatches)); Log.LogInfo("390 JobBoardScreenDiagPatches applied"); }
         catch (Exception ex) { Log.LogWarning("390 JobBoardScreenDiagPatches FEHLGESCHLAGEN: " + ex.Message); }
+        // 391: Schutz vor dem HullState-Fehlersturm (siehe HullStateGuard.cs).
+        try { Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.HullStateGuard)); Log.LogInfo("391 HullStateGuard applied"); }
+        catch (Exception ex) { Log.LogWarning("391 HullStateGuard FEHLGESCHLAGEN: " + ex.Message); }
         try { Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobAcceptPatches)); Log.LogInfo("390 JobAcceptPatches applied"); }
         catch (Exception ex) { Log.LogWarning("390 JobAcceptPatches FEHLGESCHLAGEN: " + ex.Message); }
         // 368: Amenity-Gate - Repair/Werkstatt-Eintritt nur fuer den Spieler, der dockt.

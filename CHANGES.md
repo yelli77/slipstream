@@ -1,3 +1,13 @@
+## Neu in custom-build-391: HullState-Fehlersturm abgefangen (Freeze nach langer Spielzeit)
+
+- Befund (Player-prev.log einer gefrorenen Sitzung, 99 MB): 104.811x NullReferenceException in
+  HullState.FixedUpdate -> FinaliseCollision -> CalculateOtherCollisionEnergy(GameObject collidee). smallCollisions
+  (HashSet<GameObject>) enthielt ein zerstoertes Objekt; die Summe wirft in jedem FixedUpdate und die Menge wird nie
+  geleert. Start: erste Ankunft in Atlas Prime. Job-Annahmen liefen alle mitten im Sturm sauber durch (nicht der Ausloeser).
+- Neu: Client/HullStateGuard.cs - Prefix auf CalculateOtherCollisionEnergy (null/zerstoert => 0), Finalizer auf
+  FinaliseCollision (Exception verschlucken + smallCollisions leeren), Ring der letzten Kollisionsobjekt-Namen und
+  Kontext-Log "391 HullStateGuard[...] Treffer #n" beim ersten Auftreten (Sektor, Remote-Spieler, letzte Kollisionen).
+
 ## Neu in custom-build-390: Diagnose fuer Freeze/Crash nach Job-Annahme (kein Verhalten geaendert)
 
 - Befund: JobAcceptPatches (AcceptJob-Hook) war bis 389 nie per Harmony registriert (toter Code) - daher nie
