@@ -7,6 +7,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+// ── BepInEx stub (381-Diag-Stub: nur Paths.ConfigPath, fuer den
+// STRUCKMP_DISABLE_TRIGGERSTAY_PATCH-Kill-Switch in AmenityLocalGate.cs) ──
+namespace BepInEx
+{
+    public static class Paths
+    {
+        public static string ConfigPath = "/tmp/does-not-exist-test-stub";
+    }
+}
+
 // ── HarmonyLib stubs ──
 namespace HarmonyLib
 {

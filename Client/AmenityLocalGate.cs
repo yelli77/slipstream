@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 using System.Linq;
+using System.IO;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -212,18 +213,36 @@ namespace StarTruckMP.StarTruckClient
                 //     (lokaler Truck weit weg vom Terminal), wird unterdrueckt.
                 try
                 {
-                    var triggerZoneType = AccessTools.TypeByName("AmenityTriggerZone");
-                    var stay = AccessTools.Method(triggerZoneType, "OnTriggerStay");
-                    if (stay != null)
+                    // 381 Diagnose-Kill-Switch: NUR fuer diesen einen Patch, unabhaengig
+                    // vom 376-Gesamt-Gate. Ziel: beweisen/widerlegen, ob genau dieser
+                    // Harmony-Prefix (auf einer Il2Cpp-Methode mit Collider-Parameter)
+                    // fuer den reproduzierbaren harten Crash (Build 379 + 380, identischer
+                    // Absturzpunkt direkt nach der 377-Diagnosezeile) verantwortlich ist.
+                    string disableStayEnv = Environment.GetEnvironmentVariable("STRUCKMP_DISABLE_TRIGGERSTAY_PATCH");
+                    bool disableStayFile;
+                    try
                     {
-                        var stayPrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(TriggerZoneStayPrefix));
-                        stayPrefix.priority = GatePriority;
-                        harmonyInstance.Patch(stay, prefix: stayPrefix);
-                        StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Prefix auf AmenityTriggerZone.OnTriggerStay registriert (Fix B: Ghost-Trigger-Pfad).");
+                        disableStayFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_DISABLE_TRIGGERSTAY_PATCH.txt"));
                     }
-                    else
+                    catch { disableStayFile = false; }
+                    bool disableStay = (disableStayEnv == "1") || disableStayFile;
+                    StarTruckMP.Log.LogInfo($"381 OnTriggerStay-Patch Kill-Switch: env={disableStayEnv ?? "<null>"} file={disableStayFile} -> {(disableStay ? "DEAKTIVIERT" : "aktiv")}");
+
+                    if (!disableStay)
                     {
-                        StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: AmenityTriggerZone.OnTriggerStay nicht gefunden - Restpfad-Gate dort inaktiv.");
+                        var triggerZoneType = AccessTools.TypeByName("AmenityTriggerZone");
+                        var stay = AccessTools.Method(triggerZoneType, "OnTriggerStay");
+                        if (stay != null)
+                        {
+                            var stayPrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(TriggerZoneStayPrefix));
+                            stayPrefix.priority = GatePriority;
+                            harmonyInstance.Patch(stay, prefix: stayPrefix);
+                            StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Prefix auf AmenityTriggerZone.OnTriggerStay registriert (Fix B: Ghost-Trigger-Pfad).");
+                        }
+                        else
+                        {
+                            StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: AmenityTriggerZone.OnTriggerStay nicht gefunden - Restpfad-Gate dort inaktiv.");
+                        }
                     }
                 }
                 catch (Exception exTZ)
