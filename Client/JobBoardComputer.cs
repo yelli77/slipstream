@@ -239,6 +239,7 @@ private static void SetVisible(bool v)
             }
             else
             {
+                Watchdog.Mark("J-Close: TryInvokeGameJobBoard(false)");
                 bool wasOurs = hasUIFocus; // 338: am echten Fokus-Kontext orientieren, nicht an weOpenedGameBoard
                 TryInvokeGameJobBoard(false);
                 if (wasOurs) ReleaseUIFocus();
@@ -267,6 +268,7 @@ private static void SetVisible(bool v)
         private static void ApplyUIFocus()
         {
             hasUIFocus = true; // 338: Fokus-Kontext aktiv (Close-Detection haengt hieran)
+            Watchdog.Mark("Apply: UI-Fokus beginnt");
             // Pause wie im nativen ScreenController_Pauser (Board schliessen laeuft darueber).
             try
             {
@@ -293,9 +295,11 @@ private static void SetVisible(bool v)
         private static void ReleaseUIFocus()
         {
             hasUIFocus = false; // 338: Fokus-Kontext aufgehoben (kein doppeltes Release mehr)
+            Watchdog.Mark("Release: Cursor lock");
             // Reihenfolge invers: erst Cursor/Input, zuletzt Pauser entfernen.
             try { Cursor.lockState = CursorLockMode.Locked; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.lock fehlgeschlagen: " + ex.Message); }
             try { Cursor.visible = false; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.invisible fehlgeschlagen: " + ex.Message); }
+            Watchdog.Mark("Release: Input an");
             try
             {
                 var inp = StarTruckerInput.Get();
@@ -307,6 +311,7 @@ private static void SetVisible(bool v)
                 }
             }
             catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 StarTruckerInput-Release fehlgeschlagen: " + ex.Message); }
+            Watchdog.Mark("Release: RemovePauser");
             try
             {
                 var pc = PauseController_Inst();
@@ -333,7 +338,9 @@ private static void SetVisible(bool v)
             // ist eine Coroutine (Asset-Load) - das Screen existiert erst nach 1-2 Frames/sekunden.
             if (hasUIFocus && Time.unscaledTime > boardOpenGraceUntil && !GameJobBoardScreenPresent())
             {
+                Watchdog.Mark("Close erkannt: ReleaseUIFocus beginnt");
                 ReleaseUIFocus();
+                Watchdog.Mark("Close: ReleaseUIFocus fertig");
                 weOpenedGameBoard = false;
                 visible = false;
                 StarTruckMP.Log.LogInfo("338 JobBoard nativ geschlossen - Fokus reverted.");

@@ -60,18 +60,18 @@ namespace StarTruckMP.StarTruckClient
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "ApplyUsersJobChoices")]
         [HarmonyPrefix]
-        public static void Apply_Prefix(global::JobBoardScreen __instance) { Dump("ApplyUsersJobChoices BEGIN", __instance); }
+        public static void Apply_Prefix(global::JobBoardScreen __instance) { Watchdog.Mark("ApplyUsersJobChoices BEGIN"); Dump("ApplyUsersJobChoices BEGIN", __instance); }
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "ApplyUsersJobChoices")]
         [HarmonyPostfix]
-        public static void Apply_Postfix(global::JobBoardScreen __instance) { Dump("ApplyUsersJobChoices END (ohne Crash durchgelaufen)", __instance); }
+        public static void Apply_Postfix(global::JobBoardScreen __instance) { Watchdog.Mark("ApplyUsersJobChoices END"); Dump("ApplyUsersJobChoices END (ohne Crash durchgelaufen)", __instance); }
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "OnScreenBack")]
         [HarmonyPrefix]
-        public static void Back_Prefix(global::JobBoardScreen __instance, string backToScreen) { Dump("OnScreenBack BEGIN (back='" + backToScreen + "')", __instance); }
+        public static void Back_Prefix(global::JobBoardScreen __instance, string backToScreen) { Watchdog.Mark("OnScreenBack BEGIN"); Dump("OnScreenBack BEGIN (back='" + backToScreen + "')", __instance); }
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "OnScreenBack")]
         [HarmonyPostfix]
-        public static void Back_Postfix(global::JobBoardScreen __instance) { StarTruckMP.Log.LogInfo("390 OnScreenBack END (ohne Crash durchgelaufen)"); }
+        public static void Back_Postfix(global::JobBoardScreen __instance) { Watchdog.Mark("OnScreenBack END"); StarTruckMP.Log.LogInfo("390 OnScreenBack END (ohne Crash durchgelaufen)"); }
     }
 }

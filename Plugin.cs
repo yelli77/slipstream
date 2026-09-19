@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-391";
+    public const string customBuildNumber = "custom-build-392";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -44,6 +44,7 @@ public class StarTruckMP : BasePlugin
     {
         Log = base.Log;
         try { global::StarTruckMP.StarTruckClient.LogBackup.RotateOnStart(); } catch { }
+        try { global::StarTruckMP.StarTruckClient.Watchdog.Start(); Log.LogInfo("392 Watchdog gestartet"); } catch { }
 
         LaunchedViaSlipstream = global::StarTruckMP.Common.LaunchMarker.ConsumeIfFresh();
         Log.LogInfo(LaunchedViaSlipstream
@@ -98,6 +99,7 @@ public class StarTruckMP : BasePlugin
         {
             // 311b: throttle POI rewrite — run at most every 5 s and only when
             // connected; FindObjectsOfType<DockingBay>() is not free.
+            try { global::StarTruckMP.StarTruckClient.Watchdog.Beat(); } catch { }
             try { global::StarTruckMP.StarTruckClient.LogBackup.Tick(); } catch { }
             poiUpdateTimer -= Time.unscaledDeltaTime;
             if (poiUpdateTimer <= 0f)

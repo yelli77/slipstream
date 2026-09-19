@@ -1,3 +1,6 @@
+## custom-build-392
+- Diagnose: Watchdog-Thread meldet Hauptthread-Freeze (LogOutput.log + BepInEx/log_backups/watchdog.log) inkl. letztem Schritt; Schrittmarker beim Jobboard Oeffnen/Schliessen (Fokus, Cursor, Input, Pauser, OnScreenBack/ApplyUsersJobChoices). Keine Verhaltensaenderung.
+
 ## Neu in custom-build-391: HullState-Fehlersturm abgefangen (Freeze nach langer Spielzeit)
 
 - Befund (Player-prev.log einer gefrorenen Sitzung, 99 MB): 104.811x NullReferenceException in
