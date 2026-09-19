@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 using System.Linq;
-using System.IO;
 
 namespace StarTruckMP.StarTruckClient
 {
@@ -82,70 +81,12 @@ namespace StarTruckMP.StarTruckClient
         private const float BayCacheTtlSeconds = 2f;
 
         private static float lastSuppressedLog = -999f;
-        private static float lastLayerDiagLog = -999f;
         private static int suppressCount = 0;
 
         public static void Apply()
         {
             if (applied) return;
             applied = true;
-
-            // 377 Diagnose (rein additiv, KEINE Verhaltensaenderung): liest den nativen
-            // Layer, auf dem DockingBay seine Trigger-Collider fuer den Amenity-Ablauf
-            // erwartet (DockingBay.k_triggerColliderLayer - siehe Klassenkommentar oben,
-            // Punkt 3). Ziel: statt der Nachbearbeitung per Harmony-Gate (368/369/370)
-            // pruefen, ob wir Ghost-Trucks stattdessen sauber ueber die Unity-Physik-
-            // Layer-Kollisionsmatrix (Physics.IgnoreLayerCollision) von diesem Layer
-            // fernhalten koennen - dann wuerde OnTriggerStay fuer Ghosts dort NATIV nie
-            // mehr feuern, ganz ohne unsere Nachbearbeitung.
-            try
-            {
-                int triggerLayerRaw = global::DockingBay.k_triggerColliderLayer;
-                string AsLayerName(int idx) => (idx >= 0 && idx <= 31) ? UnityEngine.LayerMask.LayerToName(idx) : "<out-of-range>";
-                var maskBits = new System.Collections.Generic.List<string>();
-                for (int i = 0; i <= 31; i++)
-                {
-                    if ((triggerLayerRaw & (1 << i)) != 0)
-                    {
-                        maskBits.Add($"{i}:{AsLayerName(i)}");
-                    }
-                }
-                StarTruckMP.Log.LogInfo(
-                    $"377 AmenityLocalGate-Diag: DockingBay.k_triggerColliderLayer={triggerLayerRaw} " +
-                    $"(alsLayerIndex={AsLayerName(triggerLayerRaw)}, alsBitmaskGesetzteBits=[{string.Join(", ", maskBits)}])");
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"377 AmenityLocalGate-Diag: k_triggerColliderLayer nicht lesbar: {ex.Message}");
-            }
-
-            // 378 Diagnose (additiv, KEINE Verhaltensaenderung): komplette Layer-Tabelle
-            // 0-31 + fuer jeden Layer, ob die Physik-Engine ihn aktuell gegen Layer 26
-            // ("PlayerTruckTrigger", empirisch aus Build-377-Log bestaetigt: das ist der
-            // Layer der Werkstatt-/Amenity-Triggerzone) ignoriert. Ziel: einen frei
-            // ungenutzten Layer-Index finden, auf den wir Ghost-Trucks legen koennen,
-            // OHNE einen der bestehenden, benannten Layer zu verwenden - dieser Fakt ist
-            // rein projektstatisch und braucht keinen Dock-/Werkstatt-Test, nur einen
-            // normalen Spielstart.
-            try
-            {
-                const int triggerZoneLayer = 26; // PlayerTruckTrigger (Build-377-Log, Zeile 420)
-                var lines = new System.Collections.Generic.List<string>();
-                var freeLayers = new System.Collections.Generic.List<int>();
-                for (int i = 0; i <= 31; i++)
-                {
-                    string nm = UnityEngine.LayerMask.LayerToName(i);
-                    bool ignoresTrigger = UnityEngine.Physics.GetIgnoreLayerCollision(i, triggerZoneLayer);
-                    lines.Add($"{i}:'{nm}'{(ignoresTrigger ? "(ignoriertZone26)" : "")}");
-                    if (string.IsNullOrEmpty(nm) && i >= 8) freeLayers.Add(i); // 0-7 sind Unity-Builtins, nie anfassen
-                }
-                StarTruckMP.Log.LogInfo($"378 AmenityLocalGate-Diag: Layer-Tabelle: [{string.Join(", ", lines)}]");
-                StarTruckMP.Log.LogInfo($"378 AmenityLocalGate-Diag: Freie/unbenannte Layer-Kandidaten (>=8) fuer Ghost-Trucks: [{string.Join(", ", freeLayers)}]");
-            }
-            catch (Exception ex1)
-            {
-                StarTruckMP.Log.LogWarning($"378 AmenityLocalGate-Diag: Layer-Tabellen-Dump fehlgeschlagen: {ex1.Message}");
-            }
 
             var envMeters = Environment.GetEnvironmentVariable("STRUCKMP_AMENITY_GATE_METERS");
             if (!string.IsNullOrEmpty(envMeters) &&
@@ -193,7 +134,7 @@ namespace StarTruckMP.StarTruckClient
                     StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: Typ DockingBaySharedAssets nicht gefunden - Feature inaktiv.");
                 }
 
-                // ── 369 (Fix B): die TATSAECHLICH wirksamen Restpfade ──
+                // ── 369 (Fix B): der TATSAECHLICH wirksame Restpfad ──
                 //
                 // Beweis 368: Das DockingBaySharedAssets-Gate feuert (Suppress-Log auf
                 // beiden Clients), aber ALLE Spieler landen trotzdem in der Werkstatt —
@@ -205,55 +146,20 @@ namespace StarTruckMP.StarTruckClient
                 // OnTriggerStay aus -> onAmenityEnter -> TruckAmenityTerminal.OnAmenityEnter
                 // -> Werkstatt-/Amenity-Zustand. Das DockingBay-Gate sieht davon nichts.
                 //
-                // Zwei weitere Choke-Points:
-                //  1. AmenityTriggerZone.OnTriggerStay: Ghost-Trigger an der Quelle
-                //     abschneiden (der lokale Truck selbst laeuft nativ weiter).
-                //  2. TruckAmenityTerminal.OnAmenityEnter: LETZTE Sperre — jeder
-                //     Amenity-Eintritt, der nicht vom lokal anwesenden Spieler kommt
-                //     (lokaler Truck weit weg vom Terminal), wird unterdrueckt.
-                try
-                {
-                    // 381 Diagnose-Kill-Switch: NUR fuer diesen einen Patch, unabhaengig
-                    // vom 376-Gesamt-Gate. Ziel: beweisen/widerlegen, ob genau dieser
-                    // Harmony-Prefix (auf einer Il2Cpp-Methode mit Collider-Parameter)
-                    // fuer den reproduzierbaren harten Crash (Build 379 + 380, identischer
-                    // Absturzpunkt direkt nach der 377-Diagnosezeile) verantwortlich ist.
-                    // 382: per Feldtest bestaetigter Crash-Ursprung - Patch bleibt per
-                    // Default AUS. Opt-in zum gezielten Re-Testen via
-                    // STRUCKMP_ENABLE_TRIGGERSTAY_PATCH=1 oder Datei
-                    // STRUCKMP_ENABLE_TRIGGERSTAY_PATCH.txt im BepInEx-Config-Ordner.
-                    string enableStayEnv = Environment.GetEnvironmentVariable("STRUCKMP_ENABLE_TRIGGERSTAY_PATCH");
-                    bool enableStayFile;
-                    try
-                    {
-                        enableStayFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_ENABLE_TRIGGERSTAY_PATCH.txt"));
-                    }
-                    catch { enableStayFile = false; }
-                    bool disableStay = !((enableStayEnv == "1") || enableStayFile);
-                    StarTruckMP.Log.LogInfo($"382 OnTriggerStay-Patch: per Feldtest als Crash-Ursache bestaetigt, jetzt PER DEFAULT DEAKTIVIERT (redundant dank Sweep 379/380). enableEnv={enableStayEnv ?? "<null>"} enableFile={enableStayFile} -> {(disableStay ? "DEAKTIVIERT" : "aktiv (Opt-in)")}");
-
-                    if (!disableStay)
-                    {
-                        var triggerZoneType = AccessTools.TypeByName("AmenityTriggerZone");
-                        var stay = AccessTools.Method(triggerZoneType, "OnTriggerStay");
-                        if (stay != null)
-                        {
-                            var stayPrefix = new HarmonyMethod(typeof(AmenityLocalGate), nameof(TriggerZoneStayPrefix));
-                            stayPrefix.priority = GatePriority;
-                            harmonyInstance.Patch(stay, prefix: stayPrefix);
-                            StarTruckMP.Log.LogInfo($"{LogTag} AmenityLocalGate: Prefix auf AmenityTriggerZone.OnTriggerStay registriert (Fix B: Ghost-Trigger-Pfad).");
-                        }
-                        else
-                        {
-                            StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: AmenityTriggerZone.OnTriggerStay nicht gefunden - Restpfad-Gate dort inaktiv.");
-                        }
-                    }
-                }
-                catch (Exception exTZ)
-                {
-                    StarTruckMP.Log.LogWarning($"{LogTag} AmenityLocalGate: OnTriggerStay-Patch fehlgeschlagen: {exTZ.Message}");
-                }
-
+                // Choke-Point: TruckAmenityTerminal.OnAmenityEnter — LETZTE Sperre: jeder
+                // Amenity-Eintritt, der nicht vom lokal anwesenden Spieler kommt (lokaler
+                // Truck weit weg vom Terminal), wird unterdrueckt.
+                //
+                // Ein zweiter Choke-Point (Harmony-Prefix direkt auf
+                // AmenityTriggerZone.OnTriggerStay) existierte hier bis Build 381 und
+                // wurde per zwei sauberen A/B-Feldtests (Build 380 + 381) als alleiniger
+                // Verursacher eines reproduzierbaren harten PhysX-Absturzes identifiziert
+                // und in Build 382 entfernt. Er ist inzwischen auch funktional ueberholt:
+                // SweepGhostTriggerImmunity() (siehe unten) haelt Ghost-Truck-Collider
+                // bereits auf Physik-Ebene per Physics.IgnoreCollision von der Amenity-
+                // Triggerzone fern, wodurch OnTriggerStay fuer Ghosts dort NATIV nie mehr
+                // feuert - der urspruengliche Zweck dieses Patches ist damit erfuellt,
+                // ohne die instabile native Methode selbst patchen zu muessen.
                 try
                 {
                     var terminalType = AccessTools.TypeByName("TruckAmenityTerminal");
@@ -337,107 +243,6 @@ namespace StarTruckMP.StarTruckClient
                 // Niemals crashen - im Zweifel laeuft der native Ablauf unveraendert.
                 StarTruckMP.Log.LogWarning($"{LogTag} AmenityGatePrefix Fehler: {ex.Message}");
                 return true;
-            }
-        }
-
-        /// <summary>
-        /// 369 (Fix B): Prefix vor AmenityTriggerZone.OnTriggerStay(Collider col).
-        ///
-        /// Root Cause des 368-Restbugs (Beweis: Suppress-Log des DockingBay-Gates AUF
-        /// BEIDEN Clients, trotzdem Werkstatt bei allen): Der Ghost-Truck steht
-        /// physisch in der Dock-/Amenity-Triggerzone der Station und loest dort
-        /// OnTriggerStay aus. Diese Zone feuert onAmenityEnter unabhAengig von
-        /// DockingBaySharedAssets.CanEnterAmenity/EnterAmenity — das 368-Gate sah
-        /// diesen Pfad nicht.
-        ///
-        /// 370-Fix (KRITISCH): Der Harmony-Prefix ist bisher NIE angewendet worden!
-        /// Feldlog (custom-build-369, zwei unabhaengige Clients): "Failed to patch
-        /// void AmenityTriggerZone::OnTriggerStay(UnityEngine.Collider col):
-        /// System.Exception: Parameter "other" not found in method [...] OnTriggerStay
-        /// (UnityEngine.Collider col)". Harmony matcht Prefix-Parameter NAMENTLICH
-        /// gegen die Original-Methode - die native Methode nennt ihren Parameter
-        /// "col", nicht "other". Bei Namens-Mismatch verwirft Harmony den KOMPLETTEN
-        /// Patch (IL Compile Error), OHNE die App abstuerzen zu lassen - nur eine
-        /// leicht zu uebersehende Warnung im Log. Damit war dieser Choke-Point (der
-        /// laut Code-Kommentar "TATSAECHLICH wirksame" Pfad) seit Build 368 auf JEDEM
-        /// Client komplett inaktiv, unabhaengig von der Gate-Logik selbst.
-        /// Fix: Parametername auf "col" umbenannt (muss exakt der nativen Signatur
-        /// entsprechen, damit Harmony ihn binden kann).
-        ///
-        /// Entscheidung:
-        ///  - Trigger-Quelle ist der LOKALE Truck -> native (Spieler ist selbst da).
-        ///  - Trigger-Quelle ist ein RemoteTruck-Ghost -> IMMER skippen (370: die alte
-        ///    Distanz-Ausnahme "Ghost, aber lokaler Truck NAHE -> allow" ist entfernt,
-        ///    siehe unten).
-        ///  - OnTriggerExit bleibt unangetastet (natives Cleanup intakt).
-        /// </summary>
-        // ReSharper disable once RedundantAssignment
-        public static bool TriggerZoneStayPrefix(AmenityTriggerZone __instance, Collider col)
-        {
-            try
-            {
-                var client = global::StarTruckMP.StarTruckClient.StarTruckClient.client;
-                if (client == null || !client.IsConnected) return true; // Singleplayer: nativ
-                if (__instance == null || col == null) return true;
-
-                var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
-                if (myTruck == null) return true;
-
-                var triggerRoot = ResolveTriggerSource(col);
-                if (triggerRoot == null) return true;
-
-                // 377 Diagnose (additiv, keine Verhaltensaenderung): einmalige Layer-
-                // Momentaufnahme bei jedem OnTriggerStay-Aufruf, den unser Prefix sieht -
-                // zeigt die TATSAECHLICHEN Layer-Nummern von Zone/Ghost/lokalem Truck im
-                // Feld, unabhaengig vom k_triggerColliderLayer-Wert oben.
-                if (Time.realtimeSinceStartup - lastLayerDiagLog > 10f)
-                {
-                    lastLayerDiagLog = Time.realtimeSinceStartup;
-                    try
-                    {
-                        int zoneLayer = __instance.gameObject != null ? __instance.gameObject.layer : -1;
-                        int colLayer = col.gameObject != null ? col.gameObject.layer : -1;
-                        int triggerRootLayer = triggerRoot.layer;
-                        int myTruckLayer = myTruck.layer;
-                        StarTruckMP.Log.LogInfo(
-                            $"377 AmenityLocalGate-Diag: OnTriggerStay-Layers zone(GO='{__instance.gameObject?.name}')={zoneLayer}:{UnityEngine.LayerMask.LayerToName(zoneLayer)}, " +
-                            $"col(GO='{col.gameObject?.name}')={colLayer}:{UnityEngine.LayerMask.LayerToName(colLayer)}, " +
-                            $"triggerRoot(GO='{triggerRoot.name}')={triggerRootLayer}:{UnityEngine.LayerMask.LayerToName(triggerRootLayer)}, " +
-                            $"myTruck(GO='{myTruck.name}')={myTruckLayer}:{UnityEngine.LayerMask.LayerToName(myTruckLayer)}");
-                    }
-                    catch (Exception exDiag)
-                    {
-                        StarTruckMP.Log.LogWarning($"377 AmenityLocalGate-Diag Fehler: {exDiag.Message}");
-                    }
-                }
-
-                // Lokaler Truck selbst: nie anfassen.
-                if (SameNativeObject(triggerRoot, myTruck)) return true;
-                if (!IsRemoteGhost(triggerRoot)) return true; // fremde native Objekte: nativ
-
-                // 370-Fix: Ghost ist hier bereits DEFINITIV identifiziert (kein Verdacht,
-                // ResolveTriggerSource + IsRemoteGhost sind exakt). Der lokale Spieler
-                // bekommt fuer SEINEN Truck einen eigenen, unabhaengigen OnTriggerStay-
-                // Call (siehe SameNativeObject-Check oben, laeuft nativ weiter) - es gibt
-                // also NIE einen legitimen Grund, einen Ghost-Trigger durchzulassen.
-                //
-                // Root Cause des 369-Restbugs (Feldtest: ALLE Spieler landen weiterhin in
-                // der Werkstatt, obwohl das Gate laut Log feuert): die alte
-                // Distanz-Ausnahme unten liess den Ghost-Trigger durch, wenn der lokale
-                // Truck "zufaellig nah" an der Zone war. Seit Shop/Werkstatt/JobBoard an
-                // DENSELBEN Bays haengen (feature/shop-at-jobboard-bays), stehen mehrere
-                // Spieler dort staendig nah beieinander (< 750m) - "nah" ist der
-                // Normalfall geworden, nicht die Ausnahme. Die Distanz-Ausnahme griff
-                // damit praktisch immer und hat das Gate faktisch wirkungslos gemacht.
-                // Fix: Ghost-Trigger IMMER unterdruecken, unabhaengig von der Distanz.
-                LogSuppress(__instance.gameObject, "TriggerZone.OnTriggerStay",
-                    $"Ghost-Trigger '{triggerRoot.name}' definitiv erkannt - immer unterdrueckt (370, Distanz-Ausnahme entfernt)");
-                return false; // kein m_truckInTrigger, kein onAmenityEnter vom Ghost
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"{LogTag} TriggerZoneStayPrefix Fehler: {ex.Message}");
-                return true; // niemals native Pfade per Exception blockieren
             }
         }
 
@@ -580,27 +385,6 @@ namespace StarTruckMP.StarTruckClient
         }
 
         // ── Helpers ──
-
-        /// <summary>
-        /// Liefert das Root-GameObject der OnTriggerStay-Quelle: attachedRigidbody
-        /// zuerst (Rigidbody-Trucks), sonst das Collider-GO selbst, sonst der oberste
-        /// Parent. Niemals werfen.
-        /// </summary>
-        private static GameObject ResolveTriggerSource(Collider other)
-        {
-            try
-            {
-                var rb = other.attachedRigidbody;
-                var go = rb != null ? rb.gameObject : other.gameObject;
-                if (go == null) return null;
-                // Topmost Parent (Trigger-Zonen-Subcollider zeigen auf den Truck-Root).
-                var t = go.transform;
-                while (t != null && t.parent != null) t = t.parent;
-                return (t != null && t.gameObject != null) ? t.gameObject : go;
-            }
-            catch { return null; }
-        }
-
 
         private static DockingBay ResolveBayCached(DockingBaySharedAssets shared)
         {

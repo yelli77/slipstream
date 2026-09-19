@@ -235,43 +235,10 @@ public static class TestGate
             UnityEngine.Time.realtimeSinceStartup = 10f; // TTL expired -> registry rescan finds same bay
             Check("cache expired -> rescan, still suppressed (ghost)", !StarTruckMP.StarTruckClient.AmenityLocalGate.AmenityGatePrefix(shared));
         }
-        // ── 369 Fix B: AmenityTriggerZone.OnTriggerStay (der 368-Restpfad) ──
-        // Case 8: Ghost loest OnTriggerStay aus, lokaler Truck weit weg -> suppress
-        {
-            var zone = new AmenityTriggerZone();
-            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop");
-            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(500, 0, 0) };
-            UnityEngine.Object.Registry.Add(zone);
-            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = farMyTruck; // 9000m
-            var col = new UnityEngine.Collider { gameObject = ghost, attachedRigidbody = new UnityEngine.Rigidbody { gameObject = ghost } };
-            Check("B1: Ghost-Trigger in Zone + lokaler Truck weit -> suppress",
-                !StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
-        }
-        // Case 9: lokaler Truck selbst in der Zone -> native (allow)
-        {
-            var zone = new AmenityTriggerZone();
-            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop2");
-            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
-            UnityEngine.Object.Registry.Add(zone);
-            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck; // 10m
-            var col = new UnityEngine.Collider { gameObject = dockedMyTruck, attachedRigidbody = new UnityEngine.Rigidbody { gameObject = dockedMyTruck } };
-            Check("B2: lokaler Truck in Zone -> allow (nativ)",
-                StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
-        }
-        // Case 10 (370-Fix): Ghost-Trigger, lokaler Truck NAHE -> jetzt IMMER suppress.
-        // Vorher "allow (ambiguous)" - genau das war der 369-Feldbug: an gemeinsamen
-        // Shop/Werkstatt/JobBoard-Bays ist "lokaler Truck nah" der Normalfall, nicht
-        // die Ausnahme, die Distanz-Ausnahme liess den Ghost-Trigger fast immer durch.
-        {
-            var zone = new AmenityTriggerZone();
-            zone.gameObject = new UnityEngine.GameObject("AmenityTrigger_Workshop3");
-            zone.transform = new UnityEngine.Transform { position = new UnityEngine.Vector3(10, 0, 0) };
-            UnityEngine.Object.Registry.Add(zone);
-            StarTruckMP.StarTruckClient.StarTruckClient.myTruck = dockedMyTruck;
-            var col = new UnityEngine.Collider { gameObject = ghost, attachedRigidbody = null };
-            Check("B3: Ghost-Trigger + lokaler Truck nahe -> suppress (370: kein Ambiguous-Fall mehr)",
-                !StarTruckMP.StarTruckClient.AmenityLocalGate.TriggerZoneStayPrefix(zone, col));
-        }
+        // ── 369 Fix B: AmenityTriggerZone.OnTriggerStay-Tests (Case 8-10) entfernt —
+        // der Patch selbst wurde in Build 382/383 dauerhaft entfernt (per Feldtest als
+        // alleiniger Verursacher eines reproduzierbaren PhysX-Crashes bestaetigt und
+        // funktional durch SweepGhostTriggerImmunity ersetzt, siehe AmenityLocalGate.cs).
         // Case 11: TruckAmenityTerminal.OnAmenityEnter — letzte Sperre
         {
             var termFar = new TruckAmenityTerminal();
