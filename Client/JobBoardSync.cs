@@ -786,6 +786,18 @@ namespace StarTruckMP.StarTruckClient
         [HarmonyPrefix]
         public static bool AcceptJob_Prefix(global::QuestInstance job)
         {
+            // custom-build-389: Diagnose — Zeile VOR der nativen Annahme (BepInEx-Log flusht pro Zeile),
+            // damit bei einem nativen Crash die letzte Zeile zeigt, wo es passiert ist.
+            try
+            {
+                string dq = "?", dn = "?", db = "?", dc = "?";
+                try { dq = job?.questId ?? "null"; } catch { }
+                try { dn = job?.displayName ?? "null"; } catch { }
+                try { db = job?.DropOffBay() ?? "null"; } catch (Exception e1) { db = "ERR:" + e1.GetType().Name; }
+                try { dc = job != null ? job.Credits().ToString() : "null"; } catch { }
+                StarTruckMP.Log.LogInfo($"389 AcceptJob BEGIN: questId='{dq}' name='{dn}' dropOffBay='{db}' credits={dc} sector='{StarTruckClient.currentSector}'");
+            }
+            catch { }
             try
             {
                 if (!JobBoardServerSync.PoolMissingAfterUpload(out string reason)) return true;
@@ -806,6 +818,7 @@ namespace StarTruckMP.StarTruckClient
         [HarmonyPostfix]
         public static void AcceptJob_Postfix(global::QuestInstance job)
         {
+            try { StarTruckMP.Log.LogInfo("389 AcceptJob END (native Annahme ohne Crash durchgelaufen)"); } catch { }
             try { JobBoardServerSync.NotifyLocalJobAccepted(job); }
             catch (Exception ex) { StarTruckMP.Log.LogWarning($"AcceptJob_Postfix Fehler: {ex.Message}"); }
         }
