@@ -41,6 +41,8 @@
   <ItemGroup>
     <!-- custom-build-348: Pioneer-Badge-Textur embedded in die DLL (Texture2D.LoadImage zur Laufzeit). -->
     <EmbeddedResource Include="pioneer_badge_256.png" />
+    <!-- custom-build-387: CEO-Badge (Yelli + Malik) statt Pioneers-Club-Icon. -->
+    <EmbeddedResource Include="ceo_badge.png" />
   </ItemGroup>
 
   <ItemGroup>

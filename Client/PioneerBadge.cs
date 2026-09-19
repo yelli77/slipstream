@@ -26,8 +26,20 @@ namespace StarTruckMP.Encoding
         private const string ResourceName = "StarTruckMP.pioneer_badge_256.png";
         private const string ShaderName = "UI/Default"; // URP-kompatibel, UniGLTF-frei
 
+        // custom-build-387: CEO-Badge (breites Banner-Bild) fuer hardcodierte SteamIDs —
+        // ersetzt bei diesen Spielern das runde Pioneers-Club-Icon. Rein clientseitig,
+        // kein Protokoll-Change (Server sendet weiter pioneer=true fuer Seed-Pioniere).
+        private const string CeoResourceName = "StarTruckMP.ceo_badge.png";
+        private static readonly HashSet<ulong> CeoSteamIds = new()
+        {
+            76561198089098228UL, // Yelli
+            76561199230438614UL, // Malik
+        };
+
         private static Texture2D _texture;
         private static bool _textureAttempted;
+        private static Texture2D _ceoTexture;
+        private static bool _ceoTextureAttempted;
 
         /// <summary>steamId -> letzte vom Server gemeldete Pioneer-Flag (SetPlayerSteamId-keyed via playerId).</summary>
         private static readonly Dictionary<ulong, bool> PioneerBySteamId = new();
@@ -66,6 +78,14 @@ namespace StarTruckMP.Encoding
                    && PioneerBySteamId.TryGetValue(sid, out bool flag) && flag;
         }
 
+        /// <summary>custom-build-387: Ist der Spieler ein CEO (hardcodierte SteamID-Liste)?</summary>
+        private static bool IsCeo(playerInfo p, ushort playerId)
+        {
+            ulong sid = p.steamId;
+            if (sid == 0) SteamIdByPlayer.TryGetValue(playerId, out sid);
+            return sid != 0 && CeoSteamIds.Contains(sid);
+        }
+
         /// <summary>SteamID einer playerInfo zuordnen (vom setPlayerSteamId-Handler gerufen).</summary>
         public static void AssociateSteamId(ushort playerId, ulong steamId)
         {
@@ -91,7 +111,8 @@ namespace StarTruckMP.Encoding
             {
                 if (nameLabel == null) { DetachFor(nameLabel); return null; }
                 if (!StarTruckClient.StarTruckClient.playerList.TryGetValue(playerId, out var p)) return nameLabel;
-                if (!IsPioneer(p, playerId))
+                bool ceo = IsCeo(p, playerId);
+                if (!ceo && !IsPioneer(p, playerId))
                 {
                     // custom-build-366 (Bug 2): Diagnose-Marker — unterscheidet im Testlog,
                     // ob das Badge bewusst NICHT angehaengt wurde (kein Pionier) oder ob
@@ -106,7 +127,7 @@ namespace StarTruckMP.Encoding
                 int key = nameLabel.GetInstanceID();
                 if (BadgeByLabel.TryGetValue(key, out var existing) && existing != null) return nameLabel;
 
-                var badge = CreateBadge(nameLabel);
+                var badge = CreateBadge(nameLabel, ceo);
                 if (badge != null) BadgeByLabel[key] = badge;
             }
             catch (Exception ex)
@@ -139,13 +160,13 @@ namespace StarTruckMP.Encoding
             return SteamIdByPlayer.TryGetValue(playerId, out ulong sid) ? sid : 0UL;
         }
 
-        private static GameObject CreateBadge(GameObject nameLabel)
+        private static GameObject CreateBadge(GameObject nameLabel, bool ceo)
         {
-            var tex = GetTexture();
+            var tex = ceo ? GetCeoTexture() : GetTexture();
             if (tex == null)
             {
                 if (!_textureAttempted)
-                    StarTruckMP.Log.LogWarning("PioneerBadge: Textur nicht ladbar — Badge uebersprungen.");
+                    StarTruckMP.Log.LogWarning("PioneerBadge: Textur nicht ladbar (ceo=" + ceo + ") — Badge uebersprungen.");
                 return null;
             }
 
@@ -163,7 +184,7 @@ namespace StarTruckMP.Encoding
             float worldY = labelH * 2.25f; // 3x von 0.75 — Badge haengt 3x hoeher ueber der Text-Mitte
 
             var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            quad.name = "PioneerBadge_" + nameLabel.name;
+            quad.name = (ceo ? "CeoBadge_" : "PioneerBadge_") + nameLabel.name;
             UnityEngine.Object.Destroy(quad.GetComponent<Collider>());
             quad.layer = nameLabel.layer;
 
@@ -207,7 +228,18 @@ namespace StarTruckMP.Encoding
             // WORLD-Offsets/-Groesse → LOCAL umrechnen (parent lossyScale, TMP-Klon = 5x):
             // y = halbe Badge-Hoehe ueber Label-Top + Luft, z leicht nach vorn gegen Z-Fighting.
             quad.transform.localPosition = new Vector3(0f, worldY / py, 0.05f);
-            quad.transform.localScale = new Vector3(worldSize / px, worldSize / py, 1f);
+            if (ceo)
+            {
+                // CEO-Banner ist breit (Seitenverhaeltnis aus der Textur): Hoehe ~0.6x des runden
+                // Badges, Breite ueber Aspect — gleiche Mitte, damit es wie das Pioneer-Icon sitzt.
+                float ceoH = worldSize * 0.6f;
+                float ceoW = ceoH * ((float)tex.width / Mathf.Max(1, tex.height));
+                quad.transform.localScale = new Vector3(ceoW / px, ceoH / py, 1f);
+            }
+            else
+            {
+                quad.transform.localScale = new Vector3(worldSize / px, worldSize / py, 1f);
+            }
             // Das Label selbst ist ein Billboard (LookRotation zur Kamera) — als Kind erbt das
             // Quad Rotation+Position. Quad-Mesh schaut +Z; LookRotation richtet +Z zur Kamera,
             // passt also direkt.
@@ -269,13 +301,28 @@ namespace StarTruckMP.Encoding
             if (_texture != null) return _texture;
             if (_textureAttempted) return null;
             _textureAttempted = true;
+            _texture = LoadEmbeddedTexture(ResourceName);
+            return _texture;
+        }
+
+        private static Texture2D GetCeoTexture()
+        {
+            if (_ceoTexture != null) return _ceoTexture;
+            if (_ceoTextureAttempted) return null;
+            _ceoTextureAttempted = true;
+            _ceoTexture = LoadEmbeddedTexture(CeoResourceName);
+            return _ceoTexture;
+        }
+
+        private static Texture2D LoadEmbeddedTexture(string resourceName)
+        {
             try
             {
                 var asm = Assembly.GetExecutingAssembly();
-                using var stream = asm.GetManifestResourceStream(ResourceName);
+                using var stream = asm.GetManifestResourceStream(resourceName);
                 if (stream == null)
                 {
-                    StarTruckMP.Log.LogWarning($"PioneerBadge: EmbeddedResource '{ResourceName}' nicht gefunden.");
+                    StarTruckMP.Log.LogWarning($"PioneerBadge: EmbeddedResource '{resourceName}' nicht gefunden.");
                     return null;
                 }
                 using var ms = new MemoryStream();
@@ -290,9 +337,8 @@ namespace StarTruckMP.Encoding
                 }
                 tex.wrapMode = TextureWrapMode.Clamp;
                 tex.filterMode = FilterMode.Bilinear;
-                _texture = tex;
-                StarTruckMP.Log.LogInfo($"PioneerBadge: Textur geladen ({tex.width}x{tex.height}, {png.Length} Bytes).");
-                return _texture;
+                StarTruckMP.Log.LogInfo($"PioneerBadge: Textur '{resourceName}' geladen ({tex.width}x{tex.height}, {png.Length} Bytes).");
+                return tex;
             }
             catch (Exception ex)
             {
