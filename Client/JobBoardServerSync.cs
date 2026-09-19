@@ -37,6 +37,11 @@ namespace StarTruckMP.StarTruckClient
     /// </summary>
     public static class JobBoardServerSync
     {
+        // custom-build-388: KILL-SWITCH. false = Job-Sync komplett AUS: kein Upload, kein Pool-Empfang,
+        // kein jobTaken, kein Board-Filter — jeder Spieler nutzt seine lokalen Spiel-Jobs.
+        // (Grund: Spiel-Freeze nach Job-Annahme im Multiplayer.)
+        public static readonly bool ENABLED = false;
+
         // Sende-Seite: Upload einmalig pro (Sektor, Job-Hash) — Neu-Generierung mit
         // identischem Inhalt wird nicht erneut hochgeladen.
         private static string lastUploadedSector = null;
@@ -97,6 +102,7 @@ namespace StarTruckMP.StarTruckClient
         // ------------------------------------------------------------------
         public static void OnLocalJobsGenerated()
         {
+            if (!ENABLED) return;
             try
             {
                 string skip = null;
@@ -265,6 +271,7 @@ namespace StarTruckMP.StarTruckClient
         // ------------------------------------------------------------------
         public static void HandlePoolIncoming(MessageReceivedEventArgs e)
         {
+            if (!ENABLED) return;
             try
             {
                 string sector = e.Message.GetString();
@@ -362,6 +369,7 @@ namespace StarTruckMP.StarTruckClient
         /// <summary>Ruft der Accept-Pfad auf, WENN wir verbunden sind (sonst nichts).</summary>
         public static void NotifyLocalJobAccepted(global::QuestInstance job)
         {
+            if (!ENABLED) return;
             try
             {
                 var client = StarTruckClient.client;
@@ -388,6 +396,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static void HandleJobTaken(MessageReceivedEventArgs e)
         {
+            if (!ENABLED) return;
             try
             {
                 string sector = e.Message.GetString();
@@ -415,6 +424,7 @@ namespace StarTruckMP.StarTruckClient
         /// </summary>
         public static bool HasFreshPool(string sector)
         {
+            if (!ENABLED) return false;
             if (string.IsNullOrEmpty(sector)) return false;
             if (pooledSector != sector) return false;
             return (Time.unscaledTime - lastPoolReceiveTime) < 60f;
@@ -442,6 +452,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static string BuildDiagLine(string sector, Il2CppSystem.Collections.Generic.List<global::QuestInstance> jobs)
         {
+            if (!ENABLED) return "ServerSync: AUS (lokale Jobs, " + (jobs != null ? jobs.Count : 0) + " Stueck)";
             try
             {
                 bool fresh = HasFreshPool(sector);
@@ -473,6 +484,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static void Update()
         {
+            if (!ENABLED) return;
             try
             {
                 // Veraltete Incoming-Assemblierungen abraeumen (budgetiert, 1x/s reicht).
@@ -542,6 +554,7 @@ namespace StarTruckMP.StarTruckClient
         public static bool PoolMissingAfterUpload(out string reason)
         {
             reason = null;
+            if (!ENABLED) return false;
             try
             {
                 var client = StarTruckClient.client;

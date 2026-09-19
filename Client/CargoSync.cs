@@ -37,6 +37,7 @@ namespace StarTruckMP.StarTruckClient
     {
         public static void OnLocalCargoSpawned()
         {
+            if (!JobBoardServerSync.ENABLED) return; // 388: Cargo-Sync gehoert zum Job-Sync
             try
             {
                 var client = StarTruckClient.client;
@@ -75,6 +76,7 @@ namespace StarTruckMP.StarTruckClient
 
         public static void HandleIncoming(MessageReceivedEventArgs e)
         {
+            if (!JobBoardServerSync.ENABLED) return; // 388: Cargo-Sync gehoert zum Job-Sync
             try
             {
                 if (!ChunkedBlobTransfer.TryReceiveChunk("cargo", e.Message, out string sector, out byte[] blob))

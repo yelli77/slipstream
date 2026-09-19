@@ -1,3 +1,11 @@
+## Neu in custom-build-388: Job-Sync (Server-Pool) + Cargo-Sync per Kill-Switch AUS
+
+- Grund: Spiel-Freeze nach Job-Annahme im Multiplayer (Atlas Prime -> Purity, beide Spieler).
+- `JobBoardServerSync.ENABLED = false` (Client/JobBoardServerSync.cs): kein Upload, kein Pool-Empfang,
+  kein jobTaken, kein Board-Filter, kein Accept-Guard. Jeder Spieler nutzt seine lokalen Spiel-Jobs.
+- `CargoSync` (Container-Sync, Grundlage des Job-Syncs) haengt am selben Schalter und ist ebenfalls aus.
+- Server-Relay bleibt unveraendert (wird einfach nicht mehr benutzt). Wieder einschalten: ENABLED = true.
+
 ## Neu in custom-build-333: PLAN B Same-Seed lite - Job-Sync ohne IL2CPP-Serialization
 
 - Entscheidung (Michael): die Serialize/Deserialize-Seite (FlatSharp/QuestTaskParameterSaveData-
