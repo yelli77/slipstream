@@ -22,7 +22,7 @@ public class StarTruckMP : BasePlugin
     // WICHTIG: bei jedem Release-Build hochzaehlen (siehe version.json) - customBuildNumber ist
     // nur ein Anzeige-String, protocolBuildNumber ist die tatsaechlich fuer den Versionscheck
     // gegen den Server verwendete Zahl.
-    public const string customBuildNumber = "custom-build-389";
+    public const string customBuildNumber = "custom-build-390";
     public const int protocolBuildNumber = 152;
     internal static new ManualLogSource Log;
 
@@ -43,6 +43,7 @@ public class StarTruckMP : BasePlugin
     public override void Load()
     {
         Log = base.Log;
+        try { global::StarTruckMP.StarTruckClient.LogBackup.RotateOnStart(); } catch { }
 
         LaunchedViaSlipstream = global::StarTruckMP.Common.LaunchMarker.ConsumeIfFresh();
         Log.LogInfo(LaunchedViaSlipstream
@@ -68,6 +69,12 @@ public class StarTruckMP : BasePlugin
         Harmony.CreateAndPatchAll(typeof(TruckClient));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardSyncPatches));
         Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.CargoSyncPatches));
+        // 390: reine Diagnose-Patches (jeweils isoliert, ein Fehlschlag darf den Plugin-Start nicht stoeren).
+        // JobAcceptPatches war bis 389 NIE registriert (toter Code) — deshalb kamen keine AcceptJob-Logs/jobTaken.
+        try { Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobBoardScreenDiagPatches)); Log.LogInfo("390 JobBoardScreenDiagPatches applied"); }
+        catch (Exception ex) { Log.LogWarning("390 JobBoardScreenDiagPatches FEHLGESCHLAGEN: " + ex.Message); }
+        try { Harmony.CreateAndPatchAll(typeof(global::StarTruckMP.StarTruckClient.JobAcceptPatches)); Log.LogInfo("390 JobAcceptPatches applied"); }
+        catch (Exception ex) { Log.LogWarning("390 JobAcceptPatches FEHLGESCHLAGEN: " + ex.Message); }
         // 368: Amenity-Gate - Repair/Werkstatt-Eintritt nur fuer den Spieler, der dockt.
         // (376-Kill-Switch entfernt: Diagnosephase abgeschlossen, Root-Cause-Fix per
         // Feldtest bestaetigt - siehe AmenityLocalGate.cs Klassenkommentar.)
@@ -88,6 +95,7 @@ public class StarTruckMP : BasePlugin
         {
             // 311b: throttle POI rewrite — run at most every 5 s and only when
             // connected; FindObjectsOfType<DockingBay>() is not free.
+            try { global::StarTruckMP.StarTruckClient.LogBackup.Tick(); } catch { }
             poiUpdateTimer -= Time.unscaledDeltaTime;
             if (poiUpdateTimer <= 0f)
             {

@@ -1,3 +1,12 @@
+## Neu in custom-build-390: Diagnose fuer Freeze/Crash nach Job-Annahme (kein Verhalten geaendert)
+
+- Befund: JobAcceptPatches (AcceptJob-Hook) war bis 389 nie per Harmony registriert (toter Code) - daher nie
+  AcceptJob-/jobTaken-Logs. Jetzt registriert (Prefix gibt true zurueck, Sync ist aus => reine Logs).
+- Neu: Client/JobBoardScreenDiag.cs - Logs VOR/NACH JobBoardScreen.ApplyUsersJobChoices und OnScreenBack mit
+  angenommenen/terminierten Jobs (questId, Name, Ziel-Bay). Vermutung: Annahme wird beim Verlassen des Screens verarbeitet.
+- Neu: Client/LogBackup.cs - BepInEx-Log-Snapshot alle 10 s nach BepInEx/log_backups/LogOutput_current.log,
+  beim naechsten Start umbenannt zu LogOutput_<zeit>.log (10 werden behalten). Grund: LogOutput.log wird bei jedem Start ueberschrieben.
+
 ## Neu in custom-build-388: Job-Sync (Server-Pool) + Cargo-Sync per Kill-Switch AUS
 
 - Grund: Spiel-Freeze nach Job-Annahme im Multiplayer (Atlas Prime -> Purity, beide Spieler).
