@@ -218,15 +218,19 @@ namespace StarTruckMP.StarTruckClient
                     // Harmony-Prefix (auf einer Il2Cpp-Methode mit Collider-Parameter)
                     // fuer den reproduzierbaren harten Crash (Build 379 + 380, identischer
                     // Absturzpunkt direkt nach der 377-Diagnosezeile) verantwortlich ist.
-                    string disableStayEnv = Environment.GetEnvironmentVariable("STRUCKMP_DISABLE_TRIGGERSTAY_PATCH");
-                    bool disableStayFile;
+                    // 382: per Feldtest bestaetigter Crash-Ursprung - Patch bleibt per
+                    // Default AUS. Opt-in zum gezielten Re-Testen via
+                    // STRUCKMP_ENABLE_TRIGGERSTAY_PATCH=1 oder Datei
+                    // STRUCKMP_ENABLE_TRIGGERSTAY_PATCH.txt im BepInEx-Config-Ordner.
+                    string enableStayEnv = Environment.GetEnvironmentVariable("STRUCKMP_ENABLE_TRIGGERSTAY_PATCH");
+                    bool enableStayFile;
                     try
                     {
-                        disableStayFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_DISABLE_TRIGGERSTAY_PATCH.txt"));
+                        enableStayFile = File.Exists(Path.Combine(BepInEx.Paths.ConfigPath, "STRUCKMP_ENABLE_TRIGGERSTAY_PATCH.txt"));
                     }
-                    catch { disableStayFile = false; }
-                    bool disableStay = (disableStayEnv == "1") || disableStayFile;
-                    StarTruckMP.Log.LogInfo($"381 OnTriggerStay-Patch Kill-Switch: env={disableStayEnv ?? "<null>"} file={disableStayFile} -> {(disableStay ? "DEAKTIVIERT" : "aktiv")}");
+                    catch { enableStayFile = false; }
+                    bool disableStay = !((enableStayEnv == "1") || enableStayFile);
+                    StarTruckMP.Log.LogInfo($"382 OnTriggerStay-Patch: per Feldtest als Crash-Ursache bestaetigt, jetzt PER DEFAULT DEAKTIVIERT (redundant dank Sweep 379/380). enableEnv={enableStayEnv ?? "<null>"} enableFile={enableStayFile} -> {(disableStay ? "DEAKTIVIERT" : "aktiv (Opt-in)")}");
 
                     if (!disableStay)
                     {
