@@ -50,6 +50,7 @@ namespace StarTruckMP.StarTruckClient
         private static readonly List<CloneRecord> clones = new List<CloneRecord>();
         private static readonly HashSet<int> clonedBayIds = new HashSet<int>();
         private static readonly HashSet<string> dumpedStations = new HashSet<string>();
+        private static readonly HashSet<int> skippedLogged = new HashSet<int>();
         private static string lastSector = "none";
         private static int passesLeft = 0;
         private static bool active = false;
@@ -109,6 +110,7 @@ namespace StarTruckMP.StarTruckClient
                     clones.Clear();
                     clonedBayIds.Clear();
                     dumpedStations.Clear();
+                    skippedLogged.Clear();
                     passesLeft = 4;
                 }
                 if (passesLeft <= 0) return;
@@ -198,12 +200,16 @@ namespace StarTruckMP.StarTruckClient
                             noShop++;
                             continue;
                         }
+                        // Quest-/Venture-Job-Board-Bays bleiben Job Board: IsQuestBay (FTUE) oder
+                        // Bay-Name mit "Venture"/"Quest" (Feldlog 385: "Job Board + Venture" hat
+                        // IsQuestBay=False, ist aber die Bay fuer Quest-Auftraege).
                         bool isQuestBay = false;
                         try { isQuestBay = bay.IsQuestBay; } catch { }
-                        if (isQuestBay)
+                        if (isQuestBay || IsQuestOrVentureName(SafeName(bay)))
                         {
                             skippedQuest++;
-                            StarTruckMP.Log.LogInfo($"{Tag} Quest-Bay uebersprungen: station='{stationName}' bay='{SafeName(bay)}'");
+                            if (skippedLogged.Add(bay.GetInstanceID()))
+                                StarTruckMP.Log.LogInfo($"{Tag} Quest-/Venture-Bay bleibt Job Board: station='{stationName}' bay='{SafeName(bay)}'");
                             continue;
                         }
 
@@ -382,9 +388,12 @@ namespace StarTruckMP.StarTruckClient
                         try { quest = b.IsQuestBay; } catch { }
                         string dn = "-";
                         try { var p = b.m_dockingBayPOI; if (p != null) dn = p.displayNameId; } catch { }
+                        string questEvt = "?", questFlag = "?";
+                        try { questEvt = (b.m_questEventOnPlayerDocked != null).ToString(); } catch { }
+                        try { questFlag = b.m_questFlagForQuestBay != null ? b.m_questFlagForQuestBay.ToString() : "-"; } catch { }
                         StarTruckMP.Log.LogInfo(
                             $"{Tag}   bay='{SafeName(b)}' amenity={b.m_amenityType} shop='{sdName ?? "-"}' " +
-                            $"shared=0x{shared} quest={quest} poiNameId='{dn}'");
+                            $"shared=0x{shared} quest={quest} questEvt={questEvt} questFlag={questFlag} poiNameId='{dn}'");
                     }
                     catch (Exception ex)
                     {
@@ -396,6 +405,13 @@ namespace StarTruckMP.StarTruckClient
             {
                 StarTruckMP.Log.LogWarning($"{Tag} Station-Dump fehlgeschlagen: {ex.Message}");
             }
+        }
+
+        private static bool IsQuestOrVentureName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            return name.IndexOf("venture", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("quest", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static string SafeName(UnityEngine.Component c)
