@@ -1,88 +1,60 @@
-using HarmonyLib;
-using Il2CppInterop.Runtime.InteropTypes;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
 
 namespace StarTruckMP.StarTruckClient
 {
     /// <summary>
-    /// 311c (Dock-Rewrite): Shop an JobsBoard-Docking-Bays.
+    /// 384 (Shop-Klon-Rewrite): Shops an JobsBoard-Docking-Bays.
     ///
-    /// Hintergrund: Das Jobboard ist seit custom-build-288/307 jederzeit per J-Taste
-    /// verfuegbar (Client/JobBoardComputer.cs) - die JobsBoard-Docking-Bays am Station-
-    /// Dock sind dafuer redundant. Diese Patches leiten den Dock-Ablauf an diesen Bays
-    /// auf den SHOP um, damit mehr freie Bays fuer Spieler existieren, die in den Shop
-    /// wollen. Echte Shop-Bays verhalten sich unverändert.
+    /// Ersetzt die Laufzeit-Umbiegung aus 311-375 (Prefix auf EnterAmenity, Postfix mit
+    /// LoadAndShow("ShopScreen"), OnAmenityEnter-Schlucker, POI-/Label-Sweeps).
+    /// Diagnose aus den Atlas-Prime-Logs: Diese Kette war zustandsabhaengig (Bay-Suche ueber
+    /// das geteilte SharedAssets-Objekt lieferte je nach Enumerationsreihenfolge die falsche
+    /// Bay, m_amenityType wurde dauerhaft an evtl. falscher Bay veraendert, das native
+    /// Job-Board-Open wurde ohne Absicherung geschluckt) und lieferte ueberall dort
+    /// "Andocken, nichts passiert", wo die Reihenfolge ungluecklich fiel.
     ///
-    /// Mechanismus (statisch gegen die interop Assembly-CSharp.dll verifiziert):
-    ///   StationAmenity-Enum: None=0, JobsBoard=1, Shop=2, Repairs=3, PaintShop=4,
-    ///   BodyShop=5, UpgradeShop=6, ItemDelivery=7, FuelPump=8, ParkingBay=9
-    ///   (ilspycmd -t StationAmenity /bepinex/interop/Assembly-CSharp.dll).
+    /// Neues Prinzip: Die JobsBoard-Bay wird beim Sektorladen zu einer ECHTEN Shop-Bay
+    /// gemacht, indem die Felder der Shop-Bay DERSELBEN Station geklont werden
+    /// (m_amenityType, m_shopDescription, m_amenityName, m_setPOISettingFromAmenity,
+    /// POI-Settings + displayNameId). Damit laeuft Docking, Amenity-Event und Screen-Open
+    /// exakt wie an einer nativen Shop-Bay - ohne Harmony-Patches.
     ///
-    /// 311c: ECHTER Dock-Pfad (verifiziert via ilspycmd-Dekompilierung): Die native
-    /// DockingCoroutine (DockingBay.&lt;DockingCoroutine&gt;d__82, liest m_amenityType
-    /// der Bay) ruft nach dem Dock-Cinematic
-    ///   DockingBaySharedAssets.EnterAmenity(StationAmenity amenityType,
-    ///   string nameStringId, ShopDescription shopDesc, ItemDeliveryDescription
-    ///   deliveryDesc, bool showScreenImmediately)
-    /// auf; diese Methode baut das AmenityEventArgs und feuert m_enterAmenityEvent.
-    /// Der vorherige Prefix auf TruckAmenityTerminal.OnAmenityEnter feuerte beim Dock
-    /// NICHT (das ist der AmenityTriggerZone-Pfad im Stationsinneren) und wurde entfernt.
-    /// Der neue Prefix schreibt amenityType (ref) JobsBoard -> Shop um und injiziert
-    /// per ref die shopDescription der ParentStation (Shop-DockingBayGroup), BEVOR der
-    /// native Handler die EventArgs baut. Bay-Aufloesung: __instance (ScriptableObject)
-    /// -> DockingBay mit m_sharedAssets == __instance -> ParentStation.
-    ///
-    /// 311b (POI-Marker): Die POI-Marker der JobsBoard-Bays zeigten weiterhin
-    /// 'Auftragsborse' (Klemmbrett-Icon). Statisch verifizierte natives Design:
-    ///   - DockingBay.ConfigurePOI(bool) liest m_setPOISettingFromAmenity und ruft
-    ///     dann m_sharedAssets.GetPOISettings(m_amenityType) und haengt das Ergebnis
-    ///     an m_dockingBayPOI.settings (der PointsOfInterest-Manager rendert daraus
-    ///     Icon + Label). CallerCount von ConfigurePOI ist 2.
-    ///   - RegisterPointOfInterest.SetSettings(PointOfInterestSettings) ist public
-    ///     und aktualisiert die zugehoerigen Marker (der POI-Manager liest pro Frame
-    ///     entry.settings).
-    ///   - Der angezeigte Label-Text kommt aus RegisterPointOfInterest.displayNameId
-    ///     (String-ID); die POI-Settings liefern nur Icon/Prefab/Farben.
-    /// Native Pfade, die wir nutzen (KEIN eigenes Overlay):
-    ///   1. PointOfInterestSettings austauschen: DockingBay.m_sharedAssets
-    ///      .m_poiSettingsJobsBoard = m_poiSettingsShop (fuer zukuenftige
-    ///      ConfigurePOI-Aufrufe), plus bay.ConfigurePOI(bay.gameObject.activeSelf)
-    ///      als Re-Apply-Versuch.
-    ///   2. RegisterPointOfInterest.SetSettings(shopSettings) direkt an der live
-    ///      registrierten POI-Instanz (Wirksamkeit unabhaengig vom CallerCount-Design
-    ///      von ConfigurePOI).
-    ///   3. displayNameId auf shopDescription.shopDisplayName setzen, damit das
-    ///      Label den Shop-Namen zeigt (nicht die String-ID 'Auftragsboerse').
-    /// Fallback/diag: Wenn m_dockingBayPOI oder Shop-Settings null sind, Log-Warnung
-    /// (Praefix 311b) und Bay-Anzeige unveraendert.
-    ///
-    /// DockingBayHUD-Konsistenz: DockingBayHUD.IsJobsBoard fragt
-    /// ShouldRewriteForAmenityDisplay() ab und behandelt die Bays als Shop-Bays,
-    /// damit kein 'Modified - Job Board (Jobs)'-HUD-Marker mehr erzeugt wird.
-    /// Singleplayer ohne MP-Client: Patches greifen gar nicht (Gate auf IsConnected).
+    /// Regeln:
+    ///  - Nur Stationen, in denen das Spiel selbst einen Shop anbietet (Shop-Bay mit
+    ///    ShopDescription bzw. Shop-DockingBayGroup mit ShopDescription). Kein Fallback auf
+    ///    Shops anderer Stationen/Sektoren: Station ohne Shop => Bay bleibt Job Board.
+    ///  - Nur fuer verbundene MP-Clients; bei Disconnect werden die Originalwerte
+    ///    wiederhergestellt.
+    ///  - SharedAssets der Bay werden NICHT getauscht/veraendert (enthalten die
+    ///    Docking-Cinematic-Timelines der Bay).
+    ///  - Quest-Bays (DockingBay.IsQuestBay) werden nicht angefasst.
     /// </summary>
     public static class ShopAtJobBoardBays
     {
-        private static bool harmonyApplied = false;
+        private const string Tag = "384 ShopClone:";
 
-        /// <summary>
-        /// 369 (Fix C): Explizite Prioritaet dieses 311-Prefixes — IMMER unter dem
-        /// 368 AmenityLocalGate (AmenityLocalGate.GatePriority = 800), damit die
-        /// Gate-Entscheidung zuerst faellt und ein Suppress (Ghost-Dock) die gesamte
-        /// 311-Rewrite-Kette deterministisch ueberspringt.
-        /// </summary>
-        public const int ShopPrefixPriority = 400;
+        private sealed class CloneRecord
+        {
+            public DockingBay bay;
+            public int bayId;
+            public StationAmenity amenity;
+            public ShopDescription shop;
+            public string amenityName;
+            public bool setPoiFromAmenity;
+            public PointOfInterestSettings poiSettings;
+            public string poiDisplayNameId;
+        }
 
-        /// <summary>
-        /// True, wenn dieser Dock-Event-Ablauf umgeschrieben werden soll:
-        /// nur fuer verbundene MP-Clients (Singleplayer unveraendert lassen).
-        /// Konsistent mit DockingBayHUD.RefreshDockingBays / JobBoardComputer.CheckToggle,
-        /// die ebenfalls auf StarTruckClient.client.IsConnected gaten.
-        /// </summary>
+        private static readonly List<CloneRecord> clones = new List<CloneRecord>();
+        private static readonly HashSet<int> clonedBayIds = new HashSet<int>();
+        private static readonly HashSet<string> dumpedStations = new HashSet<string>();
+        private static string lastSector = "none";
+        private static int passesLeft = 0;
+        private static bool active = false;
+
+        /// <summary>Nur fuer verbundene MP-Clients (Singleplayer unveraendert).</summary>
         private static bool ShouldRewrite()
         {
             try
@@ -96,1484 +68,340 @@ namespace StarTruckMP.StarTruckClient
             }
         }
 
-        /// <summary>
-        /// 311b: Oeffentliches Gate fuer die Anzeige-Umschreibung (POI/HUD).
-        /// Derselbe Gate wie ShouldRewrite() - verbundener MP-Client.
-        /// </summary>
+        /// <summary>Gate fuer die HUD-Klassifikation (DockingBayHUD.IsJobsBoard), unveraendert.</summary>
         public static bool ShouldRewriteForAmenityDisplay()
         {
             return ShouldRewrite();
         }
 
-        // 372b: Diagnose-Dump je Station nur einmal pro Session (vergleicht Atlas
-        // Prime vs. Purity anhand echter Laufzeitdaten, statt weiter zu raten).
-        private static readonly HashSet<string> loggedStationShopDiagnostics = new HashSet<string>();
-
-        // 373 Fix: Ziel (User): JEDES System mit Docking-Ports soll beim Docken
-        // einen Shop verfuegbar haben - auch Stationen ohne eigene native
-        // Shop-DockingBayGroup (z.B. Palm View/Harmony Link/New Liberty in Atlas
-        // Prime). globalFallbackShopDescription cached den ersten echten Shop, den
-        // wir je gesehen haben (persistiert ueber Sektorwechsel, da ShopDescription
-        // ein ScriptableObject-Asset ist, kein Szenenobjekt) - letzter Ausweg, wenn
-        // weder die eigene Station noch eine andere aktuell geladene Station einen
-        // Shop hat.
-        private static ShopDescription globalFallbackShopDescription;
-        private static readonly HashSet<string> loggedShopFallbackUse = new HashSet<string>();
-
         /// <summary>
-        /// Liest die shopDescription der ersten DockingBayGroup der Station, deren
-        /// amenityType == Shop ist (Station.DockingBayGroups).
+        /// Wird aus Plugin.Update im 5-s-Takt aufgerufen. Bei Sektorwechsel (und einige Ticks
+        /// danach, weil Bays verzoegert erscheinen koennen) werden alle JobsBoard-Bays mit
+        /// Shop-Station geklont. Idempotent.
         /// </summary>
-        private static ShopDescription FindStationShopDescription(Station stationObj)
+        public static void ApplyShopClones()
         {
-            if (stationObj == null) return null;
-            string stationName = null;
-            try { stationName = stationObj.gameObject?.name; } catch { }
-            var diagKey = stationName ?? ("Station#" + stationObj.GetHashCode());
             try
             {
-                var groups = stationObj.DockingBayGroups;
-                if (groups == null)
+                if (!ShouldRewrite())
                 {
-                    if (loggedStationShopDiagnostics.Add(diagKey))
+                    if (active)
                     {
-                        StarTruckMP.Log.LogWarning($"372b ShopAtJobBoardBays: Station.DockingBayGroups ist null/leer (station={stationName}).");
+                        active = false;
+                        RestoreAll();
+                        lastSector = "none";
                     }
-                    return null;
+                    return;
+                }
+                if (!active)
+                {
+                    active = true;
+                    lastSector = "none";
                 }
 
-                // 372b: Vollstaendiger Gruppen-Dump (einmal pro Station), um Atlas
-                // Prime vs. Purity anhand echter Laufzeitdaten zu vergleichen -
-                // zeigt amenityType + ob shopDescription gesetzt ist, je Gruppe.
-                if (loggedStationShopDiagnostics.Add(diagKey))
+                var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
+                if (string.IsNullOrEmpty(sector) || sector == "none") return;
+
+                if (sector != lastSector)
+                {
+                    // Neue Szene: alte Bay-Referenzen sind zerstoert.
+                    lastSector = sector;
+                    clones.Clear();
+                    clonedBayIds.Clear();
+                    dumpedStations.Clear();
+                    passesLeft = 4;
+                }
+                if (passesLeft <= 0) return;
+                passesLeft--;
+
+                RunPass(sector);
+            }
+            catch (Exception ex)
+            {
+                StarTruckMP.Log.LogWarning($"{Tag} ApplyShopClones Fehler: {ex}");
+            }
+        }
+
+        private static void RunPass(string sector)
+        {
+            var allBays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
+            if (allBays == null || allBays.Length == 0) return;
+
+            // Bays je Station gruppieren (Schluessel = nativer Station-Pointer).
+            var byStation = new Dictionary<long, List<DockingBay>>();
+            var stationObjs = new Dictionary<long, Station>();
+            foreach (var bay in allBays)
+            {
+                if (bay == null) continue;
+                Station st = null;
+                try { st = bay.ParentStation; } catch { }
+                if (st == null) continue;
+                long key = (long)st.Pointer;
+                if (!byStation.TryGetValue(key, out var list))
+                {
+                    list = new List<DockingBay>();
+                    byStation[key] = list;
+                    stationObjs[key] = st;
+                }
+                list.Add(bay);
+            }
+
+            int cloned = 0, noShop = 0, skippedQuest = 0, failed = 0;
+            foreach (var kv in byStation)
+            {
+                var st = stationObjs[kv.Key];
+                var bays = kv.Value;
+                string stationName = SafeName(st);
+
+                // Referenz: eine echte Shop-Bay dieser Station (+ deren ShopDescription).
+                DockingBay refBay = null;
+                ShopDescription shop = null;
+                foreach (var b in bays)
                 {
                     try
                     {
-                        var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
-                        var parts = new List<string>();
-                        int idx = 0;
-                        foreach (var gg in groups)
-                        {
-                            idx++;
-                            if (gg == null) { parts.Add($"#{idx}=null"); continue; }
-                            string sdInfo = "shopDesc=null";
-                            try
-                            {
-                                if (gg.shopDescription != null)
-                                    sdInfo = $"shopDesc='{gg.shopDescription.shopDisplayName}'";
-                            }
-                            catch (Exception exSd) { sdInfo = $"shopDesc=ERR({exSd.Message})"; }
-                            parts.Add($"#{idx}=amenity:{gg.amenityType},{sdInfo}");
-                        }
-                        StarTruckMP.Log.LogInfo(
-                            $"372b ShopAtJobBoardBays: Station-Diagnose station='{stationName}' sector='{sector}' " +
-                            $"groupCount={groups.Count} [{string.Join(" | ", parts)}]");
+                        if (b.m_amenityType != StationAmenity.Shop) continue;
+                        var sd = b.m_shopDescription;
+                        if (sd == null) continue;
+                        refBay = b;
+                        shop = sd;
+                        break;
                     }
-                    catch (Exception exDiag)
+                    catch { }
+                }
+                if (shop == null)
+                {
+                    // Fallback INNERHALB derselben Station: Shop-DockingBayGroup.
+                    shop = FindStationGroupShop(st);
+                    if (shop != null)
                     {
-                        StarTruckMP.Log.LogWarning($"372b ShopAtJobBoardBays: Diagnose-Dump fehlgeschlagen: {exDiag.Message}");
+                        foreach (var b in bays)
+                        {
+                            try { if (b.m_amenityType == StationAmenity.Shop) { refBay = b; break; } } catch { }
+                        }
                     }
                 }
 
+                DumpStationOnce(sector, stationName, bays, refBay, shop);
+
+                foreach (var bay in bays)
+                {
+                    try
+                    {
+                        if (!DockingBayAmenityUtil.IsJobsBoardBay(bay)) continue;
+                        int id = bay.GetInstanceID();
+                        if (clonedBayIds.Contains(id)) continue;
+
+                        if (shop == null)
+                        {
+                            // Spiel bietet an dieser Station keinen Shop an => Bay bleibt Job Board.
+                            noShop++;
+                            continue;
+                        }
+                        bool isQuestBay = false;
+                        try { isQuestBay = bay.IsQuestBay; } catch { }
+                        if (isQuestBay)
+                        {
+                            skippedQuest++;
+                            StarTruckMP.Log.LogInfo($"{Tag} Quest-Bay uebersprungen: station='{stationName}' bay='{SafeName(bay)}'");
+                            continue;
+                        }
+
+                        if (CloneOne(bay, refBay, shop, stationName)) cloned++;
+                        else failed++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        StarTruckMP.Log.LogWarning($"{Tag} Klon an '{SafeName(bay)}' fehlgeschlagen: {ex.Message}");
+                    }
+                }
+            }
+
+            if (cloned > 0 || failed > 0 || skippedQuest > 0)
+            {
+                StarTruckMP.Log.LogInfo(
+                    $"{Tag} Pass sector='{sector}': {cloned} JobsBoard-Bays zu Shop-Bays geklont, " +
+                    $"{noShop} ohne Shop in Station (bleiben Job Board), {skippedQuest} Quest-Bays uebersprungen, {failed} Fehler " +
+                    $"(gesamt geklont: {clones.Count}).");
+            }
+        }
+
+        private static bool CloneOne(DockingBay bay, DockingBay refBay, ShopDescription shop, string stationName)
+        {
+            var poi = bay.m_dockingBayPOI;
+            var refPoi = refBay != null ? refBay.m_dockingBayPOI : null;
+
+            // Originalzustand sichern (fuer Restore bei Disconnect).
+            var rec = new CloneRecord
+            {
+                bay = bay,
+                bayId = bay.GetInstanceID(),
+                amenity = bay.m_amenityType,
+                shop = bay.m_shopDescription,
+                amenityName = bay.m_amenityName,
+                setPoiFromAmenity = bay.m_setPOISettingFromAmenity,
+                poiSettings = poi != null ? poi.settings : null,
+                poiDisplayNameId = poi != null ? poi.displayNameId : null,
+            };
+
+            // Bay-Konfiguration der Shop-Bay klonen: das liest die native DockingCoroutine
+            // beim Andocken (m_amenityType/m_shopDescription) -> natives Shop-Open.
+            bay.m_amenityType = StationAmenity.Shop;
+            bay.m_shopDescription = shop;
+            if (refBay != null)
+            {
+                try
+                {
+                    var nm = refBay.m_amenityName;
+                    if (!string.IsNullOrEmpty(nm)) bay.m_amenityName = nm;
+                    bay.m_setPOISettingFromAmenity = refBay.m_setPOISettingFromAmenity;
+                }
+                catch (Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"{Tag} amenityName/setPOI aus Referenz nicht uebernommen: {ex.Message}");
+                }
+            }
+
+            // POI (Icon + Label) ueber die nativen Wege: Settings der echten Shop-Bay bzw.
+            // m_poiSettingsShop der eigenen SharedAssets, displayNameId der Referenz.
+            string poiInfo = "kein POI";
+            if (poi != null)
+            {
+                try
+                {
+                    PointOfInterestSettings settings = refPoi != null ? refPoi.settings : null;
+                    if (settings == null)
+                    {
+                        var shared = bay.m_sharedAssets;
+                        if (shared != null) settings = shared.m_poiSettingsShop;
+                    }
+                    if (settings != null) poi.SetSettings(settings);
+                    if (refPoi != null)
+                    {
+                        var dn = refPoi.displayNameId;
+                        if (!string.IsNullOrEmpty(dn)) poi.displayNameId = dn;
+                    }
+                    poiInfo = $"POI umgestellt (settings={(settings != null)}, displayNameId='{poi.displayNameId}')";
+                }
+                catch (Exception ex)
+                {
+                    poiInfo = "POI-Fehler: " + ex.Message;
+                }
+            }
+
+            clones.Add(rec);
+            clonedBayIds.Add(rec.bayId);
+            string shopName = null;
+            try { shopName = shop.shopDisplayName; } catch { }
+            StarTruckMP.Log.LogInfo(
+                $"{Tag} geklont: station='{stationName}' bay='{SafeName(bay)}' -> Shop '{shopName}' " +
+                $"(Referenz-Bay='{(refBay != null ? SafeName(refBay) : "keine (Gruppen-Shop)")}'; {poiInfo})");
+            return true;
+        }
+
+        /// <summary>Shop-ShopDescription aus den DockingBayGroups DIESER Station (kein Fremd-Fallback).</summary>
+        private static ShopDescription FindStationGroupShop(Station st)
+        {
+            try
+            {
+                var groups = st.DockingBayGroups;
+                if (groups == null) return null;
                 foreach (var g in groups)
                 {
                     if (g == null) continue;
                     if (g.amenityType != StationAmenity.Shop) continue;
                     var sd = g.shopDescription;
-                    if (sd != null)
-                    {
-                        // 373: eigener echter Shop gefunden - als globalen Fallback
-                        // cachen, falls andere Stationen (dieser oder ein spaeterer
-                        // Sektor) keinen eigenen haben.
-                        globalFallbackShopDescription = sd;
-                        return sd;
-                    }
-                    // Gruppe vorhanden, aber Description null -> continue (nicht abbrechen)
+                    if (sd != null) return sd;
                 }
-
-                // 373 Fix: Diese Station hat selbst keinen Shop. Fallback-Kette,
-                // damit trotzdem JEDE JobsBoard-Bay einen funktionierenden Shop
-                // bekommt: 1) andere, gerade geladene Stationen (gleicher Sektor),
-                // 2) zuletzt bekannter echter Shop aus einem frueher besuchten
-                // Sektor. Items/Preise sind dann nicht "lokal", aber ein
-                // funktionierender Shop ist das erklaerte Ziel - besser als der
-                // bisherige Fallback (Bay bleibt Jobboerse).
-                var sectorFallback = FindAnyShopDescriptionInLoadedStations(stationObj);
-                if (sectorFallback != null)
-                {
-                    globalFallbackShopDescription = sectorFallback;
-                    if (loggedShopFallbackUse.Add(diagKey))
-                    {
-                        StarTruckMP.Log.LogInfo($"373 ShopAtJobBoardBays: Sektor-Fallback-Shop fuer Station '{stationName}' verwendet (andere Station im selben Sektor hat einen Shop).");
-                    }
-                    return sectorFallback;
-                }
-
-                if (IsShopDescriptionAlive(globalFallbackShopDescription))
-                {
-                    if (loggedShopFallbackUse.Add(diagKey))
-                    {
-                        StarTruckMP.Log.LogInfo($"373 ShopAtJobBoardBays: Cross-Sektor-Fallback-Shop fuer Station '{stationName}' verwendet (kein Shop im aktuellen Sektor gefunden).");
-                    }
-                    return globalFallbackShopDescription;
-                }
-
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays: Station hat keine Shop-DockingBayGroup mit shopDescription und kein Fallback-Shop verfuegbar (station={stationName}).");
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.FindStationShopDescription fehlgeschlagen: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"{Tag} DockingBayGroups nicht lesbar: {ex.Message}");
             }
             return null;
         }
 
-        /// <summary>
-        /// 373: Sucht in ALLEN aktuell geladenen Stationen (typischerweise der
-        /// laufende Sektor) nach einer echten Shop-DockingBayGroup mit
-        /// shopDescription - Kandidat fuer den Sektor-Fallback.
-        /// </summary>
-        private static ShopDescription FindAnyShopDescriptionInLoadedStations(Station exclude)
+        /// <summary>Stellt alle geaenderten Bays auf den Originalzustand zurueck (Disconnect).</summary>
+        private static void RestoreAll()
         {
-            try
+            int restored = 0;
+            foreach (var rec in clones)
             {
-                var allStations = UnityEngine.Object.FindObjectsOfType<Station>();
-                if (allStations == null) return null;
-                foreach (var st in allStations)
-                {
-                    if (st == null) continue;
-                    if (exclude != null && (ReferenceEquals(st, exclude) || st.Pointer == exclude.Pointer)) continue;
-                    try
-                    {
-                        var groups = st.DockingBayGroups;
-                        if (groups == null) continue;
-                        foreach (var g in groups)
-                        {
-                            if (g == null) continue;
-                            if (g.amenityType != StationAmenity.Shop) continue;
-                            var sd = g.shopDescription;
-                            if (sd != null) return sd;
-                        }
-                    }
-                    catch { continue; }
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"373 ShopAtJobBoardBays.FindAnyShopDescriptionInLoadedStations fehlgeschlagen: {ex.Message}");
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 373: Liveness-Check fuer eine cross-Sektor gecachte ShopDescription -
-        /// ScriptableObject-Assets ueberleben Sektorwechsel normalerweise, aber
-        /// niemals ungeprueft auf eine ggf. zerstoerte native Referenz zugreifen.
-        /// </summary>
-        private static bool IsShopDescriptionAlive(ShopDescription sd)
-        {
-            if (sd == null) return false;
-            try
-            {
-                var _ = sd.shopDisplayName;
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public static void Apply()
-        {
-            if (harmonyApplied) return;
-            harmonyApplied = true;
-            var harmony = new Harmony("StarTruckMP.ShopAtJobBoardBays");
-
-            // 313: Ziel-Suche gelockt. Root Cause des 312-Fehlschlags (BepInEx-Log
-            // 'Patchziel ... nicht gefunden'): Die interop-Proxy-Signatur ist
-            //   public unsafe bool EnterAmenity(StationAmenity amenityType,
-            //       string nameStringId, ShopDescription shopDesc,
-            //       ItemDeliveryDescription deliveryDesc, bool showScreenImmediately = true)
-            // ABER: DockingBaySharedAssets.cs im Proxy beginnt mit `using Il2CppSystem;`,
-            // d.h. das 'string' der Signatur ist Il2CppSystem.String (via ilspycmd -t
-            // DockingBaySharedAssets /bepinex/interop/Assembly-CSharp.dll verifiziert,
-            // NativeMethodInfoPtr_..._StationAmenity_String_ShopDescription_..., Token
-            // 100671329). Der alte Match 'ps[1].ParameterType == typeof(string)' verglich
-            // System.String mit Il2CppSystem.String und scheiterte dadurch IMMER.
-            //
-            // Neue Strategie: nur Methodenname + Parameteranzahl matchen; alle
-            // Kandidaten mit Parametertypen ins Log; wenn mehr als einer, den mit
-            // StationAmenity an Position 0 (und ShopDescription an Position 2)
-            // bevorzugen. IL2CPP.GetIl2CppMethodByToken ist hier nicht noetig: Der
-            // Proxy-Methodenkoerper ruft selbst via NativeMethodInfoPtr in den nativen
-            // Code - Harmony patched den Proxy, das genuegt (gleicher Pfad wie bei
-            // OnAmenityEnter, der funktioniert hat).
-            MethodInfo mi = null;
-            string targetDesc = null;
-            try
-            {
-                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    System.Type[] types;
-                    try { types = asm.GetTypes(); } catch { continue; }
-                    foreach (var t in types)
-                    {
-                        if (t == null || t.Name != "DockingBaySharedAssets") continue;
-                        MethodInfo fallbackCandidate = null;
-                        foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
-                        {
-                            if (m.Name != "EnterAmenity") continue;
-                            var ps = m.GetParameters();
-                            var sig = string.Join(", ", Array.ConvertAll(ps, p => p.ParameterType.FullName));
-                            StarTruckMP.Log.LogInfo($"313 EnterAmenity-Kandidat: {t.FullName}.{m.Name}({sig})");
-                            if (ps.Length < 5) continue;
-                            // 314: Accept 5+ params. Runtime has 6 (QuestInstance appended).
-                            var isPrimary = ps[0].ParameterType.Name == "StationAmenity"
-                                         && ps[2].ParameterType.Name == "ShopDescription";
-                            if (isPrimary)
-                            {
-                                mi = m;
-                                targetDesc = $"{t.Name}.{m.Name}(StationAmenity, {ps[1].ParameterType}, ShopDescription, {ps[3].ParameterType}, bool, ...)";
-                                StarTruckMP.Log.LogInfo($"314 Patch-Ziel gewaehlt: {t.FullName}.{m.Name} ({ps.Length} Parameter)");
-                                break;
-                            }
-                            fallbackCandidate ??= m;
-                        }
-                        if (mi == null && fallbackCandidate != null)
-                        {
-                            mi = fallbackCandidate;
-                            targetDesc = $"{t.Name}.{fallbackCandidate.Name}(FALLBACK: {fallbackCandidate})";
-                        }
-                        if (mi != null) break;
-                    }
-                    if (mi != null) break;
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.Apply: Ziel-Suche fehlgeschlagen: {ex.Message}");
-            }
-
-            if (mi == null)
-            {
-                StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays.Apply: Patchziel DockingBaySharedAssets.EnterAmenity nicht gefunden - Feature inaktiv.");
-                return;
-            }
-
-            var prefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPrefix));
-            // 369 (Fix C): Prioritaet EXPLIZIT unter dem 368 AmenityLocalGate (800) pinnen.
-            // Semantik: Harmony sortiert Prefixes absteigend nach Priority — das Gate
-            // entscheidet ZUERST. Gate=false (Ghost-/Fern-Dock) => 311-Prefix + Native
-            // werden geskippt (kein Rewrite, kein Screen-Open). Gate=true (legitimes
-            // Dock, eigener Truck in/nach der Bay) => 311-Rewrite-Kette laeuft KOMPLETT
-            // (POI-Rewrite + ShopScreen-Open via Postfix). Return-Wert des 311-Prefixes
-            // ist void => er skippt niemals selbst etwas, schreibt nur __args um.
-            prefix.priority = ShopPrefixPriority;
-            var postfix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(EnterAmenityPostfix));
-            harmony.Patch(mi, prefix: prefix, postfix: postfix);
-            StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays.Apply: Harmony-Patch auf {targetDesc} registriert (Docking-Pfad 311c + 315 Postfix).");
-
-            // 315c: Nativen JobBoard-Open unterdruecken - Prefix auf
-            // TruckAmenityTerminal.OnAmenityEnter (Dekompilat-Beweis im Kommentar
-            // bei OnAmenityEnterPrefix). Bei Ziel-Suche-Fehlschlag laeuft das native
-            // JobBoard-Open einfach unveraendert weiter (Flackern akzeptiert, kein
-            // Build-/Laufzeit-Risiko).
-            try
-            {
-                MethodInfo onEnter = null;
-                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-                {
-                    System.Type[] types;
-                    try { types = asm.GetTypes(); } catch { continue; }
-                    foreach (var t in types)
-                    {
-                        if (t == null || t.Name != "TruckAmenityTerminal") continue;
-                        foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                        {
-                            if (m.Name != "OnAmenityEnter") continue;
-                            var ps = m.GetParameters();
-                            StarTruckMP.Log.LogInfo($"315c OnAmenityEnter-Kandidat: {t.FullName}.{m.Name}({string.Join(", ", Array.ConvertAll(ps, p => p.ParameterType.Name))})");
-                            if (ps.Length == 2 && ps[0].ParameterType.Name.Contains("Object") && ps[1].ParameterType.Name.Contains("EventArgs"))
-                            {
-                                onEnter = m;
-                                break;
-                            }
-                        }
-                        if (onEnter != null) break;
-                    }
-                    if (onEnter != null) break;
-                }
-                if (onEnter != null)
-                {
-                    var onEnterPrefix = new HarmonyMethod(typeof(ShopAtJobBoardBays), nameof(OnAmenityEnterPrefix));
-                    // 369 (Fix C): unter dem 368 AmenityLocalGate-Terminal-Prefix (800)
-                    // pinnen — dessen Suppress (ferner Eintritt) muss VOR dieser Logik
-                    // greifen und dieses Prefix dann gar nicht mehr sehen.
-                    onEnterPrefix.priority = ShopPrefixPriority;
-                    harmony.Patch(onEnter, prefix: onEnterPrefix);
-                    StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays.Apply: Harmony-Prefix auf TruckAmenityTerminal.OnAmenityEnter registriert (nativer JobBoard-Open unterdrueckbar).");
-                }
-                else
-                {
-                    StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays.Apply: TruckAmenityTerminal.OnAmenityEnter nicht gefunden - natives JobBoard-Open bleibt aktiv (Flackern akzeptiert).");
-                }
-            }
-            catch (Exception exOnEnter)
-            {
-                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.Apply: OnAmenityEnter-Patch fehlgeschlagen (natives JobBoard-Open bleibt aktiv): {exOnEnter.Message}");
-            }
-        }
-
-        // ── Prefix: rewrite the JobsBoard dock amenity into a Shop amenity ──
-
-        // 315g: Fester Label-Text fuer ALLE Shop-Bay-Marker (HUD + world-space).
-        // Die Bays zeigen 'Cosmo's Cash 'n Carry' (Shopname aus dem Dekompilat).
-        // NICHT fuer die Kontext-Injection verwenden (m_shopDescription /
-        // TruckAmenityTerminal._currentShop brauchen den echten ShopDescription-Wert).
-        // ALLE Ist-Zustands-Heuristiken (SweepPoiMarkerLabels, SetLiveMarkerText,
-        // 315d World-Label) vergleichen gegen DIESE Konstante - der Sweep
-        // normalisiert den neuen Text daher nicht wieder weg.
-        private const string ShopBayDisplayName = "Cosmo's Cash 'n Carry";
-
-        private static int rewriteCount = 0;
-
-        /// <summary>
-        /// 315: Cached Shop-Displayname fuer den Namen-Fix (Aufgabe 2): wird im
-        /// EnterAmenityPrefix gesetzt und im Postfix gelesen (guiShow-Callback).
-        /// </summary>
-        private static string lastShopDisplayName = null;
-
-        /// <summary>
-        /// 315b: ShopDescription der letzten Umleitung (fuer Kontext-Injection).
-        /// </summary>
-        private static ShopDescription lastStationShop = null;
-
-        /// <summary>
-        /// 315c: True, wenn der Prefix DIESEN EnterAmenity-Aufruf tatsaechlich von
-        /// JobsBoard nach Shop umgeschrieben hat (echte Shop-Docks setzen das
-        /// nicht). Setzt lastShopDisplayName/lastStationShop und aktiviert die
-        /// native-Open-Unterdrueckung im Postfix.
-        /// </summary>
-        private static bool lastWasRewrite = false;
-
-        /// <summary>
-        /// 315c: Unterdrueckt das NATIVE JobBoard-Screen-Open. Der Prefix auf
-        /// TruckAmenityTerminal.OnAmenityEnter (Token 100671950, Dekompilat:
-        /// 'public unsafe void OnAmenityEnter(Il2CppSystem.Object sender,
-        /// Il2CppSystem.EventArgs eventArgs)') skippt den nativen Rumpf, wenn
-        /// dieses Flag steht - dann oeffnet ausschliesslich unser ShopScreen-
-        /// LoadAndShow. Zeitfenster 15 s gegen verlorene Events (sonst wuerde
-        /// ein spaeteres echtes Amenity-Enter fälschlich geschluckt).
-        /// </summary>
-        private static bool suppressNativeOpen = false;
-        private static DateTime suppressNativeOpenAtUtc = DateTime.MinValue;
-
-        /// <summary>
-        /// Prefix vor DockingBaySharedAssets.EnterAmenity - DER Punkt, den die native
-        /// DockingCoroutine nach dem Dock-Cinematic aufruft. amenityType und shopDesc
-        /// werden per ref umgeschrieben, BEVOR der native Handler das AmenityEventArgs
-        /// baut und m_enterAmenityEvent feuert.
-        /// </summary>
-        // ReSharper disable once RedundantAssignment
-        // 314: __args approach to handle the runtime 6-param signature
-        // (EnterAmenity(StationAmenity, String, ShopDescription, ItemDeliveryDescription,
-        //  Boolean, QuestInstance)) without needing QuestInstance type at compile time.
-        public static void EnterAmenityPrefix(
-            DockingBaySharedAssets __instance,
-            object[] __args)
-        {
-            try
-            {
-                if (!ShouldRewrite()) return;
-                if (__args == null || __args.Length < 5) return;
-
-                // __args[0]: StationAmenity amenityType (ref)
-                // __args[1]: string nameStringId
-                // __args[2]: ShopDescription shopDesc (ref)
-                // __args[3]: ItemDeliveryDescription deliveryDesc
-                // __args[4]: bool showScreenImmediately
-                // __args[5]: QuestInstance (runtime-only, may be absent)
-
-                // Check JobsBoard via Convert.ToInt32 (works with Il2Cpp enums in __args)
-                int amenityInt;
-                try { amenityInt = Convert.ToInt32(__args[0]); }
-                catch { return; }
-                if (amenityInt != (int)AmenityTypes.JobsBoard) return;
-
-                // 374b Fix: Diagnose-Log direkt beim Eintritt in den JobsBoard-Zweig -
-                // zeigt fuer den naechsten Testlauf zweifelsfrei, OB EnterAmenityPrefix
-                // fuer einen konkreten Dock-Versuch ueberhaupt aufgerufen wird (statt
-                // nur die spaeteren Bail-out-Zweige, die bisher schweigen, wenn schon
-                // dieser Punkt nie erreicht wird).
                 try
                 {
-                    StarTruckMP.Log.LogInfo($"374b ShopAtJobBoardBays: EnterAmenityPrefix -> JobsBoard-Dock erkannt (sharedAssets='{__instance?.name}').");
-                }
-                catch { }
-
-                // 372 Fix: State fuer DIESEN Dock-Versuch zuruecksetzen, BEVOR die
-                // Fallback-Pruefungen (Bay/Station/ShopDescription) laufen. Beweis
-                // (User-Report 372): In Atlas Prime oeffnet sich an mehreren
-                // JobsBoard->Shop-Bays GAR KEIN Menue, obwohl Docking klappt - waehrend
-                // Purity funktioniert. Root Cause: FindStationShopDescription() liefert
-                // fuer Stationen ohne eigene native Shop-DockingBayGroup (Palm View,
-                // Harmony Link, New Liberty) null, EnterAmenityPrefix bricht dann VOR
-                // dem Setzen von lastShopDisplayName/lastStationShop/suppressNativeOpen
-                // ab - aber die statischen Felder behalten den Stand des letzten
-                // ERFOLGREICHEN Rewrites (ggf. an einer ganz anderen Bay/Station!).
-                // Ergebnis: OnAmenityEnterPrefix (315c) schluckt anhand des stehen
-                // gebliebenen suppressNativeOpen-Flags weiterhin das native
-                // JobBoard-Open - und der (nicht umgeschriebene) Dock zeigt gar nichts
-                // mehr an, statt sauber auf die native Jobboerse zurueckzufallen.
-                // Fix: Bei jedem JobsBoard-Amenity-Enter-Versuch den State sofort
-                // zuruecksetzen, damit ein Fallback in diesem Aufruf garantiert zu
-                // einem unveraenderten (ehrlichen) nativen Pfad fuehrt.
-                lastShopDisplayName = null;
-                lastStationShop = null;
-                lastWasRewrite = false;
-                suppressNativeOpen = false;
-
-                var bay = FindBayForSharedAssets(__instance);
-                if (bay == null)
-                {
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: DockingBay fuer SharedAssets nicht gefunden - Bay bleibt Jobboard (Fallback).");
-                    return;
-                }
-
-                var station = bay.ParentStation;
-                if (station == null)
-                {
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: DockingBay.ParentStation null - Bay bleibt Jobboard (Fallback).");
-                    return;
-                }
-
-                var stationShop = FindStationShopDescription(station);
-                if (stationShop == null)
-                {
-                    // Sauberer Fallback: Bay verhaelt sich wie bisher (= Jobboard via Dock).
-                    StarTruckMP.Log.LogWarning("311 ShopAtJobBoardBays: keine ShopDescription an der Station verfuegbar - Bay bleibt Jobboard (Fallback).");
-                    return;
-                }
-
-                // Write back ref parameters through __args
-                __args[0] = (StationAmenity)AmenityTypes.Shop;
-                __args[2] = stationShop;
-
-                // 315 Fix (Aufgabe 2): nameStringId. Dekompilat-Beweis:
-                //   TruckAmenityTerminal.AmenitySetup hat das Feld 'promptStringId'
-                //   (GetIl2CppField(AmenitySetup, "promptStringId")) und
-                //   TruckAmenityTerminal.get_shopDisplayName (Token 100671943)
-                //   liefert den Text, den der Dock-Prompt anzeigt. Die Screens
-                //   steuern NUR via bay.m_amenityType (siehe Patch unten) - aber
-                //   der Prompt/Screen-Titel baut auf der String-ID auf. Der
-                //   Jobboard-Wert (__args[1], native ID 'Auftragsboerse') muss
-                //   deshalb auf den Shop-Displaynamen umgeschrieben werden.
-                //shopDesc.shopDisplayName ist der native Anzeigename der Shop-Gruppe
-                //(ShopDescription.shopDisplayName, ilspycmd -t ShopDescription).
-                if (__args.Length >= 2)
-                {
-                    var displayName = stationShop.shopDisplayName;
-                    if (string.IsNullOrEmpty(displayName)) displayName = "Shop";
-                    __args[1] = displayName;
-                    lastShopDisplayName = displayName;
-                }
-
-                // 315b Fix (Aufgabe 1): Dekompilat-Beweis (ilspycmd -t DockingBay):
-                //   m_amenityType ist auf dem interop-Proxy eine PROPERTY
-                //   ('public unsafe StationAmenity m_amenityType { get; set; }',
-                //   Zeile ~937, NativeFieldInfoPtr_m_amenityType -> GetIl2CppField
-                //   (DockingBay, "m_amenityType"), Token-Zeile 1960). GetField()
-                //   schlug deshalb IMMER fehl (User-Log 344). Property setzen,
-                //   Enum.ToObject-Regel (game-and-server-ops.md, Interop-Falle).
-                //   Ebenso verifiziert: m_shopDescription Property (Zeile ~950,
-                //   NativeFieldInfoPtr Zeile 1961) - der native Screen-Open liest den
-                //   Shop-Kontext teils direkt von der Bay; damit laedt der ShopScreen
-                //   seine Items/Preise nativ (kein leerer Shop).
-                var amenitySet = false;
-                try
-                {
-                    var bayType = bay.GetType();
-                    // Property zuerst (Proxy-Realitaet), Field als Fallback.
-                    var amenityProp = bayType.GetProperty("m_amenityType",
-                        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                    if (amenityProp != null && amenityProp.CanWrite)
-                    {
-                        var enumObj = Enum.ToObject(amenityProp.PropertyType, AmenityTypes.Shop);
-                        amenityProp.SetValue(bay, enumObj);
-                        amenitySet = true;
-                        StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_amenityType (Property) -> Shop gesetzt (bay={bay.gameObject?.name}, type={amenityProp.PropertyType.Name}).");
-                    }
-                    else
-                    {
-                        var amenityField = bayType.GetField("m_amenityType",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (amenityField != null)
-                        {
-                            var enumObj = Enum.ToObject(amenityField.FieldType, AmenityTypes.Shop);
-                            amenityField.SetValue(bay, enumObj);
-                            amenitySet = true;
-                            StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_amenityType (Field) -> Shop gesetzt (bay={bay.gameObject?.name}).");
-                        }
-                    }
-                    if (!amenitySet)
-                    {
-                        StarTruckMP.Log.LogWarning("315b ShopAtJobBoardBays: Weder Property noch Field 'm_amenityType' gefunden (Screen-Open bleibt evtl. Jobboard).");
-                    }
-
-                    // 315b (Aufgabe 3): bay.m_shopDescription ebenfalls setzen.
-                    try
-                    {
-                        var shopProp = bayType.GetProperty("m_shopDescription",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (shopProp != null && shopProp.CanWrite)
-                        {
-                            shopProp.SetValue(bay, stationShop);
-                            StarTruckMP.Log.LogInfo($"315b ShopAtJobBoardBays: bay.m_shopDescription (Property) -> stationShop gesetzt (bay={bay.gameObject?.name}).");
-                        }
-                    }
-                    catch (Exception exShopProp)
-                    {
-                        StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: m_shopDescription-Set fehlgeschlagen: {exShopProp.Message}");
-                    }
-                }
-                catch (Exception exAmenity)
-                {
-                    StarTruckMP.Log.LogWarning($"315b ShopAtJobBoardBays: m_amenityType-Rewrite fehlgeschlagen: {exAmenity.Message}");
-                }
-
-                // 315b: Prefix-State fuer den Postfix merken.
-                lastShopDisplayName = __args.Length >= 2 ? (__args[1] as string) : null;
-                lastStationShop = stationShop;
-                // 315c: Nur wenn die komplette Umleitung (args + Bay-Kontext) gegriffen
-                // hat, darf der Postfix das native JobBoard-Open schlucken und den
-                // ShopScreen selbst oeffnen. Echte Shop-Docks (kein Rewrite) laufen
-                // voellig unveraendert durch den nativen Pfad.
-                lastWasRewrite = amenitySet;
-                if (amenitySet)
-                {
-                    suppressNativeOpen = true;
-                    suppressNativeOpenAtUtc = DateTime.UtcNow;
-                }
-
-                rewriteCount++;
-                StarTruckMP.Log.LogInfo($"311 ShopAtJobBoardBays: JobsBoard-Dock zu Shop umgeschrieben (#{rewriteCount}, bay={bay.gameObject?.name}).");
-            }
-            catch (Exception ex)
-            {
-                // Niemals crashen - im Zweifel laeuft der native Ablauf unveraendert.
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.EnterAmenityPrefix Fehler: {ex}");
-            }
-        }
-
-        // ── Postfix: screen-open fallback (315 Fix, Kandidat a) ──
-
-        /// <summary>
-        /// 315: Postfix nach DockingBaySharedAssets.EnterAmenity. Beweis im
-        /// Dekompilat, warum das notwendig ist: Die Screens (JobBoardScreen /
-        /// ShopScreen : ScreenController_Pauser) werden nativ ueber
-        /// TruckAmenityTerminal.AmenitySetup.openAmenityScreenEvent /
-        /// openDockedScreenEventIfNeeded (GameEvent-Felder,
-        /// GetIl2CppField(AmenitySetup, "openAmenityScreenEvent") /
-        /// "openDockedScreenEventIfNeeded") geoeffnet. Das ist ein Asset-Bindung
-        /// an der BAY - die EventArgs-Parameter (amenityType/shopDesc) steuern
-        /// dieses Open NICHT. Falls das m_amenityType-Vorschalten im Prefix nicht
-        /// greift, oeffnet der native Pfad weiterhin die Jobboerse.
-        ///
-        /// Fallback (nur wenn der Prefix umgeschrieben hat): nach dem nativen
-        /// EnterAmenity den Shop-Screen via MenuState.LoadAndShow explizit
-        /// oeffnen (gleicher Pfad wie JobBoardComputer.TryOpenGameJobBoard,
-        /// nur mit "ShopScreen").
-        /// </summary>
-        public static void EnterAmenityPostfix(object[] __args)
-        {
-            try
-            {
-                if (!ShouldRewrite()) return;
-                if (__args == null || __args.Length < 5) return;
-                if (string.IsNullOrEmpty(lastShopDisplayName)) return; // Prefix hat nicht umgeschrieben
-
-                int amenityInt;
-                try { amenityInt = Convert.ToInt32(__args[0]); }
-                catch { return; }
-                if (amenityInt != (int)AmenityTypes.Shop) return; // nur umgeschriebene Docks
-
-                // ── 315c: Shop-Open WIEDER AKTIV fuer ALLE umgeschriebenen Docks ──
-                // User-Log 345 (Zeilen 243-247) beweist: Mit der 315b-Flag-Logik
-                // ging NUR das native JobBoard auf, der Shop kam nie. Der native
-                // Pfad folgt der Asset-Bindung (openAmenityScreenEvent), nicht den
-                // EventArgs - deshalb feuern wir hier IMMER den bewiesenen Open-Pfad
-                // (custom-build-344: Screen ging definitiv auf) und unterdruecken
-                // das native JobBoard-Open separat via OnAmenityEnter-Prefix.
-                //
-                // 1) Kontext-Injection VOR dem Open: TruckAmenityTerminal.Get()
-                //    (static, Dekompilat Zeile ~667) -> _currentShop/_currentAmenity
-                //    (Zeilen ~337/~394) setzen, damit der ShopScreen beim Laden die
-                //    Station-ShopDescription (Items/Preise) vorfindet.
-                try
-                {
-                    var terminal = TruckAmenityTerminal.Get();
-                    if (terminal != null)
-                    {
-                        var termType = terminal.GetType();
-                        var curShopProp = termType.GetProperty("_currentShop",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (curShopProp != null && curShopProp.CanWrite)
-                        {
-                            curShopProp.SetValue(terminal, lastStationShop);
-                        }
-                        var curAmenityProp = termType.GetProperty("_currentAmenity",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (curAmenityProp != null && curAmenityProp.CanWrite)
-                        {
-                            curAmenityProp.SetValue(terminal, Enum.ToObject(curAmenityProp.PropertyType, AmenityTypes.Shop));
-                        }
-                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: TruckAmenityTerminal._currentShop/_currentAmenity auf Station-Shop gesetzt (Kontext-Injection).");
-                    }
-                    else
-                    {
-                        StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays: TruckAmenityTerminal.Get() null - Kontext-Injection uebersprungen.");
-                    }
-                }
-                catch (Exception exCtx)
-                {
-                    StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: Terminal-Kontext-Injection fehlgeschlagen: {exCtx.Message}");
-                }
-
-                // 2) Bewiesener Open-Pfad: MenuState.LoadAndShow("ShopScreen")
-                //    (JobBoardComputer.TryOpenGameJobBoard nutzt denselben Pfad).
-                var ms = com.monsterandmonster.Menu.MenuState.Get();
-                if (ms == null)
-                {
-                    StarTruckMP.Log.LogWarning("315c ShopAtJobBoardBays: MenuState.Get() null - ShopScreen-Open nicht moeglich.");
-                    return;
-                }
-                var runnerGO = new GameObject("StarTruckMP_ShopScreenRunner315c");
-                UnityEngine.Object.DontDestroyOnLoad(runnerGO);
-                var runner = runnerGO.AddComponent<JobBoardComputer.CoroutineRunnerHelper>();
-                runner.StartCoroutine(ms.LoadAndShow("ShopScreen", null, null));
-                StarTruckMP.Log.LogInfo($"315c ShopAtJobBoardBays: LoadAndShow(\"ShopScreen\") ausgefuehrt (shopName='{lastShopDisplayName}').");
-
-                // 3) Kontext + defensives Populate am geladenen ShopScreen nachziehen
-                //    (Dekompilat: ShopScreen.screenLogic public, ShopScreenLogic
-                //    .currentShopDescription Property Zeile ~363; ShopScreen.Populate()
-                //    public Zeile ~418). Try/catch: Niemals crashen.
-                try
-                {
-                    var screen = UnityEngine.Object.FindFirstObjectByType<ShopScreen>();
-                    if (screen == null)
-                    {
-                        // LoadAndShow ist eine Coroutine - der Screen kann noch nicht
-                        // instanziiert sein. Populate/Logic-Injection folgen dann in
-                        // der Screen-eigenen Initialisierung aus dem Terminal-Kontext
-                        // (Schritt 1); nichts weiter zu tun.
-                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: ShopScreen (noch) nicht in Szene - Populate nach LoadAndShow uebersprungen.");
-                        return;
-                    }
-                    if (screen.screenLogic != null)
-                    {
-                        var logicProp = screen.screenLogic.GetType().GetProperty("currentShopDescription",
-                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (logicProp != null && logicProp.CanWrite)
-                        {
-                            logicProp.SetValue(screen.screenLogic, lastStationShop);
-                            StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: ShopScreenLogic.currentShopDescription -> stationShop gesetzt.");
-                        }
-                    }
-                    try
-                    {
-                        screen.Populate();
-                        StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Populate nach Kontext-Injection nachgezogen.");
-                    }
-                    catch (Exception exPop)
-                    {
-                        StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: Populate nicht verfuegbar (uebersprungen): {exPop.Message}");
-                    }
-                }
-                catch (Exception exScr)
-                {
-                    StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays: ShopScreen-Nachbearbeitung fehlgeschlagen: {exScr.Message}");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Niemals crashen - im Zweifel bleibt der native Screen-Stand.
-                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.EnterAmenityPostfix Fehler: {ex.Message}");
-            }
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        // 315c: NATIVES JobBoard-Open an umgeschriebenen Bays unterdruecken.
-        //
-        // Patch-Punkt (Dekompilat-Beweis, ilspycmd -t TruckAmenityTerminal,
-        // /bepinex/interop/Assembly-CSharp.dll, 2 Versuche, Versuch 2 erfolgreich):
-        //   - 'public unsafe void OnAmenityEnter(Il2CppSystem.Object sender,
-        //     Il2CppSystem.EventArgs eventArgs)' (Token 100671950,
-        //     NativeMethodInfoPtr_OnAmenityEnter_Private_Void_Object_EventArgs_0).
-        //   - TruckAmenityTerminal.AmenitySetup traegt die GameEvent-Felder
-        //     'openAmenityScreenEvent' / 'openDockedScreenEventIfNeeded'
-        //     (NativeFieldInfoPtr_openAmenityScreenEvent / ..._IfNeeded); OnAmenityEnter
-        //     ist der native Handler, der diese Events feuert und damit das
-        //     JobBoardScreen-Open ausloest.
-        // Da der Proxy-Body via NativeMethodInfoPtr in den nativen Code ruft, reicht
-        // ein Harmony-Prefix (skip via __result-freiem return false) - analog zum
-        // funktionierenden EnterAmenity-Patch. Zeitfenster-Logik: Der Prefix setzt
-        // das Flag im EnterAmenity-Postfix zeitgleich mit dem eigenen Open; nach
-        // 15 s verfaellt es, damit spaetere echte Amenity-Enters (andere Bays)
-        // niemals geschluckt werden.
-        // ════════════════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// 315c: Prefix vor TruckAmenityTerminal.OnAmenityEnter. Liefert false
-        /// (skip nativer Rumpf -> kein JobBoard-Open), wenn dieses Enter von einer
-        /// umgeschriebenen JobsBoard-Bay kommt; sonst true.
-        ///
-        /// 369 (Fix C): Das Zeitfenster allein war UNSICHER — es schluckte auch das
-        /// legitime Shop-Terminal-Open einer ECHTEN Shop-Bay, wenn innerhalb von 15s
-        /// vorher ein JobsBoard-Rewrite lief ("Docking funktioniert, Shop oeffnet sich
-        /// nicht"). Jetzt wird zusaetzlich geprueft, dass dieses Terminal tatsaechlich
-        /// ein JobsBoard-Terminal ist (_currentAmenity == JobsBoard). Ein Shop-Terminal
-        /// (echte Shop-Bay) wird NIEMALS geschluckt; ohne lesbaren Zustand gilt das
-        /// alte Fenster-Verhalten (never-break-native bei Suppress ist hier unwichtig,
-        /// weil nur unbeschrieben wird, wenn vorher ein Rewrite gegriffen hat).
-        /// </summary>
-        public static bool OnAmenityEnterPrefix(TruckAmenityTerminal __instance)
-        {
-            try
-            {
-                if (!suppressNativeOpen) return true;
-                if ((DateTime.UtcNow - suppressNativeOpenAtUtc).TotalSeconds > 15)
-                {
-                    // Zeitfenster abgelaufen - Flag entsorgen, native Pfade bleiben intakt.
-                    suppressNativeOpen = false;
-                    StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: Unterdrueckungs-Fenster abgelaufen - natives OnAmenityEnter wieder aktiv.");
-                    return true;
-                }
-                // 375 Fix: Der bisherige "Fix C" (369) verliess sich zusaetzlich auf
-                // ReadTerminalAmenity(__instance) (_currentAmenity via Reflection), um
-                // zu pruefen, ob dieses Terminal WIRKLICH ein JobsBoard-Terminal ist,
-                // bevor das native Open geschluckt wird. Beweis aus dem Purity-Log
-                // (User-Report "Auftragsboard lag ueber dem Shop Board beim
-                // Shop-Docking"): _currentAmenity liest zum Zeitpunkt dieses Prefix
-                // fuer eine soeben umgeschriebene JobsBoard-Bay noch 0 (None) statt der
-                // erwarteten 1 (JobsBoard) - der native Zustand ist zu diesem Zeitpunkt
-                // schlicht noch nicht aktualisiert. Dadurch nahm der obige Zweig
-                // faelschlich "das ist KEIN JobsBoard-Terminal" an und liess das native
-                // JobBoard-Open zusaetzlich zu unserem eigenen Shop-Open durch -> beide
-                // Screens gleichzeitig offen.
-                //
-                // Seit 372 ist suppressNativeOpen bereits praezise: es wird am Anfang
-                // JEDES JobsBoard-Dock-Versuchs zurueckgesetzt (EnterAmenityPrefix) und
-                // nur bei einem tatsaechlich erfolgreichen Rewrite GENAU dieses Docks
-                // gesetzt. Die zusaetzliche, jetzt nachweislich unzuverlaessige
-                // Terminal-Amenity-Pruefung ist damit redundant und aktiv schaedlich -
-                // sie wird entfernt. Suppression haengt jetzt ausschliesslich an
-                // suppressNativeOpen (plus dem 15s-Zeitfenster oben).
-                suppressNativeOpen = false;
-                StarTruckMP.Log.LogInfo("315c ShopAtJobBoardBays: NATIVES OnAmenityEnter geschluckt (JobBoard-Open unterdrueckt, Shop-Open laeuft).");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"315c ShopAtJobBoardBays.OnAmenityEnterPrefix Fehler: {ex.Message}");
-                return true; // niemals native Pfade per Exception-Nebenwirkung blockieren
-            }
-        }
-
-        /// <summary>
-        /// 369 (Fix C): Liest TruckAmenityTerminal._currentAmenity (Property zuerst,
-        /// Field als Fallback — Il2Cpp-Proxy-Muster wie in AmenityLocalGate). -1 = nicht
-        /// lesbar (dann verhaelt sich das Suppress wie bisher rein zeitfensterbasiert).
-        /// </summary>
-        private static int ReadTerminalAmenity(TruckAmenityTerminal terminal)
-        {
-            try
-            {
-                var t = terminal.GetType();
-                var prop = t.GetProperty("_currentAmenity",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (prop != null && prop.CanRead)
-                    return Convert.ToInt32(prop.GetValue(terminal));
-                var field = t.GetField("_currentAmenity",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null)
-                    return Convert.ToInt32(field.GetValue(terminal));
-            }
-            catch { }
-            return -1;
-        }
-
-        /// <summary>
-        /// Findet die DockingBay, deren m_sharedAssets == sharedAssets ist (311c).
-        /// DockingBay.m_sharedAssets ist eine public Property auf dem interop Proxy.
-        /// Wrapper-Identitaet kann pro Zugriff wechseln -> Pointer-Vergleich als
-        /// verlaesslicheres Kriterium zusaetzlich zu ReferenceEquals.
-        /// </summary>
-        private static DockingBay FindBayForSharedAssets(DockingBaySharedAssets shared)
-        {
-            if (shared == null) return null;
-            try
-            {
-                var bays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
-                foreach (var bay in bays)
-                {
+                    var bay = rec.bay;
                     if (bay == null) continue;
-                    try
+                    bay.m_amenityType = rec.amenity;
+                    bay.m_shopDescription = rec.shop;
+                    bay.m_amenityName = rec.amenityName;
+                    bay.m_setPOISettingFromAmenity = rec.setPoiFromAmenity;
+                    var poi = bay.m_dockingBayPOI;
+                    if (poi != null)
                     {
-                        var sa = bay.m_sharedAssets;
-                        if (sa == null) continue;
-                        if (ReferenceEquals(sa, shared) || sa.Pointer == shared.Pointer) return bay;
+                        if (rec.poiSettings != null) poi.SetSettings(rec.poiSettings);
+                        poi.displayNameId = rec.poiDisplayNameId;
                     }
-                    catch { continue; }
+                    restored++;
+                }
+                catch (Exception ex)
+                {
+                    StarTruckMP.Log.LogWarning($"{Tag} Restore fehlgeschlagen: {ex.Message}");
                 }
             }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311 ShopAtJobBoardBays.FindBayForSharedAssets fehlgeschlagen: {ex.Message}");
-            }
-            return null;
+            clones.Clear();
+            clonedBayIds.Clear();
+            if (restored > 0)
+                StarTruckMP.Log.LogInfo($"{Tag} Disconnect: {restored} Bays auf Originalzustand zurueckgesetzt.");
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        // 311b: POI-Marker der JobsBoard-Bays auf Shop-Anzeige umschreiben
-        // (Einkaufskorb-Icon + Shopname) via native POI-Settings, kein Overlay.
-        // ════════════════════════════════════════════════════════════════════
-
-        private static bool poiApplied = false;
-
-        // 313: Sektor-Gate (ein Log/Run pro Sektorwechsel statt alle 5 s).
-        private static string lastPoiSector = "none";
-
         /// <summary>
-        /// Re writes the POI settings of all JobsBoard bays in the scene so the native
-        /// POI marker renderer shows the Shop icon + shop display name instead of the
-        /// job board clipboard + "Auftragsbörse".
-        ///
-        /// Called periodically from Plugin.Update (throttled by DockingBayHUD's refresh
-        /// cycle) and re-applies when a new sector loads.
+        /// Diagnose (einmal je Station und Sektor): Bay-Liste mit Amenity, Shop, SharedAssets-
+        /// Pointer, IsQuestBay und POI-displayNameId - beantwortet, ob Bays sich SharedAssets
+        /// teilen und welche Bays das Spiel als Quest-Bay fuehrt.
         /// </summary>
-        public static void ApplyShopPoiToJobsBoardBays()
+        private static void DumpStationOnce(string sector, string stationName, List<DockingBay> bays, DockingBay refBay, ShopDescription shop)
         {
-            if (!ShouldRewriteForAmenityDisplay()) return;
+            if (!dumpedStations.Add(sector + "|" + stationName)) return;
             try
             {
-                // 313: Sektor-Gate - der Rewrite muss nur laufen, wenn ein neuer Sektor
-                // geladen wurde (Bays werden pro Sektor neu erzeugt). Vorher lief der
-                // Pfad alle 5 s (Log-Spam) und setzte zudem Text-Updates regelmaessig neu.
-                var sector = global::StarTruckMP.StarTruckClient.StarTruckClient.currentSector;
-                if (string.IsNullOrEmpty(sector) || sector == "none") return;
-                if (sector == lastPoiSector)
+                string shopName = null;
+                try { shopName = shop != null ? shop.shopDisplayName : null; } catch { }
+                StarTruckMP.Log.LogInfo(
+                    $"{Tag} Station '{stationName}' sector='{sector}': bays={bays.Count}, spielEigenerShop='{shopName ?? "KEIN"}', " +
+                    $"referenzBay='{(refBay != null ? SafeName(refBay) : "-")}'");
+                foreach (var b in bays)
                 {
-                    // 315e (Timing-Entscheidung): Marker-Spawn-Nachlauf als Poll im
-                    // bestehenden 5-s-Takt (Plugin.Update-Throttle) statt
-                    // Harmony-Postfix: Der Spawn der HUD-Marker (HUD_Marker_*_Standard
-                    // (Clone) aus PointOfInterestSettings.markerPrefab unter
-                    // PointsOfInterest.onScreenPOIParent) hat keine eindeutig
-                    // patchbare Methode, und der Poll deckt beide Marker - auch den,
-                    // der NACH unserem Rewrite gespawnt wird. Der Sweep ist billig
-                    // (Iterieren der vorhandenen entries-Liste) und idempotent.
-                    SweepPoiMarkerLabels();
-                    return;
-                }
-                lastPoiSector = sector;
-
-                var allBays = UnityEngine.Object.FindObjectsOfType<DockingBay>();
-                if (allBays == null || allBays.Length == 0) return;
-
-                int rewritten = 0, noPoi = 0, noShared = 0, noShopSettings = 0, noStationShop = 0;
-                foreach (var bay in allBays)
-                {
-                    if (bay == null || bay.gameObject == null) continue;
                     try
                     {
-                        // JobsBoard-Bay-Klassifikation (shared with DockingBayHUD).
-                        if (!DockingBayAmenityUtil.IsJobsBoardBay(bay)) continue;
-
-                        // 372 Fix: Cosmetic-Label (Shop-Icon + Anzeigename) nur setzen,
-                        // wenn der FUNKTIONALE Rewrite (EnterAmenityPrefix) an dieser Bay
-                        // ueberhaupt greifen KANN, d.h. die Station eine eigene native
-                        // Shop-DockingBayGroup mit ShopDescription hat. Vorher lief 311b
-                        // unabhaengig vom Prefix und beschriftete JEDE JobsBoard-Bay als
-                        // Shop (basierend auf m_poiSettingsShop, das immer existiert) -
-                        // auch an Stationen, wo der Dock danach mangels ShopDescription
-                        // gar nicht funktional umgeschrieben wird. Ergebnis war die vom
-                        // User gemeldete Diskrepanz: Label sagt "Shop", Dock verhaelt
-                        // sich (im Fallback) wie Jobboerse bzw. oeffnete zuvor gar
-                        // nichts (siehe Fix in EnterAmenityPrefix). Ehrliches Label:
-                        // ohne Station-ShopDescription bleibt die Bay optisch Jobboerse.
-                        var poiStation = bay.ParentStation;
-                        if (poiStation == null || FindStationShopDescription(poiStation) == null)
-                        {
-                            noStationShop++;
-                            continue;
-                        }
-
-                        // m_sharedAssets (DockingBaySharedAssets ScriptableObject) with
-                        // per-amenity POI settings (m_poiSettingsShop etc.).
-                        var shared = ReadSharedAssets(bay);
-                        if (shared == null)
-                        {
-                            noShared++;
-                            continue;
-                        }
-
-                        // 1) Native path: redirect the JobsBoard POI setting of this
-                        //    bay's shared assets to the Shop POI setting (basket icon),
-                        //    so any ConfigurePOI(…) call picks up Shop automatically.
-                        var shopSettings = shared.m_poiSettingsShop;
-                        if (shopSettings == null)
-                        {
-                            noShopSettings++;
-                            continue;
-                        }
-                        if (shared.m_poiSettingsJobsBoard != shopSettings)
-                        {
-                            shared.m_poiSettingsJobsBoard = shopSettings;
-                        }
-
-                        // 2) Live POI instance: m_dockingBayPOI (RegisterPointOfInterest)
-                        //    gets SetSettings(shopSettings) so the already-registered
-                        //    POI entry switches immediately (PointsOfInterest manager
-                        //    reads entry.settings each frame and drives the marker).
-                        var poi = bay.m_dockingBayPOI;
-                        if (poi == null)
-                        {
-                            noPoi++;
-                            continue;
-                        }
-                        poi.SetSettings(shopSettings);
-
-                        // 313 POI-Text Plan-B: displayNameId (String-ID) wird vom nativen
-                        // Renderer nur aufgeloest, wenn die ID in der String-Tabelle
-                        // existiert - ein Shopname tut das nicht, deshalb zeigt das Label
-                        // weiterhin 'Auftragsborse'. Bewiesener Pfad (statisch verifiziert
-                        // via ilspycmd -t PointOfInterestMarker): PointsOfInterest.entries
-                        // -> PointOfInterestEntry.marker (PointOfInterestMarker) ->
-                        // marker._name/_label (TMPro.TextMeshProUGUI) + setter displayName
-                        // (Token 100665771). Den Live-Marker-Text direkt setzen.
-                        // 315b (Aufgabe 4a): shopDesc war an JobsBoard-Bays IMMER null
-                        // (User-Log 344: dispName=null -> Fallback 'Shop' ueberschrieb
-                        // den nativ bereits korrekten Label). Quelle wie im Prefix:
-                        // Station-ShopDescription via DockingBayGroup (FindStationShop-
-                        // Description-Muster); bay.ShopDescription ist nur an echten
-                        // Shop-Bays gesetzt.
-                        // 315g: Label-Text ist IMMER die Konstante ShopBayDisplayName
-                        // ("Cosmo's Cash 'n Carry") - NICHT ein freier Shopname.
-                        // shopDesc bleibt unberuehrt
-                        // (Kontext-Injection fuer Items braucht den echten Wert).
-                        var dispName = ShopBayDisplayName;
-                        // 315b (Aufgabe 4b) / 315g Heuristik: schreiben, wenn das Label
-                        // jobsboard-artig ist ODER bereits die Konstante
-                        // ShopBayDisplayName (Ist-Zustand) zeigt -
-                        // andere Texte werden auf die Konstante normalisiert,
-                        var textSet = SetLiveMarkerText(poi, bay, dispName, shopSettings);
-                        if (textSet) rewritten++;
-
-                        // 374 Fix: NICHT mehr die shopSettings-Instanz selbst registrieren
-                        // (rewrittenShopSettings) - Beweis (User-Report 374, Palm View):
-                        // m_poiSettingsShop ist ein PRO-STATION geteiltes Asset, das
-                        // sowohl die umgeschriebene JobsBoard-Bay als auch die ECHTE,
-                        // native Shop-Bay derselben Station referenzieren (Log 315e:
-                        // "before='Star Break Supplies', after='Cosmo's Cash 'n Carry'" -
-                        // das war Palm Views ECHTER Shop-Marker, nicht die JobsBoard-Bay!).
-                        // Der Settings-Pointer-Match in SweepPoiMarkerLabels traf dadurch
-                        // JEDEN Marker der Station, der dieselben Settings nutzt - inklusive
-                        // des echten Shops - und ueberschrieb dessen echten Namen mit der
-                        // generischen Konstante. Fix: stattdessen die Identitaet DIESES
-                        // POI-GameObjects registrieren (praezise, nicht stationsweit geteilt).
-                        try
-                        {
-                            if (poi.gameObject != null)
-                                rewrittenPoiGameObjectIds.Add(poi.gameObject.GetInstanceID());
-                        }
-                        catch (Exception exReg)
-                        {
-                            StarTruckMP.Log.LogWarning($"374 Registrierung fehlgeschlagen: {exReg.Message}");
-                        }
-                        // 315e: Sofort-Sweep nach dem Rewrite derselben Runde (deckt
-                        // bereits gespawnte Marker; spaeter gespawnte deckt der Poll).
-                        SweepPoiMarkerLabels();
+                        string sdName = null;
+                        try { var sd = b.m_shopDescription; sdName = sd != null ? sd.shopDisplayName : null; } catch { }
+                        string shared = "-";
+                        try { var sa = b.m_sharedAssets; if (sa != null) shared = sa.Pointer.ToString("X"); } catch { }
+                        bool quest = false;
+                        try { quest = b.IsQuestBay; } catch { }
+                        string dn = "-";
+                        try { var p = b.m_dockingBayPOI; if (p != null) dn = p.displayNameId; } catch { }
+                        StarTruckMP.Log.LogInfo(
+                            $"{Tag}   bay='{SafeName(b)}' amenity={b.m_amenityType} shop='{sdName ?? "-"}' " +
+                            $"shared=0x{shared} quest={quest} poiNameId='{dn}'");
                     }
                     catch (Exception ex)
                     {
-                        StarTruckMP.Log.LogWarning($"311b POI-Rewrite an '{bay.gameObject.name}' fehlgeschlagen: {ex.Message}");
-                    }
-                }
-
-                if (rewritten > 0 || noShared > 0 || noPoi > 0 || noShopSettings > 0 || noStationShop > 0)
-                {
-                    StarTruckMP.Log.LogInfo(
-                        $"311b POI-Rewrite: {rewritten} JobsBoard-Bays auf Shop-POI umgeschrieben " +
-                        $"(kein POI: {noPoi}, keine SharedAssets: {noShared}, keine Shop-Settings: {noShopSettings}, " +
-                        $"keine Station-ShopDescription (372): {noStationShop}).");
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311b ApplyShopPoiToJobsBoardBays Fehler: {ex}");
-            }
-        }
-
-        /// <summary>
-        /// 315e: Abdeckung ALLER HUD-Marker, deren Label noch jobsboard-artig ist
-        /// ('Auftragsboerse' etc.). Iteriert PointsOfInterest.Get().entries und
-        /// verarbeitet ALLE entries, deren
-        ///   a) settings-Pointer == eine der umgeschriebenen shopSettings-Instanzen
-        ///      (Referenzliste der 311b-Runde), ODER
-        ///   b) aktueller Label-Text jobsboard-artig ist (case-insensitive).
-        /// Deckt damit auch den zweiten Marker, dessen Label-TMP NICHT durch den
-        /// SetLiveMarkerText-Einzel-Pfad lief (User-Screenshot 348: rechter Marker
-        /// zeigte weiter 'Auftragsboerse').
-        ///
-        /// Native Anker (Dekompilat-Beweis, ilspycmd -t PointOfInterestMarker,
-        /// interop Assembly-CSharp.dll, 2026-09-16):
-        ///   public string displayName { get; set; } - Setter via Token 100665771
-        ///     (GetIl2CppMethodByToken(…, 100665771) in der interop-Wrapper-Klasse).
-        ///   public TextMeshProUGUI _label { get; set; } (native Field _label).
-        /// Setzt displayName (native Quelle) UND _label.text (+ SetVerticesDirty)
-        /// als Belt-and-Suspenders, jeweils in try/catch.
-        /// Idempotent und billig - laeuft im bestehenden 5-s-Takt nach (siehe
-        /// Timing-Entscheidung in ApplyShopPoiToJobsBoardBays).
-        /// </summary>
-        private static void SweepPoiMarkerLabels()
-        {
-            try
-            {
-                if (rewrittenPoiGameObjectIds == null || rewrittenPoiGameObjectIds.Count == 0) return;
-                var poiManager = PointsOfInterest.Get();
-                var entries = poiManager?.entries;
-                if (entries == null) return;
-
-                foreach (var entry in entries)
-                {
-                    try
-                    {
-                        if (entry == null) continue;
-                        var marker = entry.marker;
-                        if (marker == null) continue;
-
-                        // 374 Fix: Match (a) war frueher ein Settings-Pointer-Vergleich -
-                        // falsch, weil m_poiSettingsShop pro STATION geteilt ist und damit
-                        // auch echte, native Shop-Bays derselben Station traf (siehe
-                        // Kommentar bei der Registrierung oben). Jetzt: Identitaet des
-                        // POI-GameObjects selbst - trifft ausschliesslich Marker, die WIR
-                        // tatsaechlich umgeschrieben haben.
-                        bool ownedMatch = false;
-                        try
-                        {
-                            if (entry.gameObject != null
-                                && rewrittenPoiGameObjectIds.Contains(entry.gameObject.GetInstanceID()))
-                            {
-                                ownedMatch = true;
-                            }
-                        }
-                        catch { ownedMatch = false; }
-
-                        // Label-Text fuer before/after-Diagnose + Match (b) beschaffen:
-                        // bevorzugt _label, Fallback beliebiger TMP am Marker.
-                        TMPro.TMP_Text label = null;
-                        try { label = marker._label; } catch { label = null; }
-                        if (label == null)
-                        {
-                            var tmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-                            if (tmps != null && tmps.Length > 0) label = tmps[0];
-                        }
-                        if (label == null)
-                        {
-                            var ws = marker.GetComponentsInChildren<TMPro.TextMeshPro>(true);
-                            if (ws != null && ws.Length > 0) label = ws[0];
-                        }
-                        string before = null;
-                        try { before = label?.text; } catch { before = null; }
-
-                        // Match (b): Label-Text jobsboard-artig ('Auftragsb*', 'Job
-                        // Board', 'JobsBoard' - case-insensitive). Deckt Marker, deren
-                        // settings-Pointer nicht (mehr) matcht.
-                        bool jobsBoardish = !string.IsNullOrWhiteSpace(before)
-                            && (before.IndexOf("Auftragsb", StringComparison.OrdinalIgnoreCase) >= 0
-                                || before.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
-                                || before.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
-
-                        if (!ownedMatch && !jobsBoardish) continue;
-                        if (string.IsNullOrWhiteSpace(before)) continue;
-
-                        // 315g-Heuristik: Zieltext ist immer die Konstante
-                        // ShopBayDisplayName. Sie selbst ist gueltiger Ist-Zustand
-                        // (skip = idempotent, kein Flackern); ALLE anderen Texte
-                        // (Auftragsboerse, Job Board, andere Shopnamen) werden auf
-                        // sie normalisiert.
-                        string trimmed = before.Trim();
-                        bool alreadyShop = trimmed.Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
-                        if (alreadyShop) continue;
-
-                        string newText = ShopBayDisplayName;
-
-                        // 1) Nativer displayName-Setter (Token 100665771).
-                        try { marker.displayName = newText; }
-                        catch (Exception exDn)
-                        {
-                            StarTruckMP.Log.LogWarning($"315e marker: set_displayName fehlgeschlagen: {exDn.Message}");
-                        }
-
-                        // 2) _label-Text direkt setzen + Dirty (Belt-and-Suspenders).
-                        if (label != null)
-                        {
-                            label.text = newText;
-                            try { label.SetVerticesDirty(); } catch { }
-                            try { label.ForceMeshUpdate(false, false); } catch { }
-                        }
-
-                        StarTruckMP.Log.LogInfo(
-                            $"315e marker: goPath={GetGoPath(marker.gameObject)}, before='{before}', after='{newText}'");
-                    }
-                    catch (Exception exEntry)
-                    {
-                        StarTruckMP.Log.LogWarning($"315e marker: Entry-Verarbeitung fehlgeschlagen: {exEntry.Message}");
+                        StarTruckMP.Log.LogWarning($"{Tag}   Bay-Dump fehlgeschlagen: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                StarTruckMP.Log.LogWarning($"315e SweepPoiMarkerLabels Fehler: {ex.Message}");
+                StarTruckMP.Log.LogWarning($"{Tag} Station-Dump fehlgeschlagen: {ex.Message}");
             }
         }
 
-        // 315e/315f (Historie): frueher wurde hier die geteilte shopSettings-Instanz
-        // registriert - siehe 374-Fix-Kommentar oben, warum das falsch war (Settings
-        // sind pro Station geteilt, nicht pro Bay). 374: stattdessen die Identitaet
-        // der von UNS umgeschriebenen POI-GameObjects (praezise, pro Bay).
-        private static readonly HashSet<int> rewrittenPoiGameObjectIds = new HashSet<int>();
-
-        /// <summary>
-        /// 314: Setzt den sichtbaren Label-Text des Live-Markers direkt auf den
-        /// Shop-Namen. Sucht PointOfInterestMarker und TextMeshProUGUI ueber das
-        /// poi.gameObject ('Docking_BayPOI').
-        /// Statisch verifizierte Struktur (ilspycmd):
-        ///   PointOfInterestMarker._name/_label : TMPro.TextMeshProUGUI
-        ///   PointOfInterestMarker.set_displayName (public setter, Token 100665771).
-        /// Diag-Log '314b text:' zeigt Marker + TMP + Text vorher/nachher.
-        /// </summary>
-        private static bool SetLiveMarkerText(RegisterPointOfInterest poi, DockingBay bay, string newText, PointOfInterestSettings shopSettings)
+        private static string SafeName(UnityEngine.Component c)
         {
-            try
-            {
-                if (poi == null || poi.gameObject == null) return false;
-                if (string.IsNullOrEmpty(newText)) newText = ShopBayDisplayName;
-
-                // 315: 3-stufige Suche, weil 314b bewies, dass unter poi.gameObject
-                // ('Docking_BayPOI') weder PointOfInterestMarker noch TMP liegt
-                // (User-Log: '314b text: kein TMP/Marker an poi.GameObject').
-                //
-                // Statisch verifiziert (ilspycmd -t PointOfInterestMarker /
-                // -t PointsOfInterest): Der native Renderer haengt den sichtbaren
-                // Marker NICHT an das POI-GameObject - er spawnt ihn aus
-                // PointOfInterestSettings.markerPrefab unter PointsOfInterest.
-                // onScreenPOIParent. Der echte Handle ist daher
-                // PointsOfInterest.entries -> PointOfInterestEntry.marker.
-                //
-                // Stufe 1: Kinder+Parents von poi.gameObject (inkl. world-space
-                //          TMPro.TextMeshPro - NOTES_WORLDSPACE_UI.md).
-                // Stufe 2: PointsOfInterest.entries-Match ueber entry.settings
-                //          (Referenzvergleich mit der gerade gesetzten
-                //          shopSettings-Instanz - robust, weil wir sie in Schritt
-                //          2 von ApplyShopPoiToJobsBoardBays selbst via
-                //          poi.SetSettings(shopSettings) gesetzt haben).
-                // Stufe 3: Positions-Naehe zur Bay als Fallback-Match.
-
-                PointOfInterestMarker marker = null;
-                TMPro.TMP_Text label = null;
-
-                // Stufe 1a: Kinder von poi.gameObject
-                var markers = poi.gameObject.GetComponentsInChildren<PointOfInterestMarker>(true);
-                if (markers != null && markers.Length > 0) marker = markers[0];
-                var tmps = poi.gameObject.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-                if (tmps != null && tmps.Length > 0) label = tmps[0];
-                // Stufe 1b: world-space TextMeshPro (NICHT nur UGUI) in Kindern
-                if (label == null)
-                {
-                    var wsTmps = poi.gameObject.GetComponentsInChildren<TMPro.TextMeshPro>(true);
-                    if (wsTmps != null && wsTmps.Length > 0) label = wsTmps[0];
-                }
-                // Stufe 1c: Parents (Marker kann am Parent-Prefab haengen)
-                if (marker == null)
-                {
-                    var parentMarkers = poi.gameObject.GetComponentsInParent<PointOfInterestMarker>(true);
-                    if (parentMarkers != null && parentMarkers.Length > 0) marker = parentMarkers[0];
-                }
-                if (label == null)
-                {
-                    var parentTmps = poi.gameObject.GetComponentsInParent<TMPro.TextMeshProUGUI>(true);
-                    if (parentTmps != null && parentTmps.Length > 0) label = parentTmps[0];
-                }
-
-                string matchMode = "poi-go";
-
-                // Stufe 2+3: PointsOfInterest.entries (statistisch verifizierter
-                // nativer Handle: entry.marker ist der gespawnte Marker,
-                // entry.settings die aktive Settings-Instanz).
-                if (marker == null)
-                {
-                    try
-                    {
-                        var poiManager = PointsOfInterest.Get();
-                        var entries = poiManager?.entries;
-                        if (entries != null)
-                        {
-                            float bestDist = float.MaxValue;
-                            Vector3 bayPos = bay.transform.position;
-                            foreach (var entry in entries)
-                            {
-                                if (entry == null) continue;
-                                // Stufe 2: Referenz-Match ueber die Settings, die wir
-                                // gerade via poi.SetSettings(shopSettings) gesetzt
-                                // haben (robust gegen interlaced entry-Listen, wo der
-                                // reine Pointer-Vergleich am GO scheiterte).
-                                bool settingsMatch = false;
-                                if (shopSettings != null)
-                                {
-                                    try { settingsMatch = entry.settings != null && entry.settings.Pointer == shopSettings.Pointer; }
-                                    catch { settingsMatch = false; }
-                                }
-                                // Stufe 3: Positions-Naehe zur Bay (< 30 m) als
-                                // Fallback-Match (POI-GO selbst ist das Docking_BayPOI).
-                                bool posMatch = false;
-                                try
-                                {
-                                    var entryGo = entry.gameObject;
-                                    if (entryGo != null)
-                                    {
-                                        float d = Vector3.Distance(entryGo.transform.position, bayPos);
-                                        if (d < 30f) posMatch = true;
-                                    }
-                                }
-                                catch { }
-
-                                if (!settingsMatch && !posMatch) continue;
-
-                                var m = entry.marker;
-                                if (m == null) continue;
-                                float score = settingsMatch ? 0f : 10f;
-                                try
-                                {
-                                    var mGo = m.gameObject;
-                                    if (mGo != null) score += Vector3.Distance(mGo.transform.position, bayPos);
-                                }
-                                catch { }
-                                if (score < bestDist)
-                                {
-                                    bestDist = score;
-                                    marker = m;
-                                    matchMode = settingsMatch ? "poi-entries(settings)" : "poi-entries(pos)";
-                                }
-                            }
-                        }
-                    }
-                    catch (Exception exEntries)
-                    {
-                        StarTruckMP.Log.LogWarning($"315 text: PointsOfInterest.entries-Suche fehlgeschlagen: {exEntries.Message}");
-                    }
-                }
-
-                // TMP am gefundenen Marker nachziehen (Stufe 2/3 => label neu holen)
-                if (marker != null && label == null)
-                {
-                    var mTmps = marker.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true);
-                    if (mTmps != null && mTmps.Length > 0) label = mTmps[0];
-                    if (label == null)
-                    {
-                        var mWs = marker.GetComponentsInChildren<TMPro.TextMeshPro>(true);
-                        if (mWs != null && mWs.Length > 0) label = mWs[0];
-                    }
-                }
-
-                if (marker == null && label == null)
-                {
-                    StarTruckMP.Log.LogWarning($"315b text: kein TMP/Marker gefunden (poi={poi.gameObject.name}, mode={matchMode}, entries-Match fehlgeschlagen).");
-                    return false;
-                }
-
-                // 315d: World-space 3D-Label am Dock ('Auftragsboerse').
-                // Dekompilat-Beweis (ilspycmd -t DockingBay / -t DockingBaySharedAssets
-                // / -t PointOfInterestSettings, Build-Container):
-                //   - DockingBay hat ALS TMP nur m_dockingBayTextLabel (= Docking_BayIdText,
-                //     User-Log 346: traegt 'JP-03') plus String-Feld m_amenityName.
-                //   - DockingBaySharedAssets enthaelt KEINEN TMP/Label-Member (nur
-                //     POI-Settings, Timelines, Materialien) - Kandidat (a) verworfen.
-                //   - PointOfInterestMarker hat nur TextMeshProUGUI (HUD, korrekt).
-                //   => Das 3D-Schild ist Plan (b): ein weiteres world-space
-                //      TMPro.TextMeshPro unter bay.gameObject selbst. Pflicht-Diag:
-                //      '315d scan:' mit goPath + text ALLER TMPs (inkl. inaktiver).
-                //      Umschreiben nur bei JobsBoard-artigem Text ODER Text, der
-                //      dem zuletzt injizierten Shopnamen entspricht (315g: das
-                //      Label ist immer die Konstante ShopBayDisplayName;
-                //      sie selbst ist gueltiger Ist-Zustand und wird nicht erneut
-                //      geschrieben = kein Flackern).
-                try
-                {
-                    var bayTmps = bay.gameObject != null
-                        ? bay.gameObject.GetComponentsInChildren<TMPro.TextMeshPro>(true)
-                        : null;
-                    if (bayTmps != null && bayTmps.Length > 0)
-                    {
-                        foreach (var bayTmp in bayTmps)
-                        {
-                            if (bayTmp == null || bayTmp.gameObject == null) continue;
-                            string scanText = bayTmp.text;
-                            bool isWsIdText = false;
-                            try
-                            {
-                                var wsLabelProp2 = bay.GetType().GetProperty("m_dockingBayTextLabel",
-                                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                                isWsIdText = ReferenceEquals(wsLabelProp2?.GetValue(bay) as UnityEngine.Object, bayTmp);
-                            }
-                            catch { }
-                            StarTruckMP.Log.LogInfo(
-                                $"315d scan: goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}', isDockingBayIdText={isWsIdText}");
-                            if (isWsIdText) continue; // JP-xx-ID-Schild unangetastet lassen.
-
-                            bool isJobsBoardName = !string.IsNullOrWhiteSpace(scanText)
-                                && (scanText.IndexOf("Auftragsb", StringComparison.OrdinalIgnoreCase) >= 0
-                                    || scanText.IndexOf("Job Board", StringComparison.OrdinalIgnoreCase) >= 0
-                                    || scanText.IndexOf("JobsBoard", StringComparison.OrdinalIgnoreCase) >= 0);
-                            // 315g: bereits korrekt (ShopBayDisplayName) = Ist-Zustand,
-                            // nicht erneut
-                            // schreiben (idempotent, kein Flackern).
-                            bool isAlreadyShop = !string.IsNullOrWhiteSpace(scanText)
-                                && scanText.Trim().Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
-                            if (isAlreadyShop) continue;
-                            if (!isJobsBoardName && string.IsNullOrWhiteSpace(scanText) != true && scanText.Trim().Equals(lastShopDisplayName ?? "\0", StringComparison.OrdinalIgnoreCase))
-                            {
-                                // ehemals injizierter Shopname -> normalisieren
-                            }
-                            else if (!isJobsBoardName) continue; // echte (fremde) Texte NICHT anfassen.
-
-                            bayTmp.text = ShopBayDisplayName;
-                            try { bayTmp.ForceMeshUpdate(false, false); } catch { }
-                            StarTruckMP.Log.LogInfo(
-                                $"315d text: rewritten, goPath={GetGoPath(bayTmp.gameObject)}, text='{scanText}'->'{ShopBayDisplayName}'");
-                        }
-                    }
-                    else
-                    {
-                        StarTruckMP.Log.LogInfo("315d scan: keine TMPro.TextMeshPro unter bay.gameObject gefunden.");
-                    }
-                }
-                catch (Exception exBayScan)
-                {
-                    StarTruckMP.Log.LogWarning($"315d scan fehlgeschlagen: {exBayScan.Message}");
-                }
-
-                string before = label != null ? label.text : null;
-
-                // 315b (Aufgabe 4b) / 315g Heuristik: die Konstante
-                // ShopBayDisplayName ist gueltiger Ist-Zustand
-                // (skip = idempotent, kein Flackern). Jeder ANDERE Text wird auf
-                // die Konstante normalisiert.
-                bool alreadyNamed = !string.IsNullOrWhiteSpace(before)
-                    && !before.Trim().Equals(ShopBayDisplayName, StringComparison.OrdinalIgnoreCase);
-                if (alreadyNamed)
-                {
-                    // 315b text: Diag-Log mit goPath fuer ALLE gefundenen Label-Instanzen.
-                    StarTruckMP.Log.LogInfo(
-                        $"315b text: keep (label already named), mode={matchMode}, " +
-                        $"marker={marker?.gameObject?.name ?? "null"}, " +
-                        $"tmp={(label != null ? label.gameObject.name : "null")}, " +
-                        $"goPath={(marker != null && marker.gameObject != null ? GetGoPath(marker.gameObject) : (label != null ? GetGoPath(label.gameObject) : "?"))}, " +
-                        $"text='{before}' (unchanged)");
-                    return true;
-                }
-
-                if (label != null)
-                {
-                    label.text = newText;
-                }
-                // displayName-Setter ebenfalls rufen (native Text-Aktualisierung,
-                // Token 100665771) - falls Init den Text spaeter neu aufbaut.
-                if (marker != null)
-                {
-                    try { marker.displayName = newText; } catch { }
-                }
-
-                StarTruckMP.Log.LogInfo(
-                    $"315b text: mode={matchMode}, marker={marker?.gameObject?.name ?? "null"}, " +
-                    $"tmp={(label != null ? label.gameObject.name : "null")}, " +
-                    $"goPath={(marker != null && marker.gameObject != null ? GetGoPath(marker.gameObject) : "?")}, " +
-                    $"text='{before}'->'{newText}'");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"314b SetLiveMarkerText fehlgeschlagen: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>315: GameObject-Pfad fuer Diag-Logs (beweist den Marker-Pfad).</summary>
-        private static string GetGoPath(GameObject go)
-        {
-            try
-            {
-                var sb = new System.Text.StringBuilder();
-                var t = go.transform;
-                while (t != null)
-                {
-                    if (sb.Length > 0) sb.Insert(0, "/");
-                    sb.Insert(0, t.name);
-                    t = t.parent;
-                }
-                return sb.ToString();
-            }
-            catch { return go?.name ?? "?"; }
-        }
-
-        /// <summary>
-        /// Reads DockingBay.m_sharedAssets via the shared reflection helper
-        /// (native-first read). Returns null when unavailable.
-        /// </summary>
-        private static DockingBaySharedAssets ReadSharedAssets(DockingBay bay)
-        {
-            try
-            {
-                var m = DockingBayAmenityUtil.FindMember(bay.GetType(), "m_sharedAssets");
-                if (m == null) return null;
-                return DockingBayAmenityUtil.ReadIl2CppField(m, bay) as DockingBaySharedAssets;
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311b ReadSharedAssets fehlgeschlagen: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Fallback ShopDescription lookup via the Station's Shop DockingBayGroup
-        /// when bay.ShopDescription is null (JobsBoard bays normally have none).
-        /// </summary>
-        private static ShopDescription FindShopDescriptionViaGroup(DockingBay bay)
-        {
-            try
-            {
-                var stationObj = bay.ParentStation;
-                if (stationObj == null) return null;
-                var m = DockingBayAmenityUtil.FindMember(stationObj.GetType(), "DockingBayGroups")
-                      ?? DockingBayAmenityUtil.FindMember(stationObj.GetType(), "m_dockingBayGroups");
-                if (m == null) return null;
-                var groups = DockingBayAmenityUtil.ReadIl2CppField(m, stationObj) as System.Collections.IEnumerable;
-                if (groups == null) return null;
-                foreach (var g in groups)
-                {
-                    var gObj = g as Il2CppObjectBase;
-                    if (gObj == null) continue;
-                    if (DockingBayAmenityUtil.ReadAmenityType(gObj) != AmenityTypes.Shop) continue;
-                    var gm = DockingBayAmenityUtil.FindMember(gObj.GetType(), "shopDescription");
-                    if (gm == null) continue;
-                    return DockingBayAmenityUtil.ReadIl2CppField(gm, gObj) as Il2CppObjectBase as ShopDescription;
-                }
-            }
-            catch (Exception ex)
-            {
-                StarTruckMP.Log.LogWarning($"311b FindShopDescriptionViaGroup fehlgeschlagen: {ex.Message}");
-            }
-            return null;
+            try { return c != null && c.gameObject != null ? c.gameObject.name : "null"; }
+            catch { return "?"; }
         }
     }
 }
