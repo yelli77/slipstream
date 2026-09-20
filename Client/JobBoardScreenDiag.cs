@@ -68,7 +68,7 @@ namespace StarTruckMP.StarTruckClient
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "OnScreenBack")]
         [HarmonyPrefix]
-        public static void Back_Prefix(global::JobBoardScreen __instance, string backToScreen) { Watchdog.Mark("OnScreenBack BEGIN"); Dump("OnScreenBack BEGIN (back='" + backToScreen + "')", __instance); }
+        public static void Back_Prefix(global::JobBoardScreen __instance, string backToScreen) { JobBoardComputer.ExtendAmenityBlock(5f); AmenityLocalGate.LogNearbyTerminals("OnScreenBack"); Watchdog.Mark("OnScreenBack BEGIN"); Dump("OnScreenBack BEGIN (back='" + backToScreen + "')", __instance); }
 
         [HarmonyPatch(typeof(global::JobBoardScreen), "OnScreenBack")]
         [HarmonyPostfix]

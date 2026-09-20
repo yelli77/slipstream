@@ -281,6 +281,15 @@ namespace StarTruckMP.StarTruckClient
                 var termPos = (__instance.transform != null) ? __instance.transform.position : Vector3.zero;
                 var myPos = (myTruck.transform != null) ? myTruck.transform.position : Vector3.zero;
                 var dist = Vector3.Distance(termPos, myPos);
+                // 393: jeder Terminal-Eintritt wird VOR dem nativen Aufruf geloggt (auch ins Watchdog-Log).
+                bool boardBusy = JobBoardComputer.BoardActiveOrRecent;
+                Watchdog.Mark("AmenityEnter " + DescribeTerminal(__instance) + " dist=" + dist.ToString("F0") + "m boardBusy=" + boardBusy);
+                // 393: waehrend Jobboard offen bzw. kurz danach KEIN Amenity-Eintritt (Werkstatt-Freeze-Verdacht).
+                if (boardBusy)
+                {
+                    StarTruckMP.Log.LogWarning("393 AmenityEnter UNTERDRUECKT (Jobboard aktiv/kuerzlich): " + DescribeTerminal(__instance) + " dist=" + dist.ToString("F0") + "m");
+                    return false;
+                }
                 if (dist > AmenityGateMaxMeters)
                 {
                     LogSuppress(__instance.gameObject, "TruckAmenityTerminal.OnAmenityEnter",
@@ -295,6 +304,47 @@ namespace StarTruckMP.StarTruckClient
                 StarTruckMP.Log.LogWarning($"{LogTag} TerminalEnterPrefix Fehler: {ex.Message}");
                 return true;
             }
+        }
+
+        /// <summary>393: Kurzbeschreibung eines Terminals (Name + Amenity-Typ), nur Reflection, crash-sicher.</summary>
+        public static string DescribeTerminal(object t)
+        {
+            try
+            {
+                var go = (t as Component)?.gameObject;
+                string name = go != null ? go.name : "?";
+                string am = "?";
+                try
+                {
+                    var pi = t.GetType().GetProperty("_currentAmenity");
+                    if (pi != null) am = Convert.ToString(pi.GetValue(t, null));
+                }
+                catch { }
+                return "'" + name + "' amenity=" + am;
+            }
+            catch { return "?"; }
+        }
+
+        /// <summary>393: loggt die 4 naechsten Amenity-Terminals (Werkstatt/Lackierer etc.) mit Entfernung zum lokalen Truck.</summary>
+        public static void LogNearbyTerminals(string ctx)
+        {
+            try
+            {
+                var myTruck = global::StarTruckMP.StarTruckClient.StarTruckClient.myTruck;
+                if (myTruck == null) return;
+                var myPos = myTruck.transform.position;
+                var list = new List<KeyValuePair<float, string>>();
+                foreach (var t in UnityEngine.Object.FindObjectsOfType<TruckAmenityTerminal>())
+                {
+                    if (t == null) continue;
+                    list.Add(new KeyValuePair<float, string>(Vector3.Distance(t.transform.position, myPos), DescribeTerminal(t)));
+                }
+                list.Sort((x, y) => x.Key.CompareTo(y.Key));
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < list.Count && i < 4; i++) sb.Append(" | ").Append(list[i].Key.ToString("F0")).Append("m ").Append(list[i].Value);
+                StarTruckMP.Log.LogInfo("393 NaechsteTerminals[" + ctx + "] von " + list.Count + ":" + sb);
+            }
+            catch (Exception ex) { StarTruckMP.Log.LogWarning("393 LogNearbyTerminals Fehler: " + ex.Message); }
         }
 
         // 379 Fix (Root Cause statt Nachbearbeitung): Physics.IgnoreCollision zwischen

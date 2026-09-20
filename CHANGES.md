@@ -1,3 +1,6 @@
+## custom-build-393
+- Werkstatt-Freeze-Verdacht: TruckAmenityTerminal.OnAmenityEnter wird waehrend Jobboard aktiv (+3-5 s danach) unterdrueckt; jeder Amenity-Eintritt und die 4 naechsten Terminals (Entfernung) werden geloggt (LogOutput + watchdog.log).
+
 ## custom-build-392
 - Diagnose: Watchdog-Thread meldet Hauptthread-Freeze (LogOutput.log + BepInEx/log_backups/watchdog.log) inkl. letztem Schritt; Schrittmarker beim Jobboard Oeffnen/Schliessen (Fokus, Cursor, Input, Pauser, OnScreenBack/ApplyUsersJobChoices). Keine Verhaltensaenderung.
 

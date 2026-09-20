@@ -292,8 +292,14 @@ private static void SetVisible(bool v)
             try { Cursor.visible = true; } catch (System.Exception ex) { StarTruckMP.Log.LogWarning("338 Cursor.visible fehlgeschlagen: " + ex.Message); }
         }
 
+        // 393: Amenity-Sperre waehrend Jobboard aktiv + Nachlaufzeit.
+        private static float amenityBlockUntil = 0f;
+        public static bool BoardActiveOrRecent { get { try { return hasUIFocus || Time.unscaledTime < amenityBlockUntil; } catch { return false; } } }
+        public static void ExtendAmenityBlock(float seconds) { try { amenityBlockUntil = Mathf.Max(amenityBlockUntil, Time.unscaledTime + seconds); } catch { } }
+
         private static void ReleaseUIFocus()
         {
+            ExtendAmenityBlock(3f);
             hasUIFocus = false; // 338: Fokus-Kontext aufgehoben (kein doppeltes Release mehr)
             Watchdog.Mark("Release: Cursor lock");
             // Reihenfolge invers: erst Cursor/Input, zuletzt Pauser entfernen.
